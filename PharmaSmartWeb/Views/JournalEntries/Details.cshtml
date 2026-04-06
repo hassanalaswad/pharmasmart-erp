@@ -1,0 +1,191 @@
+@model PharmaSmartWeb.Models.Journalentries
+
+@{
+    ViewData["Title"] = "تفاصيل القيد المحاسبي";
+    // حساب إجمالي القيد (المدين) لعرضه في السند
+    decimal totalDebit = Model.Journaldetails.Sum(d => d.Debit);
+}
+
+<!-- Content Canvas -->
+<div class="p-4 md:p-5 max-w-6xl mx-auto w-full pb-20">
+    <!-- Header Actions -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 print-hidden">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="/Home/FinanceHub" class="hover:text-primary">المالية</a>
+                <span class="material-symbols-outlined text-xs" data-icon="chevron_left">chevron_left</span>
+                <a href="/JournalEntries/Index" class="hover:text-primary">قيود اليومية</a>
+            </nav>
+            <h2 class="text-3xl font-extrabold text-primary flex items-center gap-3">
+                سند قيد يومية <span class="text-primary-container font-mono">#JV-@Model.JournalId</span>
+            </h2>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="/JournalEntries/Index" class="flex items-center gap-2 px-4 py-2.5 rounded-sm border border-slate-200 hover:bg-slate-50 transition-colors font-semibold text-slate-700">
+                <span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+                العودة للقائمة
+            </a>
+            <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2.5 rounded-sm border border-slate-200 hover:bg-slate-50 transition-colors font-semibold text-slate-700">
+                <span class="material-symbols-outlined text-lg" data-icon="print">print</span>
+                طباعة السند
+            </button>
+            
+            @if (Model.ReferenceType != "Reversal")
+            {
+                <button onclick="document.getElementById('reversalModal').classList.remove('hidden')" class="flex items-center gap-2 px-4 py-2.5 rounded-sm bg-error/10 text-error hover:bg-error hover:text-white transition-all font-bold">
+                    <span class="material-symbols-outlined text-lg" data-icon="reverse_default">flip_to_back</span>
+                    عكس القيد
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Bento Info Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="md:col-span-1 bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-slate-100 flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">التاريخ</span>
+            <p class="text-lg font-bold text-primary">@Model.JournalDate.ToString("yyyy-MM-dd")</p>
+            <p class="text-xs text-slate-500">@Model.JournalDate.ToString("hh:mm tt")</p>
+        </div>
+        <div class="md:col-span-1 bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-slate-100 flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">الفرع / القسم</span>
+            <p class="text-lg font-bold text-primary">@(Model.Branch?.BranchName ?? "المركز الرئيسي")</p>
+            <p class="text-xs text-slate-500">@(Model.ReferenceType ?? "Manual")</p>
+        </div>
+        <div class="md:col-span-2 bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-slate-100 flex flex-col gap-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">الوصف الكامل</span>
+            <p class="text-base text-slate-700 leading-relaxed font-medium">@Model.Description</p>
+        </div>
+    </div>
+
+    <!-- Ledger Table Card -->
+    <div class="bg-surface-container-lowest rounded-sm shadow-sm border border-slate-100 overflow-hidden mb-8 printable-card">
+        <div class="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+            <h3 class="font-bold text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-container" data-icon="list_alt">list_alt</span>
+                تفاصيل الحسابات المتأثرة
+            </h3>
+            <span class="bg-primary-container text-white px-3 py-1 rounded-full text-xs font-bold">@Model.Journaldetails.Count حركات مالية</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+                <thead>
+                    <tr class="text-slate-400 text-[10px] md:text-sm border-b border-slate-100 bg-slate-50">
+                        <th class="px-6 py-4 font-bold">كود الحساب</th>
+                        <th class="px-6 py-4 font-bold">اسم الحساب</th>
+                        <th class="px-6 py-4 font-bold text-left">مدين (Debit)</th>
+                        <th class="px-6 py-4 font-bold text-left">دائن (Credit)</th>
+                    </tr>
+                </thead>
+                <tbody class="text-slate-700 divide-y divide-slate-50">
+                    @{ int rowIndex = 0; }
+                    @foreach (var detail in Model.Journaldetails)
+                    {
+                        string lineClass = (rowIndex % 2 != 0) ? "bg-slate-50/30" : "";
+                        <tr class="hover:bg-slate-50 transition-colors @lineClass">
+                            <td class="px-6 py-4 font-mono text-xs md:text-sm">@detail.Account?.AccountCode</td>
+                            <td class="px-6 py-4 font-bold text-sm">@detail.Account?.AccountName</td>
+                            <td class="px-6 py-4 font-bold text-primary text-left text-sm md:text-base font-mono">
+                                @(detail.Debit > 0 ? detail.Debit.ToString("N2") : "---")
+                            </td>
+                            <td class="px-6 py-4 text-slate-400 font-bold text-left text-sm md:text-base font-mono">
+                                @(detail.Credit > 0 ? detail.Credit.ToString("N2") : "---")
+                            </td>
+                        </tr>
+                        rowIndex++;
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="bg-primary text-white">
+                        <td colspan="2" class="px-6 py-5 font-black text-sm md:text-lg">المجموع المتوازن (Total Balanced)</td>
+                        <td class="px-6 py-5 font-black text-xl md:text-2xl text-left border-l border-primary-container font-mono">@totalDebit.ToString("N2")</td>
+                        <td class="px-6 py-5 font-black text-xl md:text-2xl text-left font-mono">@totalDebit.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Reversal Confirmation Modal (Overlay) -->
+<div id="reversalModal" class="hidden fixed inset-0 bg-primary/40 z-[100] flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest w-full max-w-lg rounded-sm shadow-sm border border-slate-200 overflow-hidden border border-slate-200">
+        <div class="p-6 bg-error/5 border-b border-error/10 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-error/20 flex items-center justify-center text-error">
+                <span class="material-symbols-outlined text-2xl" data-icon="warning">warning</span>
+            </div>
+            <div>
+                <h3 class="text-xl font-black text-primary">تأكيد عملية عكس القيد</h3>
+                <p class="text-sm text-slate-600">سيتم إنشاء قيد عكسي تلقائي لتصفير هذه المعاملة.</p>
+            </div>
+        </div>
+        <form asp-action="Reverse" asp-route-id="@Model.JournalId" method="post">
+            @Html.AntiForgeryToken()
+            <div class="p-6 space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-slate-700">سبب عكس القيد (إلزامي)</label>
+                    <textarea name="reason" required class="w-full rounded-sm border-slate-200 bg-slate-50 focus:ring-primary focus:border-primary text-sm p-4 font-bold resize-none" placeholder="يرجى ذكر سبب إلغاء هذا القيد بالتفصيل..." rows="3"></textarea>
+                </div>
+                <div class="p-4 bg-slate-100 rounded-sm flex items-center gap-3">
+                    <span class="material-symbols-outlined text-slate-400" data-icon="info">info</span>
+                    <p class="text-xs text-slate-500 leading-relaxed font-bold">بمجرد التأكيد، لا يمكن التراجع عن هذه العملية وسيتم ربط القيد الجديد بهذا المستند للأغراض الرقابية.</p>
+                </div>
+            </div>
+            <div class="p-6 bg-slate-50 flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('reversalModal').classList.add('hidden')" class="px-6 py-2.5 font-bold text-slate-600 hover:bg-slate-200 rounded-sm transition-colors">
+                    إلغاء
+                </button>
+                <button type="submit" class="px-8 py-2.5 font-black bg-error text-white rounded-sm shadow-sm border border-slate-200 shadow-error/20 hover:scale-[0.98] active:scale-95 transition-all">
+                    تأكيد العكس
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        #sidebar, header, footer, .print-hidden, #reversalModal {
+            display: none !important;
+        }
+
+        body, main {
+            background-color: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        .bg-surface-container-lowest {
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        .rounded-sm, .rounded-sm {
+            border-radius: 0 !important;
+        }
+
+        .bg-primary {
+            background-color: #000 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .text-primary, .text-primary-container {
+            color: #000 !important;
+        }
+
+        .printable-card {
+            border: 1px solid #000 !important;
+        }
+        
+        table {
+            border-collapse: collapse !important;
+        }
+
+        th, td {
+            border: 1px solid #ddd !important;
+            padding: 8px !important;
+        }
+    }
+</style>

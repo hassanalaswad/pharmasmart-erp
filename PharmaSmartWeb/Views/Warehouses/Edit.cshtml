@@ -1,0 +1,171 @@
+@model PharmaSmartWeb.Models.Warehouses
+
+@{
+    ViewData["Title"] = $"تعديل هيكل وتصنيفات: {Model.WarehouseName}";
+    Layout = "_ModalLayout";
+
+    string errorMsg = ViewBag.Error as string;
+    string groupsJson = ViewBag.ItemGroupsJson as string ?? "[]";
+}
+
+<style>
+    .form-label { font-size: 11px; font-weight: 700; color: #063955; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 7px 10px; font-size: 13px; background: #f8fafc; }
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .btn-submit { background: #d97706; color: white; border: none; padding: 9px 24px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #d1d5db; padding: 9px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e11d48; margin-bottom: 14px; }
+    .btn-small { background: #063955; color: white; border: none; padding: 4px 10px; border-radius: 2px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+</style>
+
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+    <div class="alert-error">⚠ @errorMsg</div>
+}
+
+<form asp-action="Edit" method="post" id="warehouseForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="WarehouseId" />
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+        <div>
+            <label class="form-label">اسم المستودع <span style="color:#e11d48;">*</span></label>
+            <input asp-for="WarehouseName" required class="form-control" />
+        </div>
+        <div>
+            <label class="form-label">الموقع والتصنيف</label>
+            <input asp-for="Location" class="form-control" />
+        </div>
+        <div style="grid-column: span 2; background:#f8fafc; border:1px solid #e2e8f0; border-radius:2px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:12px; font-weight:700; color:#063955;">حالة المستودع</div>
+                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">إذا تم الإيقاف، لا يمكن للمستخدمين النقل منه أو الصرف المباشر.</div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" name="IsActive" value="true" @(Model.IsActive == true ? "checked" : "") style="width:16px; height:16px; cursor:pointer;" />
+                <input type="hidden" name="IsActive" value="false" />
+                <span style="font-size:12px; font-weight:700; color:#063955;">نشط</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Zones Binding -->
+    <div style="border:1px solid #cbd5e1; border-radius:2px; margin-bottom:16px;">
+        <div style="background:#f1f5f9; padding:10px 14px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#d97706;">shelves</span>
+                <span style="font-size:12px; font-weight:700; color:#063955;">أماكن التخزين (الرفوف / Zones)</span>
+            </div>
+            <button type="button" onclick="addShelfRow()" class="btn-small">
+                <span class="material-symbols-outlined" style="font-size:14px;">add</span> رف إضافي
+            </button>
+        </div>
+        
+        <div style="max-height:30vh; overflow-y:auto;">
+            <table style="width:100%; text-align:right; border-collapse:collapse; font-size:12px;">
+                <thead style="background:#f8fafc; position:sticky; top:0; z-index:10;">
+                    <tr>
+                        <th style="padding:8px 12px; border-bottom:1px solid #e2e8f0; width:150px;">كود الرف</th>
+                        <th style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">المجموعة المرتبطة</th>
+                        <th style="padding:8px 12px; border-bottom:1px solid #e2e8f0; width:50px; text-align:center;">إزالة</th>
+                    </tr>
+                </thead>
+                <tbody id="shelvesBody">
+                    @{ int i = 0; }
+                    @if (Model.Shelves != null)
+                    {
+                        foreach (var shelf in Model.Shelves)
+                        {
+                            <tr id="shelfRow_@i" style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:6px 12px;">
+                                    <input type="hidden" name="Shelves[@i].ShelfId" value="@shelf.ShelfId" />
+                                    <input type="text" name="Shelves[@i].ShelfName" value="@shelf.ShelfName" required 
+                                           style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:5px; font-family:monospace; font-weight:700; text-transform:uppercase; text-align:center;" />
+                                </td>
+                                <td style="padding:6px 12px;">
+                                    <select name="Shelves[@i].GroupId" class="shelf-group-select" data-selected="@shelf.GroupId" 
+                                            style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:5px; font-size:12px;">
+                                        <option value="">-- عام (بدون تخصيص) --</option>
+                                    </select>
+                                    <input type="hidden" name="Shelves[@i].IsActive" value="true">
+                                </td>
+                                <td style="padding:6px 12px; text-align:center;">
+                                    <button type="button" onclick="removeShelf(@i)" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; border-radius:2px; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+                                        <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+                                    </button>
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:14px; border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="history.back()" class="btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:15px;">cancel</span>
+            تراجع
+        </button>
+        <button type="submit" class="btn-submit">
+            <span class="material-symbols-outlined" style="font-size:15px;">sync_alt</span>
+            حفظ تحديثات المستودع
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const itemGroups = @Html.Raw(groupsJson);
+        let shelfIndex = @(Model.Shelves?.Count ?? 0);
+
+        window.onload = function() {
+            // Populate existing row selects
+            const selects = document.querySelectorAll('.shelf-group-select');
+            selects.forEach(select => {
+                const selectedVal = select.getAttribute('data-selected');
+                itemGroups.forEach(g => {
+                    const isSelected = (selectedVal == g.id) ? "selected" : "";
+                    select.insertAdjacentHTML('beforeend', `<option value="${g.id}" ${isSelected}>${g.name}</option>`);
+                });
+            });
+        };
+
+        function addShelfRow() {
+            let groupOptions = '<option value="">-- عام (بدون تخصيص) --</option>';
+            itemGroups.forEach(g => {
+                groupOptions += `<option value="${g.id}">${g.name}</option>`;
+            });
+
+            const html = `
+                <tr id="shelfRow_${shelfIndex}" style="border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:6px 12px;">
+                        <input type="hidden" name="Shelves[${shelfIndex}].ShelfId" value="0" />
+                        <input type="text" name="Shelves[${shelfIndex}].ShelfName" placeholder="A-01" required 
+                               style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:5px; font-family:monospace; font-weight:700; text-transform:uppercase; text-align:center;" />
+                    </td>
+                    <td style="padding:6px 12px;">
+                        <select name="Shelves[${shelfIndex}].GroupId" style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:5px; font-size:12px;">
+                            ${groupOptions}
+                        </select>
+                        <input type="hidden" name="Shelves[${shelfIndex}].IsActive" value="true">
+                    </td>
+                    <td style="padding:6px 12px; text-align:center;">
+                        <button type="button" onclick="removeShelf(${shelfIndex})" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; border-radius:2px; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            document.getElementById('shelvesBody').insertAdjacentHTML('beforeend', html);
+            shelfIndex++;
+        }
+
+        function removeShelf(index) {
+            document.getElementById(`shelfRow_${index}`).remove();
+        }
+    </script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,126 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@model IEnumerable<PharmaSmartWeb.Models.Accounts>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "ميزان المراجعة بالأرصدة";
+    ViewData["Subtitle"] = "TRIAL BALANCE REPORT";
+    decimal totalDebit = ViewBag.ExactTotalDebit ?? 0m;
+    decimal totalCredit = ViewBag.ExactTotalCredit ?? 0m;
+    bool isBalanced = Math.Abs(totalDebit - totalCredit) < 0.01m;
+
+    ViewBag.ReportNumber = "TB-" + DateTime.Now.ToString("yyyyMMdd");
+    ViewBag.ReportPeriod = "الفترة الحالية";
+
+    var groupedAccounts = Model.GroupBy(a => a.AccountType)
+        .OrderBy(g => g.Key == "Assets" ? 1 :
+                      g.Key == "Liabilities" ? 2 :
+                      g.Key == "Equity" ? 3 :
+                      g.Key == "Revenue" ? 4 : 5)
+        .ToList();
+
+    string GetArabicTypeName(string type) => type switch
+    {
+        "Assets" => "الأصول (Assets)",
+        "Liabilities" => "الخصوم (Liabilities)",
+        "Equity" => "حقوق الملكية (Equity)",
+        "Revenue" => "الإيرادات (Revenue)",
+        "Expenses" => "المصروفات (Expenses)",
+        _ => type
+    };
+
+    int typeIndex = 1;
+}
+
+@section Styles {
+    <style>
+        .group-row { background: #e8f0fe; font-weight: bold; color: #063955; }
+        .group-row td { border-bottom: 2px solid #063955; }
+        .footer-row { background: #063955; color: white; font-weight: bold; }
+        .footer-row td { border-color: #063955; }
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .kpi-card { border: 1px solid #e2e8f0; padding: 14px; text-align: center; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); background: white; }
+    </style>
+}
+
+<!-- KPI Row -->
+<div class="kpi-row">
+    <div class="kpi-card" style="border-top:3px solid #059669;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">إجمالي المدين</div>
+        <div style="font-size:22px; font-weight:900; color:#059669; font-family:monospace;">@totalDebit.ToString("N2")</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #e11d48;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">إجمالي الدائن</div>
+        <div style="font-size:22px; font-weight:900; color:#e11d48; font-family:monospace;">@totalCredit.ToString("N2")</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #063955; background:#063955;">
+        <div style="font-size:11px; color:#94a3b8; font-weight:bold;">حالة الميزان</div>
+        <div style="font-size:18px; font-weight:900; color:white;">@(isBalanced ? "متوازن" : "يوجد فرق مالي")</div>
+    </div>
+</div>
+
+<!-- Trial Balance Table -->
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width:90px;">رقم الحساب</th>
+            <th style="text-align:right;">اسم الحساب</th>
+            <th style="width:120px; background:#ecfdf5; color:#065f46;">رصيد مدين</th>
+            <th style="width:120px; background:#fef2f2; color:#991b1b;">رصيد دائن</th>
+            <th style="width:80px;">الحالة</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var group in groupedAccounts)
+        {
+            decimal groupDebit = 0;
+            decimal groupCredit = 0;
+            var rootAccountsInGroup = group.Where(a => a.ParentAccountId == null).ToList();
+            foreach (var acc in rootAccountsInGroup)
+            {
+                if (acc.AccountNature) { if (acc.Balance > 0) groupDebit += acc.Balance; else if (acc.Balance < 0) groupCredit += Math.Abs(acc.Balance); }
+                else { if (acc.Balance > 0) groupCredit += acc.Balance; else if (acc.Balance < 0) groupDebit += Math.Abs(acc.Balance); }
+            }
+            if (groupDebit == 0 && groupCredit == 0) continue;
+
+            <tr class="group-row">
+                <td style="font-family:monospace;">@typeIndex</td>
+                <td style="text-align:right; font-size:13px;">@GetArabicTypeName(group.Key)</td>
+                <td style="font-family:monospace; color:#059669;">@(groupDebit > 0 ? groupDebit.ToString("N2") : "0")</td>
+                <td style="font-family:monospace; color:#e11d48;">@(groupCredit > 0 ? groupCredit.ToString("N2") : "0")</td>
+                <td><span style="font-size:10px; font-weight:bold; padding:2px 6px; background:#dbeafe; color:#063955; border:1px solid #bfdbfe; border-radius:2px;">رئيسي</span></td>
+            </tr>
+
+            @foreach (var acc in group)
+            {
+                decimal displayDebit = 0;
+                decimal displayCredit = 0;
+                if (acc.AccountNature) { if (acc.Balance > 0) displayDebit = acc.Balance; else if (acc.Balance < 0) displayCredit = Math.Abs(acc.Balance); }
+                else { if (acc.Balance > 0) displayCredit = acc.Balance; else if (acc.Balance < 0) displayDebit = Math.Abs(acc.Balance); }
+                if (displayDebit == 0 && displayCredit == 0) continue;
+
+                bool isMain = Model.Any(a => a.ParentAccountId == acc.AccountId);
+                <tr style="@(isMain ? "background:#fafafa;" : "")">
+                    <td style="font-family:monospace; font-size:11px; color:#64748b;">@acc.AccountCode</td>
+                    <td style="text-align:right; font-weight:@(isMain ? "bold" : "normal"); color:#1e293b;">@acc.AccountName</td>
+                    <td style="font-family:monospace; color:@(displayDebit > 0 ? "#059669" : "#94a3b8"); font-weight:@(isMain ? "bold" : "normal");">
+                        @(displayDebit > 0 ? displayDebit.ToString("N2") : "0")
+                    </td>
+                    <td style="font-family:monospace; color:@(displayCredit > 0 ? "#e11d48" : "#94a3b8"); font-weight:@(isMain ? "bold" : "normal");">
+                        @(displayCredit > 0 ? displayCredit.ToString("N2") : "0")
+                    </td>
+                    <td></td>
+                </tr>
+            }
+            typeIndex++;
+        }
+    </tbody>
+    <tfoot>
+        <tr class="footer-row">
+            <td colspan="2" style="text-align:right; font-size:13px;">الإجماليات النهائية</td>
+            <td style="font-family:monospace; font-size:14px;">@totalDebit.ToString("N2")</td>
+            <td style="font-family:monospace; font-size:14px;">@totalCredit.ToString("N2")</td>
+            <td style="font-size:11px; font-weight:bold;">@(isBalanced ? "متعادل" : "فرق")</td>
+        </tr>
+    </tfoot>
+</table>

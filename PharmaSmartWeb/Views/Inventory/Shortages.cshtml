@@ -1,0 +1,135 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@model IEnumerable<PharmaSmartWeb.Models.Branchinventory>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "تقرير نواقص الأدوية";
+    ViewData["Subtitle"] = "DRUG SHORTAGES REPORT";
+    var depletedCount = Model.Count(x => x.StockQuantity <= 0);
+    var shortageCount = Model.Count(x => x.StockQuantity > 0 && x.StockQuantity <= x.MinimumStockLevel);
+    
+    // Default info for _ReportLayout summary box
+    ViewBag.ReportNumber = "SHT-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+    ViewBag.ReportPeriod = "التاريخ والإحصاء اللحظي";
+    ViewBag.ReportNotes = "متابعة المخزون الحرج وإعادة الطلب لدعم قرارات الشراء المستقبلية.";
+    ViewBag.ReportBranchName = ViewBag.BranchName ?? "الفرع الرئيسي";
+}
+
+@section Styles {
+    <style>
+        .badge-critical { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; display: inline-flex; align-items: center; gap: 4px; }
+        
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kpi-card { border: 1px solid #e2e8f0; padding: 14px; text-align: center; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        .cta-box { display: flex; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid #a7f3d0; border-right: 4px solid #059669; background: #ecfdf5; margin-top: 20px; border-radius: 4px; }
+        .cta-btn { background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 3px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    </style>
+}
+
+@section Summary {
+    <div><span>إجمالي الأصناف المعروضة:</span><span style="font-weight:bold;">@Model.Count()</span></div>
+    <div><span style="color:#e11d48;">منتهية (نافدة):</span><span style="color:#e11d48; font-weight:bold;">@depletedCount</span></div>
+    <div><span style="color:#d97706;">تحت حد الطلب (متوفرة جزئياً):</span><span style="color:#d97706; font-weight:bold;">@shortageCount</span></div>
+}
+
+<!-- KPI Row -->
+<div class="kpi-row">
+    <div class="kpi-card" style="border-top:3px solid #063955;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">إجمالي الأصناف المطلوبة</div>
+        <div style="font-size:26px; font-weight:900; color:#063955; font-family:monospace;">@Model.Count()</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #e11d48;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">أصناف منتهية تماماً (نافدة)</div>
+        <div style="font-size:26px; font-weight:900; color:#e11d48; font-family:monospace;">@depletedCount</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #d97706;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">تحت حد الطلب (بكميات قليلة)</div>
+        <div style="font-size:26px; font-weight:900; color:#d97706; font-family:monospace;">@shortageCount</div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<h3 style="font-size:14px; font-weight:bold; color:#e11d48; margin-bottom:12px; border-bottom: 1px solid #fecdd3; padding-bottom: 8px;">قائمة النواقص العاجلة</h3>
+
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width:40px; text-align:center;">#</th>
+            <th style="text-align:right;">اسم الدواء / الصنف</th>
+            <th style="width: 140px; text-align: center;">الفرع</th>
+            <th style="text-align: center; width: 120px;">الرصيد الفعلي</th>
+            <th style="text-align: center; width: 120px;">حد الطلب</th>
+            <th style="width: 180px; text-align:center;">الكمية المطلوبة (عجز)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr>
+                <td colspan="6" style="padding: 40px; text-align: center;">
+                    <span style="font-size: 32px; color: #059669;">✓</span>
+                    <h3 style="font-size: 14px; font-weight: bold; color: #059669; margin-top: 8px;">ممتاز! لا توجد نواقص في هذا النطاق.</h3>
+                </td>
+            </tr>
+        }
+        else
+        {
+            int r = 1;
+            foreach (var item in Model.OrderBy(i => i.StockQuantity))
+            {
+                var deficit = item.MinimumStockLevel - item.StockQuantity;
+                if(deficit < 0) deficit = 0;
+                var isDepleted = item.StockQuantity <= 0;
+                
+                <tr>
+                    <td style="text-align:center;">@r</td>
+                    <td style="text-align:right;">
+                        <span style="font-weight:bold; color:#063955; font-size:13px;">@item.Drug?.DrugName</span><br/>
+                        <span style="font-family:monospace; font-size:10px; color:#94a3b8; font-weight:bold;">كود: #@item.DrugId.ToString("D4")</span>
+                    </td>
+                    <td style="text-align:center; font-size: 11px; font-weight: bold; color: #64748b;">
+                        @(item.Branch?.BranchName ?? "مجمع الفروع")
+                    </td>
+                    <td style="text-align:center; font-family:monospace; font-weight:900; color:@(isDepleted ? "#e11d48" : "#d97706"); font-size: 14px;">
+                        @item.StockQuantity
+                    </td>
+                    <td style="text-align:center; font-family:monospace; font-weight:bold; color:#64748b;">
+                        @item.MinimumStockLevel
+                    </td>
+                    <td style="text-align:center;">
+                        @if(isDepleted)
+                        {
+                            <span class="badge-critical">🛒 @deficit (عجز حرج)</span>
+                        }
+                        else
+                        {
+                            <span class="badge-warning">🛒 @deficit</span>
+                        }
+                    </td>
+                </tr>
+                r++;
+            }
+        }
+    </tbody>
+</table>
+
+@if(Model.Any())
+{
+    <!-- Call to Action (No Print) -->
+    <div class="cta-box no-print">
+        <div>
+            <h4 style="font-weight:bold; color:#063955; font-size:12px; margin:0 0 4px 0;">توصية النظام الذكية</h4>
+            <p style="font-size:11px; color:#64748b; margin:0; font-weight:bold;">هناك حاجة لجدولة طلبية شراء لـ @Model.Count() صنف بأسرع وقت لضمان توفر الأدوية المستمرة.</p>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <a href="/Purchases/Create" class="cta-btn target-modal">
+                📝 إنشاء فاتورة مشتريات
+            </a>
+            <a href="/Purchases/Index" class="cta-btn target-modal" style="background:white; color:#059669; border:1px solid #10b981;">
+                سجل المشتريات
+            </a>
+        </div>
+    </div>
+}

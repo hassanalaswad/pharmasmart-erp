@@ -1,0 +1,327 @@
+@model PharmaSmartWeb.Models.ReportsHubViewModel
+@using PharmaSmartWeb.Infrastructure
+@{
+    ViewData["Title"] = "مركز التقارير والإدارة العليا";
+    ViewData["PageDescription"] = "تحليلات ذكية، قوائم ختامية، ومؤشرات الأداء (KPIs)";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { border: 1px solid #d1d5db; border-radius: 2px; background: white; margin-bottom: 16px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .enterprise-body { padding: 16px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 4px; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .kpi-box { padding: 16px; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; flex-grow: 1; }
+    .kpi-value { font-size: 24px; font-weight: 800; color: #063955; }
+    .kpi-sub { font-size: 11px; color: #94a3b8; font-weight: normal; margin-top: 4px; display: block; }
+    .form-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 6px 10px; font-size: 12px; font-weight: 700; background-color: #f8fafc; outline: none; width: 100%; }
+    .form-input:focus { border-color: #063955; background-color: white; }
+    .form-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 2px; display: block; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 6.5px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; border-color: transparent; }
+</style>
+
+<div class="max-w-7xl mx-auto p-6 space-y-4">
+
+    <!-- Header Panel & Filters -->
+    <div class="enterprise-panel p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+            <h1 class="page-title">مؤشرات الأداء المالي والتشغيلي</h1>
+            <p class="page-sub">تحليلات ذكية، قوائم ختامية، ومؤشرات الأداء لمعرفة مسار العمل.</p>
+        </div>
+
+        <form method="get" action="/Home/ReportsHub" class="flex flex-wrap md:flex-nowrap gap-3 items-end w-full lg:w-auto">
+            @if (Model.IsSuperAdmin)
+            {
+                <div class="flex-1 min-w-[150px]">
+                    <label class="form-label">الفرع</label>
+                    <select name="branchId" class="form-input">
+                        <option value="0" selected="@(Model.SelectedBranchId == 0)">كافة الفروع</option>
+                        @if (ViewBag.BranchesDropdown != null)
+                        {
+                            foreach (var b in ViewBag.BranchesDropdown)
+                            {
+                                <!option value="@b.BranchId" @(Model.SelectedBranchId == b.BranchId ? "selected" : "")>@b.BranchName</!option>
+                            }
+                        }
+                    </select>
+                </div>
+            }
+            <div class="flex-1 min-w-[120px]">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-input" />
+            </div>
+            <div class="flex-1 min-w-[120px]">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-input" />
+            </div>
+            <div>
+                <button type="submit" class="btn-primary" style="height: 29px;">
+                    تحديث
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 1. Executive KPIs (Top Level) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div class="kpi-box" style="border-right-color: #063955;">
+            <div class="kpi-title">إجمالي الإيرادات للفترة</div>
+            <div>
+                <span class="kpi-value">@Model.TotalRevenuesYTD.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
+            </div>
+            <span class="kpi-sub">من @Model.StartDate.ToString("dd-MM") إلى @Model.EndDate.ToString("dd-MM")</span>
+        </div>
+        
+        <div class="kpi-box" style="border-right-color: #059669;">
+            <div class="kpi-title text-[#059669]">صافي الأرباح</div>
+            <div>
+                <span class="kpi-value text-[#059669]">@Model.NetProfit.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
+            </div>
+            <span class="kpi-sub font-bold @((Model.ProfitMargin >= 0) ? "text-[#059669]" : "text-[#e11d48]")">هامش الربح @Model.ProfitMargin%</span>
+        </div>
+
+        <div class="kpi-box" style="border-right-color: #64748b;">
+            <div class="kpi-title">قيمة الأصول والمخزون</div>
+            <div>
+                <span class="kpi-value">@Model.TotalAssetsValue.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
+            </div>
+            <span class="kpi-sub">
+                @if(Model.SelectedBranchId == 0){ <text>موزعة على @Model.BranchesCount فروع</text> } else { <text>الفرع المحدد فقط</text> }
+            </span>
+        </div>
+
+        <div class="kpi-box" style="border-right-color: #0284c7;">
+            <div class="kpi-title text-[#0284c7]">السيولة النقدية المتاحة</div>
+            <div>
+                <span class="kpi-value text-[#0284c7]">@Model.TotalLiquidity.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
+            </div>
+            <span class="kpi-sub text-[#0284c7]">رصيد الصناديق والبنوك الفعلي</span>
+        </div>
+    </div>
+
+    <!-- 2. Main Dashboard Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Chart 1: Profit & Loss Trend -->
+        <div class="enterprise-panel mb-0 border-t-4 border-t-[#063955]">
+            <div class="enterprise-header">
+                <div>تقرير الأرباح والخسائر (P&L)</div>
+                <span class="text-[10px] text-slate-500 font-bold">تطور الإيرادات والمصروفات</span>
+            </div>
+            <div class="enterprise-body">
+                <div class="h-[250px] w-full">
+                    <canvas id="profitAndLossChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Branch Comparison -->
+        <div class="enterprise-panel mb-0 border-t-4 border-t-[#0284c7]">
+            <div class="enterprise-header">
+                <div>المبيعات والمرتجعات</div>
+                <span class="text-[10px] text-slate-500 font-bold">مقارنة أداء المبيعات</span>
+            </div>
+            <div class="enterprise-body">
+                <div class="h-[250px] w-full">
+                    <canvas id="branchComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3: Inventory Intelligence (ABC Analysis) -->
+        <div class="enterprise-panel mb-0 border-t-4 border-t-[#059669]">
+            <div class="enterprise-header">
+                <div>الذكاء المخزني (تحليل ABC)</div>
+                <span class="text-[10px] text-slate-500 font-bold">تصنيف المواد حسب قيمة الاستثمار</span>
+            </div>
+            <div class="enterprise-body">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-6 h-[250px]">
+                    <div class="w-full sm:w-1/2 h-full">
+                        <canvas id="abcAnalysisChart"></canvas>
+                    </div>
+                    <div class="w-full sm:w-1/2 space-y-3">
+                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#059669] rounded-sm flex justify-between items-center">
+                            <span class="font-bold text-[12px] text-[#063955]">الفئة A (الأهم)</span>
+                            <span class="text-[#059669] font-black font-mono">@Model.AbcCategoryA%</span>
+                        </div>
+                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#0284c7] rounded-sm flex justify-between items-center">
+                            <span class="font-bold text-[12px] text-[#063955]">الفئة B (متوسطة)</span>
+                            <span class="text-[#0284c7] font-black font-mono">@Model.AbcCategoryB%</span>
+                        </div>
+                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#64748b] rounded-sm flex justify-between items-center">
+                            <span class="font-bold text-[12px] text-[#063955]">الفئة C (الأقل)</span>
+                            <span class="text-slate-500 font-black font-mono">@Model.AbcCategoryC%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 4: Cash Flow & Liquidity -->
+        <div class="enterprise-panel mb-0 border-t-4 border-t-[#d97706]">
+            <div class="enterprise-header">
+                <div>حركة التدفق النقدي الشامل</div>
+                <span class="text-[10px] text-slate-500 font-bold">تحليل المقبوضات والمدفوعات</span>
+            </div>
+            <div class="enterprise-body">
+                <div class="h-[250px] w-full">
+                    <canvas id="cashFlowChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Chart.defaults.font.family = "tahoma, sans-serif";
+            Chart.defaults.font.size = 11; 
+            Chart.defaults.color = '#475569'; 
+            Chart.defaults.rtl = true;
+
+            const commonScales = {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9', drawBorder: false }, 
+                    ticks: { color: '#64748b' }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: { color: '#64748b' }
+                }
+            };
+
+            const commonPlugins = {
+                legend: { position: 'top', align: 'end', labels: { boxWidth: 10, color: '#1e293b', font: { size: 11, weight: 'bold' } } },
+                tooltip: { backgroundColor: '#0f172a', titleFont: { size: 12 }, bodyFont: { size: 11 }, padding: 10, rtl: true, cornerRadius: 2 }
+            };
+
+            // 1. Profit & Loss Trend (Line Chart with Fill)
+            const ctxPnl = document.getElementById('profitAndLossChart').getContext('2d');
+            new Chart(ctxPnl, {
+                type: 'line',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.PnlLabels)),
+                    datasets: [
+                        {
+                            label: 'الإيرادات',
+                            data: @Html.Raw(Json.Serialize(Model.PnlRevenues)),
+                            borderColor: '#063955',
+                            backgroundColor: '#0639551a',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0
+                        },
+                        {
+                            label: 'المصروفات',
+                            data: @Html.Raw(Json.Serialize(Model.PnlExpenses)),
+                            borderColor: '#e11d48',
+                            backgroundColor: '#e11d481a',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: commonPlugins,
+                    scales: commonScales,
+                    interaction: { mode: 'index', intersect: false },
+                    elements: { point: { radius: 0, hitRadius: 10, hoverRadius: 4 } }
+                }
+            });
+
+            // 2. Branch Comparison (Grouped Bar Chart)
+            const ctxBranch = document.getElementById('branchComparisonChart').getContext('2d');
+            new Chart(ctxBranch, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.BranchLabels)),
+                    datasets: [
+                        {
+                            label: 'المبيعات',
+                            data: @Html.Raw(Json.Serialize(Model.BranchSales)),
+                            backgroundColor: '#063955',
+                            borderWidth: 0
+                        },
+                        {
+                            label: 'المرتجعات',
+                            data: @Html.Raw(Json.Serialize(Model.BranchReturns)),
+                            backgroundColor: '#d97706',
+                            borderWidth: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: commonPlugins,
+                    scales: commonScales,
+                    interaction: { mode: 'index', intersect: false },
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }
+            });
+
+            // 3. ABC Analysis (Doughnut Chart)
+            const ctxABC = document.getElementById('abcAnalysisChart').getContext('2d');
+            new Chart(ctxABC, {
+                type: 'doughnut',
+                data: {
+                    labels: ['الفئة A', 'الفئة B', 'الفئة C'],
+                    datasets: [{
+                        data: [@Model.AbcCategoryA, @Model.AbcCategoryB, @Model.AbcCategoryC],
+                        backgroundColor: ['#059669', '#0284c7', '#64748b'], 
+                        borderWidth: 1,
+                        borderColor: '#ffffff',
+                        hoverOffset: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: commonPlugins.tooltip
+                    }
+                }
+            });
+
+            // 4. Cash Flow Trend (Bar Chart)
+            const ctxCash = document.getElementById('cashFlowChart').getContext('2d');
+            new Chart(ctxCash, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.CashFlowLabels)),
+                    datasets: [
+                        {
+                            label: 'مقبوضات',
+                            data: @Html.Raw(Json.Serialize(Model.CashInflows)),
+                            backgroundColor: '#059669', 
+                            borderWidth: 0
+                        },
+                        {
+                            label: 'مدفوعات',
+                            data: @Html.Raw(Json.Serialize(Model.CashOutflows)),
+                            backgroundColor: '#e11d48',
+                            borderWidth: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: commonPlugins,
+                    scales: commonScales,
+                    interaction: { mode: 'index', intersect: false },
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }
+            });
+        });
+    </script>
+}

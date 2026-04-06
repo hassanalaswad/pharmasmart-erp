@@ -1,0 +1,137 @@
+@model IEnumerable<PharmaSmartWeb.Models.Journaldetails>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "تقرير حركة السيولة اليومية";
+    ViewData["Subtitle"] = "Daily Cash Flow Report";
+    var account = ViewBag.SelectedAccount as PharmaSmartWeb.Models.Accounts;
+
+    // ===== Info Grid Values (will show in _ReportLayout info-grid) =====
+    ViewBag.ReportNumber = "DCF-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+    ViewBag.ReportPeriod = ViewBag.TargetDate ?? "-";
+    ViewBag.ReportAccountInfo = account != null
+        ? $"{account.AccountCode} - {account.AccountName}"
+        : "لم يتم تحديد الحساب بعد";
+
+    decimal openingBalance = ViewBag.OpeningBalance ?? 0m;
+    decimal runningBalance = openingBalance;
+}
+
+@* ===== FILTER BAR — Renders OUTSIDE the .page div (no print) ===== *@
+@section Filter {
+    <div class="report-filter-bar">
+        <form method="get" style="display:contents;">
+            <div style="flex:2; min-width:220px;">
+                <label class="rf-label">اختيار الصندوق / البنك</label>
+                <select name="accountId" required>
+                    <option value="">-- حدد الحساب --</option>
+                    @foreach (var acc in ViewBag.CashAccounts)
+                    {
+                        if (account?.AccountId == acc.AccountId)
+                        {
+                            <option value="@acc.AccountId" selected="selected">@acc.AccountCode - @acc.AccountName</option>
+                        }
+                        else
+                        {
+                            <option value="@acc.AccountId">@acc.AccountCode - @acc.AccountName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div style="flex:1; min-width:160px;">
+                <label class="rf-label">تاريخ الحركة</label>
+                <input type="date" name="date" value="@ViewBag.TargetDate" dir="ltr">
+            </div>
+            <button type="submit" class="rf-btn-submit">استخراج الكشف</button>
+            <button type="button" onclick="window.print()" class="rf-btn-print">🖨 طباعة</button>
+        </form>
+    </div>
+}
+
+@* ===== REPORT BODY (renders inside .page in _ReportLayout) ===== *@
+@if (account != null)
+{
+    <!-- Account Summary Bar -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; margin-bottom:14px;">
+        <div style="border:1px solid #e2e8f0; padding:10px 12px; background:#f8fafc; border-right:3px solid #64748b;">
+            <div style="font-size:10px; color:#64748b; font-weight:bold; margin-bottom:3px; text-transform:uppercase;">الرصيد الافتتاحي</div>
+            <div style="font-size:15px; font-weight:800; font-family:monospace;">@openingBalance.ToString("N2")</div>
+        </div>
+        <div style="border:1px solid #a7f3d0; padding:10px 12px; background:#ecfdf5; border-right:3px solid #059669;">
+            <div style="font-size:10px; color:#059669; font-weight:bold; margin-bottom:3px; text-transform:uppercase;">إجمالي الوارد (+)</div>
+            <div style="font-size:15px; font-weight:800; font-family:monospace; color:#059669;">@ViewBag.TotalDebit?.ToString("N2")</div>
+        </div>
+        <div style="border:1px solid #fecdd3; padding:10px 12px; background:#fff1f2; border-right:3px solid #e11d48;">
+            <div style="font-size:10px; color:#e11d48; font-weight:bold; margin-bottom:3px; text-transform:uppercase;">إجمالي الصادر (-)</div>
+            <div style="font-size:15px; font-weight:800; font-family:monospace; color:#e11d48;">@ViewBag.TotalCredit?.ToString("N2")</div>
+        </div>
+        <div style="border:1px solid #063955; padding:10px 12px; background:#063955; border-right:3px solid #0a4f72;">
+            <div style="font-size:10px; color:#94a3b8; font-weight:bold; margin-bottom:3px; text-transform:uppercase;">الرصيد الختامي</div>
+            <div style="font-size:15px; font-weight:800; font-family:monospace; color:white;">@ViewBag.ClosingBalance?.ToString("N2")</div>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="width:110px;">الوقت</th>
+                <th style="width:100px; text-align:center;">رقم القيد</th>
+                <th>البيان / الوصف</th>
+                <th style="width:130px; background:#ecfdf5; color:#065f46; text-align:left;">وارد / مدين</th>
+                <th style="width:130px; background:#fef2f2; color:#991b1b; text-align:left;">صادر / دائن</th>
+                <th style="width:140px; text-align:left;">الرصيد اللحظي</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background:#f0f9ff;">
+                <td colspan="5" style="font-size:11px; color:#64748b; font-style:italic; text-align:right; padding:8px 12px;">
+                    الرصيد الافتتاحي المدور من الفترة السابقة
+                </td>
+                <td style="font-family:monospace; font-weight:bold; color:#0284c7; text-align:left; padding:8px 12px; background:#e0f2fe;">
+                    @openingBalance.ToString("N2")
+                </td>
+            </tr>
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="6" style="text-align:center; padding:40px; color:#94a3b8; font-style:italic;">
+                        لا توجد حركات مسجلة في هذا التاريخ.
+                    </td>
+                </tr>
+            }
+            @foreach (var item in Model)
+            {
+                runningBalance += (item.Debit - item.Credit);
+                <tr>
+                    <td style="font-family:monospace; font-size:11px; color:#64748b;" dir="ltr">@item.Journal.JournalDate.ToString("HH:mm:ss")</td>
+                    <td style="text-align:center; font-family:monospace; color:#0284c7; font-weight:bold;">#@item.JournalId</td>
+                    <td style="font-size:12px;">@item.Journal.Description</td>
+                    <td style="text-align:left; font-family:monospace; font-weight:bold; color:@(item.Debit > 0 ? "#059669" : "#94a3b8");">
+                        @(item.Debit > 0 ? item.Debit.ToString("N2") : "-")
+                    </td>
+                    <td style="text-align:left; font-family:monospace; font-weight:bold; color:@(item.Credit > 0 ? "#e11d48" : "#94a3b8");">
+                        @(item.Credit > 0 ? item.Credit.ToString("N2") : "-")
+                    </td>
+                    <td style="font-family:monospace; font-weight:bold; color:@(runningBalance >= 0 ? "#063955" : "#e11d48"); background:#f8fafc; text-align:left;">
+                        @runningBalance.ToString("N2")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @section Summary {
+        <div><span>الرصيد الافتتاحي:</span><span>@openingBalance.ToString("N2")</span></div>
+        <div><span style="color:#059669;">إجمالي الوارد (+):</span><span style="color:#059669; font-weight:bold;">@ViewBag.TotalDebit?.ToString("N2")</span></div>
+        <div><span style="color:#e11d48;">إجمالي الصادر (-):</span><span style="color:#e11d48; font-weight:bold;">@ViewBag.TotalCredit?.ToString("N2")</span></div>
+        <div><span style="font-size:15px; color:#063955;">الرصيد الختامي:</span><span style="font-size:15px;">@ViewBag.ClosingBalance?.ToString("N2")</span></div>
+    }
+}
+else
+{
+    <div style="text-align:center; padding:60px 20px; color:#94a3b8; background:#f8fafc; border:1px dashed #cbd5e1;">
+        <div style="font-size:36px; margin-bottom:12px;">🔍</div>
+        <p style="font-size:14px; font-weight:bold; margin:0;">يرجى تحديد الصندوق والتاريخ من شريط الفلتر أعلاه واضغط "استخراج الكشف"</p>
+    </div>
+}

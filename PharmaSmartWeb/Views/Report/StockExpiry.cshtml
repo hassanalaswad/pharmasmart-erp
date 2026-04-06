@@ -1,0 +1,113 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@model IEnumerable<PharmaSmartWeb.Models.StockExpiryViewModel>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "تقرير رقابة تواريخ الصلاحية";
+    ViewData["Subtitle"] = "STOCK EXPIRY CONTROL REPORT";
+    var today = DateTime.Today;
+    var totalExpired = ViewBag.TotalExpired ?? 0;
+    var totalNear = ViewBag.TotalNear ?? 0;
+    var totalSafe = ViewBag.TotalSafe ?? 0;
+}
+
+@section Styles {
+    <style>
+        .badge-expired { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; }
+        .badge-near { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; }
+        .badge-safe { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; }
+        
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kpi-card { border: 1px solid #e2e8f0; padding: 12px; text-align: center; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        .alert-box { margin-top: 20px; padding: 14px; background: #fef2f2; border: 1px solid #fecdd3; border-right: 4px solid #e11d48; font-size: 13px; font-weight: bold; color: #991b1b; border-radius: 4px; }
+        
+        .filter-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 4px; }
+        .tab-link { padding: 8px 20px; font-size: 12px; font-weight: bold; text-decoration: none; color: #64748b; border-radius: 3px; }
+        .tab-active { background: white; color: #063955; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    </style>
+}
+
+@section Filter {
+    <div class="report-filter-bar no-print" style="justify-content: flex-start; align-items: center;">
+        <span class="rf-label" style="font-size:12px; margin:0 10px;">فلترة الصلاحية:</span>
+        <div class="filter-tabs">
+            <a href="?filter=all" class="tab-link @(ViewBag.CurrentFilter == "all" || string.IsNullOrEmpty((string)ViewBag.CurrentFilter) ? "tab-active" : "")">الكل</a>
+            <a href="?filter=expired" class="tab-link @(ViewBag.CurrentFilter == "expired" ? "tab-active" : "")">المنتهية</a>
+            <a href="?filter=near" class="tab-link @(ViewBag.CurrentFilter == "near" ? "tab-active" : "")">قريبة الانتهاء</a>
+        </div>
+    </div>
+}
+
+@section Summary {
+    <div><span>إجمالي الأصناف:</span><span style="font-weight:bold;">@Model.Count() صنف</span></div>
+    <div><span style="color:#e11d48;">منتهية الصلاحية:</span><span style="color:#e11d48; font-weight:bold;">@totalExpired صنف</span></div>
+    <div><span style="color:#d97706;">قريبة الانتهاء:</span><span style="color:#d97706; font-weight:bold;">@totalNear صنف</span></div>
+    <div><span style="color:#059669;">مخزون آمن:</span><span style="color:#059669; font-weight:bold;">@totalSafe صنف</span></div>
+}
+
+<!-- KPI Row -->
+<div class="kpi-row">
+    <div class="kpi-card" style="border-top:3px solid #e11d48;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">أصناف منتهية</div>
+        <div style="font-size:26px; font-weight:900; color:#e11d48;">@totalExpired</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #d97706;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">قريبة الانتهاء</div>
+        <div style="font-size:26px; font-weight:900; color:#d97706;">@totalNear</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #059669;">
+        <div style="font-size:11px; color:#64748b; font-weight:bold;">المخزون الآمن</div>
+        <div style="font-size:26px; font-weight:900; color:#059669;">@totalSafe</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #063955; background:#063955;">
+        <div style="font-size:11px; color:#94a3b8; font-weight:bold;">الأصناف الخطرة</div>
+        <div style="font-size:26px; font-weight:900; color:white;">@(totalExpired + totalNear)</div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width:40px; text-align:center;">#</th>
+            <th style="text-align:right;">اسم الصنف</th>
+            <th style="text-align:center;">الباركود</th>
+            <th style="text-align:center;">رقم التشغيلة</th>
+            <th style="text-align:center;">الكمية</th>
+            <th style="text-align:center;">تاريخ الانتهاء</th>
+            <th style="text-align:center;">مؤشر الخطر</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{int rowIdx = 1;}
+        @foreach (var item in Model)
+        {
+            var daysLeft = (item.ExpiryDate - today).Days;
+            var isExpired = daysLeft <= 0;
+            var isNear = daysLeft > 0 && daysLeft <= 90;
+            <tr>
+                <td style="text-align:center;">@rowIdx</td>
+                <td style="text-align:right; font-weight:bold; color:#1e293b;">@item.ItemName</td>
+                <td style="text-align:center; font-family:monospace; font-size:11px;">@item.Barcode</td>
+                <td style="text-align:center; font-family:monospace; font-size:11px;">@(item.BatchNumber ?? "---")</td>
+                <td style="text-align:center; font-weight:bold;">@item.Quantity <small style="color:#94a3b8;">@item.UnitName</small></td>
+                <td style="text-align:center; font-weight:bold; color:@(isExpired ? "#e11d48" : isNear ? "#d97706" : "#059669");">@item.ExpiryDate.ToString("yyyy/MM/dd")</td>
+                <td style="text-align:center;">
+                    @if (isExpired) { <span class="badge-expired">منتهي</span> }
+                    else if (isNear) { <span class="badge-near">@daysLeft يوم</span> }
+                    else { <span class="badge-safe">آمن</span> }
+                </td>
+            </tr>
+            rowIdx++;
+        }
+    </tbody>
+</table>
+
+<!-- Alert -->
+@if (totalExpired > 0 || totalNear > 0)
+{
+    <div class="alert-box">
+        ⚠ تنبيه: تم رصد @totalExpired صنف منتهي الصلاحية و @totalNear صنف وشيك الانتهاء. يرجى اتخاذ إجراء فوري، وإتلاف المنتهية لمنع بيعها.
+    </div>
+}

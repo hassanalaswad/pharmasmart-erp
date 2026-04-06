@@ -1,0 +1,68 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@model IEnumerable<PharmaSmartWeb.Models.PharmacistSalesViewModel>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "تقرير أداء وعمولات الصيادلة";
+    ViewData["Subtitle"] = "PHARMACIST SALES PERFORMANCE REPORT";
+    
+    // Default info for _ReportLayout summary box
+    ViewBag.ReportNumber = "PHS-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+    ViewBag.ReportPeriod = $"{ViewBag.FromDate} إلى {ViewBag.ToDate}";
+    ViewBag.ReportNotes = "تقرير إنتاجية وعمولات الصيادلة والمستخدمين بناءً على المبيعات المعتمدة.";
+}
+
+@section Filter {
+    <div class="report-filter-bar no-print" style="justify-content: flex-start;">
+        <form method="get" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; width:100%;">
+            <div style="flex:1; min-width:120px;">
+                <label class="rf-label">من تاريخ</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="rf-input" dir="ltr">
+            </div>
+            <div style="flex:1; min-width:120px;">
+                <label class="rf-label">إلى تاريخ</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="rf-input" dir="ltr">
+            </div>
+            <div style="width:90px;">
+                <label class="rf-label" style="color:#059669;">نسبة العمولة %</label>
+                <input type="number" step="0.1" name="commissionRate" value="@ViewBag.CommissionRate" style="background:#ecfdf5; border-color:#a7f3d0; color:#059669; text-align:center;">
+            </div>
+            <button type="submit" class="rf-btn-submit">تحديث البيانات</button>
+        </form>
+    </div>
+}
+
+@section Summary {
+    <div><span>إجمالي المبيعات:</span><span style="font-weight:bold;">@ViewBag.GrandTotalSales?.ToString("N2")</span></div>
+    <div><span>إجمالي العمولات:</span><span style="font-weight:bold; color:#059669;">@ViewBag.TotalCommissions?.ToString("N2")</span></div>
+    <div><span>عدد الصيادلة:</span><span style="font-weight:bold;">@Model.Count()</span></div>
+}
+
+<!-- Data Table -->
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width:40px;">#</th>
+            <th style="width:200px; text-align:right;">الصيدلي / المستخدم</th>
+            <th>عدد الفواتير</th>
+            <th>إجمالي المبيعات</th>
+            <th>المساهمة %</th>
+            <th>العمولة المستحقة</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{int rowNum = 1;}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@rowNum</td>
+                <td style="text-align:right; font-weight:bold; color:#063955;">@item.Username</td>
+                <td style="font-family:monospace; font-weight:bold;">@item.InvoiceCount</td>
+                <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.TotalSales.ToString("N2")</td>
+                <td style="color:#059669; font-weight:bold;">@item.SalesPercentage.ToString("N1")%</td>
+                <td style="font-family:monospace; font-weight:bold; color:#059669; background:#ecfdf5;">@item.CommissionAmount.ToString("N2")</td>
+            </tr>
+            rowNum++;
+        }
+    </tbody>
+</table>

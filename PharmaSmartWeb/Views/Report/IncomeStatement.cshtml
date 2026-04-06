@@ -1,0 +1,116 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@using PharmaSmartWeb.Models
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "قائمة الدخل الاحترافية";
+    ViewData["Subtitle"] = "PROFESSIONAL INCOME STATEMENT";
+    decimal sales = ViewBag.Sales ?? 0m;
+    decimal cogs = ViewBag.COGS ?? 0m;
+    decimal grossProfit = ViewBag.GrossProfit ?? 0m;
+    decimal totalOpExp = ViewBag.TotalOpExpenses ?? 0m;
+    decimal netIncome = ViewBag.NetIncome ?? 0m;
+    var expenses = ViewBag.OperatingExpenses as List<PnlAccountViewModel> ?? new List<PnlAccountViewModel>();
+    decimal grossMargin = ViewBag.GrossMargin != null ? (decimal)ViewBag.GrossMargin : 0m;
+    decimal netMargin = ViewBag.NetMargin != null ? (decimal)ViewBag.NetMargin : 0m;
+    
+    // Default info for _ReportLayout summary box
+    ViewBag.ReportNumber = "INC-" + DateTime.Now.ToString("yyyyMMdd-HHmm");
+    ViewBag.ReportPeriod = $"{ViewBag.FromDate} إلى {ViewBag.ToDate}";
+    ViewBag.ReportNotes = (netIncome >= 0 ? "يتمتع المركز بمعدل دخل إيجابي." : "يوجد عجز/خسارة في قائمة الدخل لهذه الفترة.");
+}
+
+@section Styles {
+    <style>
+        .rpt-section-hdr { background: #063955; color: white; padding: 8px 12px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; border-right: 4px solid #34d399; }
+        .rpt-row { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+        .rpt-row-total { display: flex; justify-content: space-between; padding: 10px 12px; font-weight: bold; font-size: 13px; background: #f8fafc; border-top: 2px solid #e2e8f0; }
+        .rpt-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .rpt-kpi-card { border: 1px solid #e2e8f0; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .rpt-net-box { margin-top: 20px; padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 2px solid; border-radius: 4px; }
+    </style>
+}
+
+@section Filter {
+    <div class="report-filter-bar no-print" style="justify-content: flex-start;">
+        <form method="get" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; width: 100%;">
+            <div style="flex:1; min-width:140px;">
+                <label class="rf-label">من تاريخ</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-input">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label class="rf-label">إلى تاريخ</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-input">
+            </div>
+            <button type="submit" class="rf-btn-submit">تحديث البيانات</button>
+        </form>
+    </div>
+}
+
+@section Summary {
+    <div><span>إجمالي المبيعات:</span><span style="font-weight:bold;">@sales.ToString("N2")</span></div>
+    <div><span>تكلفة المبيعات:</span><span style="color:#e11d48; font-weight:bold;">(@cogs.ToString("N2"))</span></div>
+    <div><span>إجمالي المصاريف:</span><span style="color:#e11d48; font-weight:bold;">(@totalOpExp.ToString("N2"))</span></div>
+    <div><span style="color:@(netIncome >= 0 ? "#059669" : "#e11d48");">النتيجة (صافي الدخل):</span><span style="color:@(netIncome >= 0 ? "#059669" : "#e11d48"); font-weight:bold;">@netIncome.ToString("N2")</span></div>
+}
+
+<!-- KPI Cards -->
+<div class="rpt-kpi-row">
+    <div class="rpt-kpi-card">
+        <span style="font-weight:bold; color:#063955;">هامش الربح الإجمالي</span>
+        <span style="font-size:22px; font-weight:900; color:#059669;" dir="ltr">@grossMargin.ToString("N1")%</span>
+    </div>
+    <div class="rpt-kpi-card">
+        <span style="font-weight:bold; color:#063955;">صافي هامش الربح</span>
+        <span style="font-size:22px; font-weight:900; color:#0284c7;" dir="ltr">@netMargin.ToString("N1")%</span>
+    </div>
+</div>
+
+<!-- Section 1: Revenue & COGS -->
+<div class="rpt-section-hdr" style="margin-top: 20px;">
+    <span>الإيرادات وتكلفة المبيعات</span>
+    <span style="font-size:11px; color:#94a3b8;">Revenue &amp; COGS</span>
+</div>
+<div class="rpt-row">
+    <span>إجمالي المبيعات (Revenue)</span>
+    <span style="font-weight:bold;">@sales.ToString("N2") @Settings.Currency</span>
+</div>
+<div class="rpt-row" style="color:#e11d48;">
+    <span>(-) يطرح: تكلفة البضاعة المباعة (COGS)</span>
+    <span style="font-weight:bold;">(@cogs.ToString("N2")) @Settings.Currency</span>
+</div>
+<div class="rpt-row-total" style="background:#063955; color:white;">
+    <span>مجمل الربح (Gross Profit)</span>
+    <span>@grossProfit.ToString("N2") @Settings.Currency</span>
+</div>
+
+<!-- Section 2: OPEX -->
+<div class="rpt-section-hdr" style="margin-top:20px;">
+    <span>المصاريف التشغيلية (OPEX)</span>
+    <span style="font-size:11px; color:#94a3b8;">Operating Expenses</span>
+</div>
+@foreach (var exp in expenses)
+{
+    <div class="rpt-row">
+        <span>@exp.Name <small style="color:#94a3b8; font-size:10px;">(@exp.Percentage.ToString("N1")%)</small></span>
+        <span style="font-weight:bold; color:#475569;">@exp.Total.ToString("N2") @Settings.Currency</span>
+    </div>
+}
+@if (!expenses.Any())
+{
+    <div class="rpt-row" style="color:#94a3b8; font-style:italic; justify-content:center;">لا توجد مصاريف مسجلة في هذه الفترة.</div>
+}
+<div class="rpt-row-total" style="color:#e11d48;">
+    <span>إجمالي المصاريف التشغيلية</span>
+    <span>(@totalOpExp.ToString("N2")) @Settings.Currency</span>
+</div>
+
+<!-- Net Income -->
+<div class="rpt-net-box" style="border-color:@(netIncome >= 0 ? "#059669" : "#e11d48"); background:@(netIncome >= 0 ? "#ecfdf5" : "#fff1f2");">
+    <div>
+        <div style="font-size:11px; font-weight:bold; color:#64748b; text-transform:uppercase; margin-bottom:4px;">صافي الدخل (Net Income)</div>
+        <div style="font-size:11px; color:#94a3b8;">التصنيف النهائي بعد إجمالي المصاريف</div>
+    </div>
+    <div style="font-size:28px; font-weight:900; color:@(netIncome >= 0 ? "#059669" : "#e11d48"); font-family:monospace;" dir="ltr">
+        @netIncome.ToString("N2") @Settings.Currency
+    </div>
+</div>

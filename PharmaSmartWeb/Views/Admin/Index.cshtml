@@ -1,0 +1,136 @@
+@model PharmaSmartWeb.Models.CompanySettings
+
+@{
+    ViewData["Title"] = "إعدادات المؤسسة العامة";
+    ViewData["PageDescription"] = "إدارة البيانات الأساسية للمؤسسة والشعار المستخدم في التقارير والفواتير.";
+}
+
+<div class="max-w-4xl animate-in fade-in duration-500 relative">
+    
+    @if (TempData["Success"] != null)
+    {
+        <div class="mb-6 p-4 rounded-sm bg-emerald-50 border border-emerald-200 border-r-4 border-r-emerald-500 shadow-sm flex items-center gap-3">
+            <span class="material-symbols-outlined text-emerald-600">check_circle</span>
+            <div class="text-sm font-bold text-emerald-800">
+                @TempData["Success"]
+            </div>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="mb-6 p-4 rounded-sm bg-rose-50 border border-rose-200 border-r-4 border-r-rose-500 shadow-sm flex items-center gap-3">
+            <span class="material-symbols-outlined text-rose-600">error</span>
+            <div class="text-sm font-bold text-rose-800">
+                @TempData["Error"]
+            </div>
+        </div>
+    }
+
+    <form asp-action="Index" method="post" enctype="multipart/form-data" class="bg-white rounded-[2px] shadow-sm border border-slate-200 overflow-hidden relative">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="CompanyLogoPath" />
+
+        <div class="p-6 md:p-8">
+            <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined">domain</span>
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-primary tracking-tight">الهوية المؤسسية</h2>
+                    <p class="text-[11px] text-slate-500 font-bold mt-1">المعلومات التي ستظهر على رأس الفواتير والسندات الناتجة من النظام</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Company Name -->
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                            الاسم التجاري للمؤسسة <span class="text-rose-500">*</span>
+                        </label>
+                        <input asp-for="CompanyName" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3.5 px-4 font-bold text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-lg" placeholder="مثال: صيدليات الحياة الذكية" />
+                        <span asp-validation-for="CompanyName" class="text-xs text-rose-500 font-bold"></span>
+                    </div>
+
+                    <div class="p-4 bg-blue-50/50 border border-blue-100 rounded-sm">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-blue-500 text-lg mt-0.5">info</span>
+                            <div class="text-[11px] text-slate-600 font-bold leading-relaxed space-y-1">
+                                <p>يتم استخدام الحقول أعلاه لتكوين الهوية المؤسسية.</p>
+                                <p class="text-blue-600">أما بالنسبة للرقم الضريبي وتفاصيل العنوان؛ فيتم سحبها تلقائياً لكل فرع بشكل مستقل من إعدادات الفروع لدعم مرونة الإقرارات وتعدد الفروع.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Company Logo -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                        الشعار التجاري (Logo)
+                    </label>
+                    <div class="relative group mt-2 border-2 border-dashed border-slate-300 bg-slate-50 rounded-sm hover:bg-slate-100 hover:border-amber-400 transition-all text-center">
+                        <label for="logoUpload" class="cursor-pointer block w-full p-8 relative z-10 min-h-[220px] flex flex-col items-center justify-center">
+                            @if (!string.IsNullOrEmpty(Model.CompanyLogoPath))
+                            {
+                                <div id="logoPreviewWrapper" class="absolute inset-0 p-4 flex items-center justify-center">
+                                    <img id="logoPreview" src="~/images/company/@Model.CompanyLogoPath" alt="شعار المؤسسة" class="max-h-full max-w-full object-contain" />
+                                </div>
+                                <div class="absolute inset-0 bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-amber-500 text-3xl">cloud_upload</span>
+                                    <span class="text-sm font-bold text-slate-700">تغيير الشعار الحالي</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="material-symbols-outlined text-slate-300 text-5xl mb-3">image</span>
+                                <span class="text-sm font-bold text-slate-600">انقر لرفع الشعار</span>
+                                <span class="text-[10px] text-slate-400 mt-2 font-medium">صيغ مدعومة: JPG, PNG, SVG</span>
+                            }
+                        </label>
+                        <input type="file" id="logoUpload" name="logoFile" accept="image/png, image/jpeg, image/svg+xml" class="hidden" onchange="previewLogo(event)" />
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="px-8 py-5 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <button type="submit" class="bg-amber-500 text-white px-8 py-3 rounded-sm font-black shadow-sm border border-slate-200 shadow-amber-500/30 hover:bg-amber-600 transition-all flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">save_as</span>
+                حفظ بيانات المؤسسة
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        function previewLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    let wrapper = document.getElementById('logoPreviewWrapper');
+                    if (!wrapper) {
+                        const label = document.querySelector('label[for="logoUpload"]');
+                        label.innerHTML = `
+                            <div id="logoPreviewWrapper" class="absolute inset-0 p-4 flex items-center justify-center">
+                                <img id="logoPreview" src="${e.target.result}" class="max-h-full max-w-full object-contain" />
+                            </div>
+                            <div class="absolute inset-0 bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-amber-500 text-3xl">cloud_upload</span>
+                                <span class="text-sm font-bold text-slate-700">تغيير الشعار المتطابق</span>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('logoPreview').src = e.target.result;
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+    </script>
+}

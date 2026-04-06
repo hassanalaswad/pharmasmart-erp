@@ -1,0 +1,190 @@
+@{
+    ViewData["Title"] = "إغلاق وردية الكاشير";
+    ViewData["PageDescription"] = "إحصائية المبيعات، ومطابقة الرصيد الفعلي في الصندوق";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .kpi-box { padding: 16px; border-right: 4px solid #063955; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .kpi-value { font-size: 24px; font-weight: 800; color: #063955; }
+    .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 24px; border-radius: 2px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; width: 100%; transition: 0.2s; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 10px 24px; border-radius: 2px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; width: 100%; transition: 0.2s; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; }
+    .input-field { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 2px; font-size: 24px; font-weight: 800; text-align: center; color: #063955; font-family: monospace; outline: none; }
+    .input-field:focus { border-color: #063955; }
+</style>
+
+<div class="flex-1 overflow-y-auto p-6 space-y-4">
+    <!-- Header Area -->
+    <div class="enterprise-panel p-4 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span class="material-symbols-outlined text-[32px] text-[#dc2626]">lock_clock</span>
+            <div>
+                <h1 class="page-title">إغلاق الوردية وإنهاء العمل</h1>
+                <p class="page-sub">ملخص مبيعاتك لليوم الحالي ومطابقة عهدة الصندوق.</p>
+            </div>
+        </div>
+        <a href="/Sales/Index" class="btn-secondary" style="width: auto;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+            العودة للسجل
+        </a>
+    </div>
+
+    @if(TempData["Error"] != null)
+    {
+        <div class="enterprise-panel p-4 mb-4 flex items-center gap-3" style="border-right-color: #dc2626; border-right-width: 4px; background: #fef2f2;">
+            <span class="material-symbols-outlined text-[#dc2626]">error</span>
+            <span class="font-bold text-[13px] text-[#991b1b]">@TempData["Error"]</span>
+        </div>
+    }
+
+    <!-- Shift Financial Summary -->
+    <div class="enterprise-panel p-6 mb-4">
+        <h2 class="text-[14px] font-bold text-[#063955] mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+            الملخص المالي لمبيعات اليوم
+        </h2>
+
+        <!-- Dashboard Stats Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="kpi-box" style="border-right-color: #94a3b8;">
+                <p class="kpi-title">إجمالي المبيعات</p>
+                <p class="kpi-value text-[#334155]">@((ViewBag.TotalSales ?? 0m).ToString("N2")) <span class="text-[12px] font-normal text-[#64748b]">@Settings.Currency</span></p>
+            </div>
+            <div class="kpi-box" style="border-right-color: #059669;">
+                <p class="kpi-title">صافي الكاش</p>
+                <p class="kpi-value" style="color: #059669;">@((ViewBag.TotalCash ?? 0m).ToString("N2")) <span class="text-[12px] font-normal text-[#64748b]">@Settings.Currency</span></p>
+            </div>
+            <div class="kpi-box" style="border-right-color: #0284c7;">
+                <p class="kpi-title">المدفوعات الإلكترونية</p>
+                <p class="kpi-value" style="color: #0284c7;">@((ViewBag.TotalBank ?? 0m).ToString("N2")) <span class="text-[12px] font-normal text-[#64748b]">@Settings.Currency</span></p>
+            </div>
+            <div class="kpi-box" style="border-right-color: #dc2626;">
+                <p class="kpi-title">إجمالي المرتجعات</p>
+                <p class="kpi-value" style="color: #dc2626;">@((ViewBag.TotalReturns ?? 0m).ToString("N2")) <span class="text-[12px] font-normal text-[#64748b]">@Settings.Currency</span></p>
+            </div>
+        </div>
+
+        <!-- Expected Cash Highlight -->
+        <div class="p-6 rounded-sm flex flex-col md:flex-row justify-between items-center" style="background: #063955; color: white;">
+            <div class="flex items-center gap-4 mb-4 md:mb-0">
+                <span class="material-symbols-outlined text-[40px] opacity-80" style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 2px;">savings</span>
+                <div>
+                    <h3 class="text-[16px] font-bold">المبلغ النظري الصافي</h3>
+                    <p class="text-[12px]" style="color: #cbd5e1;">الدخل الكاش مطروحاً منه المرتجعات. (المبلغ الواجب توافره في الصندوق)</p>
+                </div>
+            </div>
+            <div class="text-center md:text-left" style="background: rgba(255,255,255,0.1); padding: 16px 32px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2);">
+                <p class="text-[32px] font-extrabold font-mono" id="expectedCashText">@((ViewBag.NetCash ?? 0m).ToString("N2"))</p>
+                <p class="text-[11px] font-bold uppercase tracking-widest mt-1" style="color: #94a3b8;">@Settings.Currency</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Cash and Submit Form -->
+    <div class="enterprise-panel p-6" style="border-top: 4px solid #dc2626;">
+        <h2 class="text-[16px] font-bold text-[#1e293b] mb-2">مطابقة الصندوق وإنهاء العمل</h2>
+        <p class="text-[13px] text-[#64748b] mb-6">الرجاء عدّ النقود الفعلية في الصندوق وإدخال المجموع أدناه لاحتساب العجز أو الزيادة.</p>
+
+        <form action="/Sales/ConfirmCloseShift" method="post" id="closeShiftForm" class="max-w-xl space-y-6">
+            @Html.AntiForgeryToken()
+            <div>
+                <label class="block text-[12px] font-bold text-[#475569] uppercase tracking-wider mb-2">النقد الفعلي بالدرج (Actual Cash) - @Settings.Currency</label>
+                <input type="number" step="0.01" min="0" name="actualCash" id="actualCash" required class="input-field" placeholder="0.00" oninput="calculateVariance()" />
+            </div>
+
+            <!-- Validation/Variance Result Box -->
+            <div id="varianceContainer" class="hidden p-4 rounded-sm text-center border" style="font-size: 14px; font-weight: 700;">
+                <span id="varianceText"></span>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-4 mt-6" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" onclick="confirmShiftClose()" class="btn-danger" style="flex: 2;">
+                    <span class="material-symbols-outlined">thumb_up_alt</span>
+                    اعتماد الإغلاق وتسليم العهدة
+                </button>
+                <a href="/Home/SalesHub" class="btn-secondary" style="flex: 1;">
+                    تراجع / إلغاء
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="~/lib/sweetalert2.js"></script>
+<script>
+    var expectedCashStr = '@(ViewBag.NetCash ?? 0)'.replace(/,/g, '');
+    var expectedCash = parseFloat(expectedCashStr) || 0;
+    
+    function calculateVariance() {
+        let input = document.getElementById("actualCash").value;
+        let container = document.getElementById("varianceContainer");
+        let textNode = document.getElementById("varianceText");
+
+        if (!input) {
+            container.classList.add("hidden");
+            return;
+        }
+
+        let actual = parseFloat(input);
+        let variance = actual - expectedCash;
+        let diffText = Math.abs(variance).toLocaleString(undefined, {minimumFractionDigits: 2});
+        
+        container.classList.remove("hidden");
+        container.style.backgroundColor = "";
+        container.style.color = "";
+        container.style.borderColor = "";
+
+        if (Math.abs(variance) < 0.01) {
+            container.style.backgroundColor = "#ecfdf5";
+            container.style.color = "#047857";
+            container.style.borderColor = "#a7f3d0";
+            textNode.innerHTML = "<div style='display:flex; align-items:center; justify-content:center; gap:8px;'><span class='material-symbols-outlined text-[20px]'>check_circle</span> الصندوق مطابق تماماً (لا يوجد عجز أو زيادة)</div>";
+        } else if (variance < 0) {
+            container.style.backgroundColor = "#fef2f2";
+            container.style.color = "#b91c1c";
+            container.style.borderColor = "#fecaca";
+            textNode.innerHTML = `<div style='display:flex; align-items:center; justify-content:center; gap:8px;'><span class='material-symbols-outlined text-[20px]'>warning</span>يوجد عجز في الصندوق بمقدار: ${diffText}</div>`;
+        } else {
+            container.style.backgroundColor = "#fffbeb";
+            container.style.color = "#b45309";
+            container.style.borderColor = "#fde68a";
+            textNode.innerHTML = `<div style='display:flex; align-items:center; justify-content:center; gap:8px;'><span class='material-symbols-outlined text-[20px]'>info</span>توجد زيادة بالصندوق بمقدار: ${diffText}</div>`;
+        }
+    }
+
+    function confirmShiftClose() {
+        let input = document.getElementById("actualCash").value;
+        if (!input) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'تنبيه',
+                text: 'الرجاء إدخال النقد الفعلي قبل الإغلاق.',
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#063955'
+            });
+            return;
+        }
+        
+        Swal.fire({
+            title: 'تأكيد الإغلاق',
+            text: "هل أنت متأكد من رغبتك في إغلاق الوردية واعتماد هذه الأرصدة كنهائية؟",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'نعم، إغلاق الوردية',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById("closeShiftForm").submit();
+            }
+        });
+    }
+</script>

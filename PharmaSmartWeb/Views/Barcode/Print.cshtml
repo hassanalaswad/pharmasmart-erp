@@ -1,0 +1,330 @@
+@model IEnumerable<PharmaSmartWeb.Models.BarcodeGenerator>
+
+@{
+    Layout = null; // نلغي التخطيط الرئيسي لكي لا تظهر القوائم في الطباعة
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>طباعة الملصقات الحرارية</title>
+    
+    <!-- Google Fonts & Material Symbols -->
+    
+    
+    
+    <!-- JsBarcode -->
+    <script src="~/lib/JsBarcode.all.min.js"></script>
+    
+    <style>
+        /* 🚀 إعدادات الورق لطابعة الباركود الحرارية (Standard Pharmacy Size: 50mm x 25mm) */
+        @@page {
+            size: 50mm 25mm;
+            margin: 0;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Manrope', sans-serif;
+            background-color: #f7f9fb; /* خلفية رمادية للمعاينة على الشاشة */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* تنسيق الملصق الواحد المطابق لـ Cura Insight */
+        .thermal-label {
+            width: 48mm;
+            height: 23mm;
+            background-color: white;
+            margin: 2mm auto; /* هامش للمعاينة */
+            padding: 1.5mm 1mm;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            border-radius: 2px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            page-break-after: always; /* 🚀 إجبار الطابعة على قص الورقة بعد كل ملصق */
+        }
+
+        /* إخفاء الهوامش الخلفية عند الطباعة الفعلية */
+        @@media print {
+            body { background-color: white !important; display: block; }
+            .thermal-label { 
+                margin: 0 !important; 
+                box-shadow: none !important; 
+                width: 50mm !important; 
+                height: 25mm !important; 
+                padding: 1mm !important; 
+                border: none !important; 
+            }
+            .no-print { display: none !important; }
+            .preview-container { 
+                padding: 0 !important; 
+                background: white !important; 
+                display: block !important; 
+            }
+        }
+
+        /* تفاصيل الدواء داخل الملصق */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            line-height: 1;
+        }
+
+        .drug-name {
+            font-size: 8pt;
+            font-weight: 800; /* Extrabold */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 32mm;
+            color: #000;
+        }
+
+        .price {
+            font-size: 7pt;
+            font-weight: 800;
+            color: #000;
+        }
+
+        /* مساحة صورة الباركود */
+        .barcode-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0.5mm 0;
+        }
+
+        .barcode-container svg {
+            width: 100%;
+            height: 9mm; /* الارتفاع المثالي للباركود في الملصق الصغير */
+        }
+
+        /* تفاصيل الباتش أسفل الملصق */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 5pt;
+            color: #333;
+            line-height: 1;
+        }
+
+        .footer-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5mm;
+        }
+        
+        .footer-details span {
+            font-weight: 500;
+        }
+        
+        .footer-details span b {
+            font-weight: 800;
+        }
+
+        .brand-mark {
+            font-weight: 900;
+            font-style: italic;
+            font-size: 4pt;
+        }
+
+        /* لوحة التحكم المعاصرة */
+        .top-control-panel {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 16px 32px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-sizing: border-box;
+            border-bottom: 1px solid #e0e3e5;
+        }
+
+        .control-panel-title {
+            color: #00314e;
+            font-weight: 800;
+            font-size: 18px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-panel-subtitle {
+            font-size: 12px;
+            color: #72787f;
+            margin: 4px 0 0 0;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #00314e 0%, #004870 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 49, 78, 0.2);
+            transition: all 0.2s;
+        }
+        .btn-print:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-print:active { transform: translateY(1px); }
+
+        .btn-back {
+            background: transparent;
+            color: #41474e;
+            border: 1px solid #c1c7cf;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-back:hover { background: #f2f4f6; }
+
+        .preview-container {
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50mm, 1fr));
+            gap: 16px;
+            max-width: 1200px;
+            width: 100%;
+            justify-items: center;
+        }
+    </style>
+    <link rel="stylesheet" href="~/css/local-fonts.css" />
+</head>
+<body>
+
+    <!-- لوحة التحكم قبل الطباعة -->
+    <header class="top-control-panel no-print">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <button onclick="window.history.back()" class="btn-back">العودة</button>
+            <div style="width: 1px; height: 24px; background: #c1c7cf;"></div>
+            <div>
+                <h1 class="control-panel-title">
+                    <span class="material-symbols-outlined">preview</span>
+                    معاينة الملصقات الحرارية
+                </h1>
+                <p class="control-panel-subtitle">قياس الورق: 50mm × 25mm | إجمالي: @Model.Sum(x => x.QuantityToPrint) ملصق</p>
+            </div>
+        </div>
+        <button onclick="triggerPrint()" class="btn-print">
+            <span class="material-symbols-outlined">print</span>
+            تأكيد وطباعة
+        </button>
+    </header>
+
+    <div class="preview-container">
+        <!-- رسالة معاينة -->
+        <div class="no-print" style="margin-bottom: 32px; text-align: center;">
+            <p style="color: #41474e; font-size: 14px;">يرجى التحقق من إعدادات الطابعة لتتناسب مع أبعاد الملصق الحراري قبل الطباعة الفعلية.</p>
+        </div>
+
+        <div class="preview-grid" id="printCanvas">
+            <!-- توليد الملصقات حسب الكمية المحددة لكل دواء -->
+            @{
+                var printedIdsList = new List<int>();
+            }
+            @foreach (var item in Model)
+            {
+                printedIdsList.Add(item.Id);
+
+                for (int i = 0; i < item.QuantityToPrint; i++)
+                {
+                    <div class="thermal-label">
+                        <!-- الترويسة -->
+                        <div class="header">
+                            <span class="drug-name">@item.Drug.DrugName</span>
+                            <span class="price">@item.CurrentPrice.ToString("N2") SAR</span>
+                        </div>
+
+                        <!-- الباركود الخطي -->
+                        <div class="barcode-container">
+                            <svg class="barcode"
+                                 jsbarcode-value="@item.GeneratedCode"
+                                 jsbarcode-format="CODE128"
+                                 jsbarcode-displayvalue="false"
+                                 jsbarcode-margin="0">
+                            </svg>
+                        </div>
+
+                        <!-- التذييل -->
+                        <div class="footer">
+                            <div class="footer-details">
+                                <span>الدفعة: <b>@item.BatchNumber</b></span>
+                                <span>الانتهاء: <b>@item.ExpiryDate.ToString("MM/yy")</b></span>
+                            </div>
+                            <span class="brand-mark">Cura Ins.</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Security Token needed for POST request if anti-forgery is required on controller -->
+    @Html.AntiForgeryToken()
+
+    <!-- السكربت المسؤول عن رسم الباركودات وإعلام السيرفر باكتمال الطباعة -->
+    <script>
+        // 1. رسم جميع الباركودات في الصفحة باستخدام مكتبة JsBarcode
+        JsBarcode(".barcode").init();
+
+        const printedIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(printedIdsList));
+
+        // 2. دالة تشغيل الطباعة وتحديث الحالة في الداتا بيز
+        function triggerPrint() {
+            window.print();
+
+            // إرسال طلب بعد مدة قصيرة مفترضين انتهاء أمر الطباعة
+            setTimeout(() => {
+                fetch('/Barcode/MarkAsPrinted', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(printedIds)
+                }).then(res => {
+                    // بعد تأكيد الطباعة في السيرفر العودة للصفحة
+                    window.location.href = '/Barcode/Index';
+                });
+            }, 1000); // الانتظار ثانية لاستدعاء نافذة الطباعة الخاصة بالمتصفح
+        }
+    </script>
+</body>
+</html>
+

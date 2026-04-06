@@ -1,0 +1,292 @@
+@model PharmaSmartWeb.Models.AdminHubViewModel
+@{
+    ViewData["Title"] = "لوحة تحكم الإدارة والتهيئة";
+    Layout = "_Layout";
+}
+
+<!-- Header -->
+<div class="bg-white border-t-4 border-t-[#063955] border-b border-l border-r border-[#d1d5db] rounded-sm mb-6 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+        <h1 class="text-[18px] font-black text-[#063955] flex items-center gap-2 m-0">
+            <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+            وحدة الإدارة والتهيئة 
+            <span class="bg-[#e11d48] text-white text-[10px] px-2 py-0.5 rounded-sm font-bold tracking-widest uppercase">Super Admin</span>
+        </h1>
+        <p class="text-[12px] text-slate-500 font-bold mt-1">إعدادات النظام، الصلاحيات، الأمان، وسجلات الرقابة</p>
+    </div>
+    <div class="flex items-center gap-4">
+        <!-- زر النسخ الاحتياطي -->
+        <a href="/Admin/Backup" class="hidden md:flex items-center gap-2 bg-[#0284c7] text-white p-2 px-4 rounded-sm hover:bg-[#0369a1] transition-all font-bold text-[12px] shadow-sm">
+            <span class="material-symbols-outlined text-[16px]">cloud_sync</span>
+            النسخ الاحتياطي السريع
+        </a>
+
+        <div class="text-left hidden md:flex items-center gap-2 bg-slate-50 p-2 px-3 rounded-sm border border-slate-200">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#059669] animate-pulse"></span>
+            <div>
+                <p class="text-[10px] font-bold text-slate-500 text-right uppercase tracking-wider mb-0.5">حالة الخادم</p>
+                <p class="text-[12px] font-bold text-[#059669]">متصل بشكل آمن - Uptime 99.9%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="space-y-6 pb-12">
+
+    <!-- 1. System Health & Security KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Active Users -->
+        <div class="bg-white border text-center md:text-right border-[#d1d5db] border-r-4 border-r-[#063955] rounded-sm p-4 relative">
+            <div class="text-[11px] uppercase font-bold text-slate-500 mb-1 tracking-wider">المستخدمون النشطون (الآن)</div>
+            <div class="text-[24px] font-black text-[#063955] mb-2 font-mono">
+                @Model.UsersCount <span class="text-[11px] text-slate-400 font-bold mr-1">حساب</span>
+            </div>
+            <p class="text-[10px] text-slate-500 font-bold mt-auto mb-0">مرخصون بالنظام بشكل عام</p>
+        </div>
+        
+        <!-- Database / Employees -->
+        <div class="bg-white border border-[#d1d5db] border-r-4 border-r-[#059669] rounded-sm p-4 relative text-center md:text-right">
+            <div class="text-[11px] uppercase font-bold text-slate-500 mb-1 tracking-wider">الموظفين المسجلين</div>
+            <div class="text-[24px] font-black text-[#059669] mb-2 font-mono">
+                @Model.EmployeesCount <span class="text-[11px] text-slate-400 font-bold mr-1">موظف</span>
+            </div>
+            <p class="text-[10px] text-slate-500 font-bold mt-auto mb-0">ملفات موظفين مدخلة في النظام</p>
+        </div>
+
+        <!-- Total Branches -->
+        <div class="bg-white border border-[#d1d5db] border-r-4 border-r-[#0284c7] rounded-sm p-4 relative text-center md:text-right">
+            <div class="text-[11px] uppercase font-bold text-slate-500 mb-1 tracking-wider">الفروع النشطة</div>
+            <div class="text-[24px] font-black text-[#0284c7] mb-2 font-mono">
+                @Model.ActiveBranches <span class="text-[11px] text-slate-400 font-bold mr-1">فروع</span>
+            </div>
+            <a href="/Branches/Index" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] text-[#0284c7] font-bold hover:underline mt-auto inline-block relative z-10">إدارة الفروع</a>
+        </div>
+
+        <!-- Security Warnings (Alert) -->
+        <div class="bg-rose-50 border border-rose-200 border-r-4 border-r-[#e11d48] rounded-sm p-4 relative text-center md:text-right">
+            <div class="text-[11px] uppercase font-bold text-[#e11d48] mb-1 tracking-wider">تنبيهات أمان النظام</div>
+            <div class="text-[24px] font-black text-[#e11d48] mb-2 font-mono">
+                @Model.SystemErrorsCount <span class="text-[11px] text-rose-300 font-bold mr-1">تنبيه</span>
+            </div>
+            <a href="/Admin/SystemLogs" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] text-rose-700 font-bold hover:underline mt-auto inline-block relative z-10">مراجعة سجل الرقابة</a>
+        </div>
+    </div>
+
+    <!-- 2. Technical Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: System Load & Activity -->
+        <div class="bg-white border border-[#d1d5db] rounded-sm lg:col-span-2 flex flex-col">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 font-bold text-[13px] text-[#063955] flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">query_stats</span>
+                    حمل النظام والنشاط (System Load)
+                </div>
+                <span class="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 border border-slate-200 rounded-sm">معدل العمليات خلال اليوم المحاكاة</span>
+            </div>
+            <div class="p-6 flex-grow">
+                <div class="h-[250px] w-full">
+                    <canvas id="systemLoadChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Users Roles Distribution -->
+        <div class="bg-white border border-[#d1d5db] rounded-sm flex flex-col">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 font-bold text-[13px] text-[#063955] flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">donut_small</span>
+                    توزيع الصلاحيات المسندة
+                </div>
+                <span class="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 border border-slate-200 rounded-sm">إجمالي @Model.RolesCount دور</span>
+            </div>
+            <div class="p-6 flex-1 flex flex-col">
+                <div class="flex-1 flex items-center justify-center relative min-h-[160px]">
+                    <canvas id="rolesDoughnut"></canvas>
+                </div>
+                <div class="mt-6 border-t border-slate-100 pt-4 flex flex-col gap-3">
+                    <div class="flex justify-between text-[11px]">
+                        <span class="flex items-center gap-2 font-bold text-slate-600"><span class="w-2.5 h-2.5 bg-[#063955] rounded-sm"></span> كاشير</span>
+                        <span class="font-black text-slate-800 font-mono">50%</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="flex items-center gap-2 font-bold text-slate-600"><span class="w-2.5 h-2.5 bg-[#059669] rounded-sm"></span> مستودعات</span>
+                        <span class="font-black text-slate-800 font-mono">20%</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="flex items-center gap-2 font-bold text-slate-600"><span class="w-2.5 h-2.5 bg-[#d97706] rounded-sm"></span> حسابات</span>
+                        <span class="font-black text-slate-800 font-mono">20%</span>
+                    </div>
+                    <div class="flex justify-between text-[11px]">
+                        <span class="flex items-center gap-2 font-bold text-slate-600"><span class="w-2.5 h-2.5 bg-[#e11d48] rounded-sm"></span> إدارة عليا</span>
+                        <span class="font-black text-slate-800 font-mono">10%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Operational Tables (Audit Logs & Active Users) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Table 1: System Logs (Audit Trail) -->
+        <div class="bg-white border border-[#d1d5db] rounded-sm flex flex-col">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 font-bold text-[13px] text-[#063955] flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">history</span>
+                    سجل الرقابة (أحدث العمليات)
+                </div>
+                <a href="/Admin/SystemLogs" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] font-bold text-[#0284c7] hover:underline">عرض كافة السجلات</a>
+            </div>
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-right border-collapse text-[12px]">
+                    <thead>
+                        <tr>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">وقت العملية</th>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">المستخدم المتسبب</th>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">نوع الحدث المسجل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 text-[11px] font-mono text-slate-500" dir="ltr" style="text-align: right;">14:32:05</td>
+                            <td class="p-3 font-bold text-[#063955]">أحمد <span class="text-[10px] text-slate-500 font-mono ml-1 block mt-0.5">Super Admin</span></td>
+                            <td class="p-3">
+                                <span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-sm font-bold text-[10px] whitespace-nowrap">تعديل صلاحيات النظام</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 text-[11px] font-mono text-slate-500" dir="ltr" style="text-align: right;">12:15:22</td>
+                            <td class="p-3 font-bold text-[#063955]">مجهول <span class="text-[10px] text-slate-500 font-mono ml-1 block mt-0.5">IP: 192.168.1.4</span></td>
+                            <td class="p-3">
+                                <span class="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-sm font-bold text-[10px] whitespace-nowrap">محاولة دخول خاطئة</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 text-[11px] font-mono text-slate-500" dir="ltr" style="text-align: right;">09:05:10</td>
+                            <td class="p-3 font-bold text-[#063955]">محمود <span class="text-[10px] text-slate-500 font-mono ml-1 block mt-0.5">Accountant</span></td>
+                            <td class="p-3">
+                                <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-sm font-bold text-[10px] whitespace-nowrap">تعديل قيد يومية محاسبي</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Table 2: Active Users / Sessions -->
+        <div class="bg-white border border-[#d1d5db] rounded-sm flex flex-col">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 font-bold text-[13px] text-[#063955] flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">group</span>
+                    الجلسات المستقرة والفعالة (Active)
+                </div>
+            </div>
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-right border-collapse text-[12px]">
+                    <thead>
+                        <tr>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">اسم المستخدم</th>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">الدور / المنصب</th>
+                            <th class="bg-white border-b border-slate-200 p-3 text-[11px] uppercase tracking-wider text-slate-500 font-bold whitespace-nowrap">مكان الاتصال (الفرع)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 font-bold text-[#063955] flex items-center gap-2">
+                                <span class="w-2 h-2 bg-[#059669] rounded-full shrink-0"></span> خالد محمد
+                            </td>
+                            <td class="p-3 text-slate-600 font-bold text-[11px]">كاشير ومبيعات</td>
+                            <td class="p-3 text-slate-500 font-bold text-[11px]">فرع الرياض</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 font-bold text-[#063955] flex items-center gap-2">
+                                <span class="w-2 h-2 bg-[#059669] rounded-full shrink-0"></span> سالم عبدالله
+                            </td>
+                            <td class="p-3 text-slate-600 font-bold text-[11px]">أمين مستودع</td>
+                            <td class="p-3 text-slate-500 font-bold text-[11px]">المستودع الرئيسي</td>
+                        </tr>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors">
+                            <td class="p-3 font-bold text-[#063955] flex items-center gap-2">
+                                <span class="w-2 h-2 bg-[#d97706] rounded-full shrink-0"></span> فاطمة علي
+                            </td>
+                            <td class="p-3 text-slate-600 font-bold text-[11px]">محاسب عام</td>
+                            <td class="p-3 text-slate-500 font-bold text-[11px]">الإدارة العامة</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Include Chart.js from CDN -->
+<script src="~/lib/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Apply Global Chart Font Settings
+        Chart.defaults.font.family = "tahoma, sans-serif";
+        Chart.defaults.font.size = 11; 
+        Chart.defaults.color = '#64748b'; 
+        Chart.defaults.rtl = true;
+
+        const commonPlugins = {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#0f172a', titleFont: { size: 12 }, bodyFont: { size: 11, family: 'tahoma' }, padding: 10, rtl: true, borderRadius: 2 }
+        };
+
+        // 1. System Load Chart (Area Chart) - Mock Data
+        const ctxLoad = document.getElementById('systemLoadChart').getContext('2d');
+        new Chart(ctxLoad, {
+            type: 'line',
+            data: {
+                labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
+                datasets: [
+                    {
+                        label: 'عمليات وتعديلات',
+                        data: [120, 450, 600, 350, 500, 850, 400],
+                        borderColor: '#063955', 
+                        backgroundColor: 'rgba(6, 57, 85, 0.05)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2, // Smoother curve
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#063955',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: commonPlugins,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9', drawBorder: false }, border: { dash: [4, 4] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // 2. Roles Distribution Doughnut - Mock Data
+        const ctxRoles = document.getElementById('rolesDoughnut').getContext('2d');
+        new Chart(ctxRoles, {
+            type: 'doughnut',
+            data: {
+                labels: ['كاشير', 'أمين مستودع', 'محاسب', 'إدارة عليا'],
+                datasets: [{
+                    data: [50, 20, 20, 10], 
+                    backgroundColor: ['#063955', '#059669', '#d97706', '#e11d48'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '75%',
+                plugins: commonPlugins
+            }
+        });
+    });
+</script>

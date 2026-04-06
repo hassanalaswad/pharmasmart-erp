@@ -1,0 +1,112 @@
+@model IEnumerable<PharmaSmartWeb.Models.Warehouses>
+
+@{
+    ViewData["Title"] = "إدارة المستودعات والرفوف";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .warehouse-card { background: white; border: 1px solid #d1d5db; border-radius: 2px; overflow: hidden; }
+    .warehouse-header { padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .shelf-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 2px; font-size: 11px; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
+    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-danger  { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-edit { background: white; border: 1px solid #d1d5db; color: #475569; padding: 5px 10px; border-radius: 2px; font-size: 11px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-edit:hover { background: #fffbeb; border-color: #fde68a; color: #d97706; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+</style>
+
+<!-- Page Header -->
+<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
+    <div>
+        <h1 class="page-title">إدارة المستودعات والرفوف</h1>
+        <p class="page-sub">مراقبة أماكن التخزين وتوجيه المجموعات الدوائية (Bin Locations).</p>
+    </div>
+    <a href="/Warehouses/Create" class="btn-primary">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        إضافة مستودع جديد
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #059669;">
+        <span class="material-symbols-outlined" style="color:#059669; font-size:18px;">check_circle</span>
+        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="enterprise-panel p-10 text-center">
+        <span class="material-symbols-outlined" style="font-size:40px; color:#cbd5e1; display:block; margin-bottom:8px;">warehouse</span>
+        <p style="color:#94a3b8; font-size:13px; font-weight:600;">لا توجد مستودعات مسجلة في هذا الفرع.</p>
+    </div>
+}
+else
+{
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        @foreach (var warehouse in Model)
+        {
+            <div class="warehouse-card">
+                <div class="warehouse-header">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:#063955;">warehouse</span>
+                            <strong style="font-size:13px; color:#063955;">@warehouse.WarehouseName</strong>
+                            @if (warehouse.IsActive == true)
+                            {
+                                <span class="status-badge status-success">نشط</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-danger">موقوف</span>
+                            }
+                        </div>
+                        <div style="font-size:11px; color:#64748b; margin-top:3px; display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:13px;">location_on</span>
+                            @(string.IsNullOrEmpty(warehouse.Location) ? "الموقع غير محدد" : warehouse.Location)
+                        </div>
+                    </div>
+                    <a href="/Warehouses/Edit/@warehouse.WarehouseId" class="btn-edit">
+                        <span class="material-symbols-outlined" style="font-size:14px;">edit</span>
+                        تعديل
+                    </a>
+                </div>
+
+                <div style="padding: 12px 14px;">
+                    <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">
+                        الرفوف المتوفرة (@warehouse.Shelves.Count)
+                    </div>
+
+                    @if (!warehouse.Shelves.Any())
+                    {
+                        <p style="font-size:11px; color:#94a3b8; text-align:center; padding:12px;">لا توجد رفوف مضافة لهذا المستودع.</p>
+                    }
+                    else
+                    {
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach (var shelf in warehouse.Shelves)
+                            {
+                                <div class="shelf-item">
+                                    <span class="material-symbols-outlined" style="font-size:15px; color:#d97706;">shelves</span>
+                                    <div>
+                                        <div style="font-weight:700; font-size:12px; font-family:monospace;">@shelf.ShelfName</div>
+                                        <div style="font-size:10px; color:#64748b;">
+                                            @(shelf.ItemGroup != null ? shelf.ItemGroup.GroupName : "عام (الكل)")
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

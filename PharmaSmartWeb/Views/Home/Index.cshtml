@@ -1,0 +1,107 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "بوابة النظام الرئيسية";
+}
+
+<div class="py-8 px-4 flex flex-col items-center min-h-[70vh]">
+    <!-- Hero Message -->
+    <div class="text-center mb-10 w-full max-w-4xl bg-white/10 rounded-sm p-5 border border-white/20 shadow-sm border border-slate-200">
+        <h1 class="text-3xl font-black text-slate-800 mb-2 font-headline" id="welcomeMessage">بوابة النظام الموحدة</h1>
+        <p class="text-slate-500 text-lg font-bold">يرجى اختيار الوحدة المطلوبة بناءً على صلاحياتك الممنوحة.</p>
+    </div>
+
+    <!-- شبكة الوحدات (Grid of Modules) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full mx-auto" id="modulesContainer">
+        
+        @{ bool hasAnyModule = false; }
+
+        <!-- 1. وحدة العمليات التجارية (المبيعات والمشتريات) -->
+        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "Sales.View") || User.IsInRole("Cashier") || User.IsInRole("Pharmacist") || User.IsInRole("BranchManager"))
+        {
+            hasAnyModule = true;
+            <a href="/Home/CommercialHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-blue-600">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="w-16 h-16 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="storefront">storefront</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-3">وحدة العمليات التجارية</h3>
+                <p class="text-sm text-slate-500 font-bold leading-relaxed">نقطة البيع السريعة، المبيعات والمشتريات والمرتجعات.</p>
+            </a>
+        }
+
+        <!-- 2. الإمداد والمخزون -->
+        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "Inventory.View") || User.IsInRole("BranchManager") || User.IsInRole("Pharmacist") || User.IsInRole("Storekeeper"))
+        {
+            hasAnyModule = true;
+            <a href="/Home/InventoryHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-emerald-600">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="w-16 h-16 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="inventory_2">inventory_2</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-3">الإمداد والمخزون</h3>
+                <p class="text-sm text-slate-500 font-bold leading-relaxed">جرد الأدوية، التوريدات، المشتريات، حركة الأصناف والنواقص.</p>
+            </a>
+        }
+        
+        <!-- 3. المالية والمحاسبة -->
+        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "JournalEntries.View") || User.IsInRole("Accountant") || User.IsInRole("BranchManager"))
+        {
+            hasAnyModule = true;
+            <a href="/Home/FinanceHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-amber-600">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="w-16 h-16 rounded-sm bg-amber-50 text-amber-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="account_balance">account_balance</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-3">المالية والمحاسبة</h3>
+                <p class="text-sm text-slate-500 font-bold leading-relaxed">القيود المحاسبية، السندات، الدليل المحاسبي وميزان المراجعة.</p>
+            </a>
+        }
+
+        <!-- 4. ذكاء الأعمال والتقارير -->
+        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "System.ChangeBranch") || User.IsInRole("Accountant") || User.IsInRole("BranchManager"))
+        {
+            hasAnyModule = true;
+            <a href="/Home/ReportsHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-purple-600">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="w-16 h-16 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="query_stats">query_stats</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-3">ذكاء الأعمال والتقارير</h3>
+                <p class="text-sm text-slate-500 font-bold leading-relaxed">Prophet AI، قائمة الدخل، تقارير الأرباح والخسائر وتحليل الأداء.</p>
+            </a>
+        }
+
+        <!-- 6. الإدارة المركزية والأمن -->
+        @if (User.IsInRole("SuperAdmin"))
+        {
+            hasAnyModule = true;
+            <a href="/Home/AdminHub" class="module-card group bg-slate-900 rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-slate-500">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="w-16 h-16 rounded-sm bg-slate-800 text-slate-100 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-4xl leading-none text-white" data-icon="shield_person">shield_person</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-3">الإدارة المركزية والأمن</h3>
+                <p class="text-sm text-slate-400 font-bold leading-relaxed">صلاحيات المستخدمين، إعدادات النظام، مراقبة السجلات والنسخ الاحتياطي.</p>
+            </a>
+        }
+
+        @if (!hasAnyModule)
+        {
+            <div class="col-span-full text-center py-20 w-full animate-in fade-in duration-700">
+                <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined text-6xl text-slate-300 leading-none">lock</span>
+                </div>
+                <h3 class="text-3xl font-black text-slate-900 mb-4">لا تملك صلاحيات وصول</h3>
+                <p class="text-slate-500 font-bold max-w-lg mx-auto text-lg leading-relaxed">
+                    يرجى مراجعة إدارة النظام لربط حسابك بصلاحيات الوصول المناسبة لمهامك التشغيلية.
+                </p>
+            </div>
+        }
+
+    </div>
+</div>

@@ -1,0 +1,210 @@
+@model IEnumerable<PharmaSmartWeb.Models.BarcodeGenerator>
+
+@{
+    ViewData["Title"] = "توليد وطباعة الباركود";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .kpi-box { padding: 16px; border-right: 4px solid #063955; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; display: flex; align-items: center; gap: 16px; }
+    .kpi-title { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .kpi-value { font-size: 20px; font-weight: 800; color: #063955; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f1f5f9; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; }
+    .btn-primary:hover:not(:disabled) { background: #0a4f72; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-danger-outline { background: white; color: #dc2626; border: 1px solid #fca5a5; padding: 4px; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+    .btn-danger-outline:hover { background: #fef2f2; border-color: #dc2626; }
+</style>
+
+<div class="flex-1 overflow-y-auto p-6 space-y-4">
+    <!-- Header Section -->
+    <div class="enterprise-panel p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="w-full text-right">
+            <nav class="flex items-center gap-2 text-slate-500 text-[11px] mb-1 font-semibold">
+                <a href="/Home/Index" class="hover:text-[#063955]">الرئيسية</a>
+                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                <span class="text-[#063955]">توليد وطباعة الباركود</span>
+            </nav>
+            <h1 class="page-title">صَف طباعة الباركود</h1>
+            <p class="page-sub">قم بإدارة صف الطباعة للأصناف والمشتريات. يمكنك تعديل الكميات وتحديد الملصقات المطلوبة للطباعة الفورية.</p>
+        </div>
+        
+        <div class="flex gap-4 w-full md:w-auto">
+            <div class="kpi-box" style="border-right-color: #64748b; padding: 12px 16px; min-width: 180px;">
+                <div class="w-10 h-10 rounded-sm bg-slate-100 flex items-center justify-center text-slate-600">
+                    <span class="material-symbols-outlined">list_alt</span>
+                </div>
+                <div>
+                    <p class="kpi-title">أصناف في الانتظار</p>
+                    <p class="kpi-value text-[#334155]">@Model.Count()</p>
+                </div>
+            </div>
+            <div class="kpi-box" style="border-right-color: #063955; padding: 12px 16px; min-width: 180px;">
+                <div class="w-10 h-10 rounded-sm bg-[#f0f9ff] flex items-center justify-center text-[#063955]">
+                    <span class="material-symbols-outlined">print_connect</span>
+                </div>
+                <div>
+                    <p class="kpi-title">إجمالي الملصقات</p>
+                    <p class="kpi-value" id="totalLabelsStat">@Model.Sum(x => x.QuantityToPrint)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="enterprise-panel p-4 mb-4 flex items-center gap-3" style="border-right-color: #dc2626; border-right-width: 4px; background: #fef2f2;">
+            <span class="material-symbols-outlined text-[#dc2626]">warning</span>
+            <p class="font-bold text-[13px] text-[#991b1b]">@TempData["Error"]</p>
+        </div>
+    }
+
+    <form asp-action="PrintSelected" method="post" id="printForm">
+        <div class="enterprise-panel">
+            <!-- Table Controls -->
+            <div class="px-4 py-3 flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-50 gap-4">
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 text-[12px] font-bold text-slate-700 cursor-pointer p-2 hover:bg-slate-200 rounded-sm transition-colors">
+                        <input type="checkbox" id="selectAll" class="w-4 h-4 rounded-sm border-slate-300 text-[#063955] focus:ring-[#063955] cursor-pointer">
+                        تحديد الكل
+                    </label>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-[11px] font-bold text-slate-500" id="selectedCountMsg">تم اختيار 0 صنف</span>
+                    <button type="submit" class="btn-primary" id="printBtn" disabled>
+                        <span class="material-symbols-outlined" style="font-size: 16px;">print</span>
+                        طباعة الملصقات المحددة
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto min-h-[400px]">
+                <table class="enterprise-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;">اختيار</th>
+                            <th>الصنف الدوائي</th>
+                            <th style="text-align: center;">رقم التشغيلة</th>
+                            <th style="text-align: center;">تاريخ الصلاحية</th>
+                            <th style="text-align: center;">سعر البيع</th>
+                            <th>الكود الرقمي</th>
+                            <th style="text-align: center; width: 140px;">كمية الطباعة</th>
+                            <th style="width: 60px; text-align: center;">حذف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="barcodeTableBody">
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="8" class="p-10 text-center text-slate-400 font-bold">
+                                    <span class="material-symbols-outlined text-[48px] opacity-30 block mb-2">inventory_2</span>
+                                    لا توجد أصناف في صف الطباعة.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model)
+                        {
+                            <tr class="hover:bg-slate-50">
+                                <td class="text-center">
+                                    <input type="checkbox" name="selectedIds" value="@item.Id" class="print-checkbox w-4 h-4 rounded-sm text-[#063955] focus:ring-[#063955] border-slate-300 cursor-pointer" onchange="updateSelectedCount()"/>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-sm bg-slate-100 flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-[16px] text-slate-600">medication</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-[13px] text-[#063955]">@item.Drug.DrugName</p>
+                                            <p class="text-[10px] text-slate-400">مضاف: @item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center font-mono text-[13px] font-bold text-slate-600">@item.BatchNumber</td>
+                                <td class="text-center font-bold text-[13px] @(item.ExpiryDate < DateTime.Now.AddMonths(6) ? "text-[#dc2626]" : "text-slate-700")">
+                                    @item.ExpiryDate.ToString("yyyy-MM")
+                                </td>
+                                <td class="text-center font-extrabold text-[#063955] text-[13px]">@item.CurrentPrice.ToString("N2") <span style="font-size: 10px; font-weight: normal;">@Settings.Currency</span></td>
+                                <td>
+                                    <div class="flex flex-col gap-1 items-start">
+                                        <div class="h-4 w-20 bg-slate-800 rounded-sm opacity-80 border-r-2 border-l-2 border-slate-400 border-dashed" aria-label="Barcode simulation view"></div>
+                                        <span class="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 rounded-sm border border-slate-200">@item.GeneratedCode</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center justify-center gap-1">
+                                        <button type="button" class="w-6 h-6 rounded-sm bg-slate-200 text-slate-700 hover:bg-[#063955] hover:text-white flex items-center justify-center font-bold" onclick="adjustQty(this, -1)">-</button>
+                                        <input type="number" name="printQuantities[@item.Id]" class="qty-input w-12 h-6 text-center text-[13px] font-bold border border-slate-300 rounded-sm focus:border-[#063955] outline-none" value="@item.QuantityToPrint" min="1" onchange="updateTotalLabels()"/>
+                                        <button type="button" class="w-6 h-6 rounded-sm bg-slate-200 text-slate-700 hover:bg-[#063955] hover:text-white flex items-center justify-center font-bold" onclick="adjustQty(this, 1)">+</button>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" onclick="deleteItem(@item.Id)" class="btn-danger-outline" title="حذف">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.print-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateSelectedCount();
+    });
+
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('.print-checkbox:checked').length;
+        document.getElementById('selectedCountMsg').textContent = "تم اختيار " + checkedCount + " صنف";
+        const printBtn = document.getElementById('printBtn');
+        
+        if (checkedCount > 0) {
+            printBtn.disabled = false;
+        } else {
+            printBtn.disabled = true;
+        }
+    }
+
+    function adjustQty(btn, amount) {
+        const input = btn.parentElement.querySelector('.qty-input');
+        let currentVal = parseInt(input.value) || 0;
+        let newVal = currentVal + amount;
+        if(newVal >= 1) {
+            input.value = newVal;
+            updateTotalLabels();
+        }
+    }
+
+    function updateTotalLabels() {
+        const inputs = document.querySelectorAll('.qty-input');
+        let total = 0;
+        inputs.forEach(input => {
+            total += parseInt(input.value) || 0;
+        });
+        document.getElementById('totalLabelsStat').textContent = total;
+    }
+
+    function deleteItem(id) {
+        if(confirm('هل أنت متأكد من حذف هذا الصنف من صف الطباعة؟')) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '/Barcode/Delete/' + id;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+    
+    updateSelectedCount();
+</script>

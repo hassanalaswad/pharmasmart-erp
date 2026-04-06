@@ -1,0 +1,92 @@
+@model PharmaSmartWeb.Models.Users
+
+@{
+    Layout = "_ModalLayout";
+    ViewData["Title"] = "إضافة مستخدم للنظام";
+}
+
+<style>
+    .form-label { font-size: 12px; font-weight: 700; color: #063955; margin-bottom: 4px; display: block; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 7px 10px; font-size: 13px; }
+    .form-control:focus { outline: none; border-color: #063955; box-shadow: 0 0 0 2px rgba(6,57,85,0.1); }
+    .form-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 7px 10px; font-size: 13px; background: white; }
+    .btn-submit { background: #063955; color: white; border: none; padding: 9px 24px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-submit:hover { background: #0a4f72; }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #d1d5db; padding: 9px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .section-title { font-size: 13px; font-weight: 700; color: #063955; padding-bottom: 8px; border-bottom: 2px solid #063955; margin-bottom: 16px; }
+    .alert-info { background: #eff6ff; border-right: 4px solid #1d4ed8; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #1d4ed8; }
+    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e11d48; }
+</style>
+
+<form asp-action="Create" method="post" style="padding: 20px;">
+    <input type="hidden" asp-for="IsActive" value="true" />
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert-error mb-4">⚠ @ViewBag.Error</div>
+    }
+
+    <div class="section-title">بيانات الحساب الأساسية</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+            <label class="form-label">اسم الدخول (Username) <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px; color:#94a3b8;">person</span>
+                <input type="text" asp-for="Username" required autocomplete="off" placeholder="مثال: ahmed_2024"
+                       class="form-control" style="flex:1;" />
+            </div>
+            <span asp-validation-for="Username" style="color:#e11d48; font-size:11px;"></span>
+        </div>
+
+        <div>
+            <label class="form-label">كلمة المرور <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px; color:#94a3b8;">lock</span>
+                <input type="password" asp-for="PasswordHash" required autocomplete="new-password" placeholder="كلمة مرور قوية"
+                       class="form-control" style="flex:1;" />
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">الصلاحيات والفرع</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+            <label class="form-label">مجموعة الصلاحيات <span style="color:#e11d48;">*</span></label>
+            <select asp-for="RoleId" asp-items="ViewBag.RoleList" required class="form-select">
+                <option value="">-- اختر الصلاحية --</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label">فرع العمل الافتراضي <span style="color:#e11d48;">*</span></label>
+            <select asp-for="DefaultBranchId" asp-items="ViewBag.BranchList" required class="form-select">
+                <option value="">-- اختر الفرع --</option>
+            </select>
+        </div>
+    </div>
+
+    <div>
+        <label class="form-label">ربط الحساب بموظف (اختياري)</label>
+        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="form-select" style="max-width:400px;">
+            <option value="">-- حساب إداري (بدون تخصيص موظف) --</option>
+        </select>
+    </div>
+
+    <div class="alert-info" style="margin-top: 16px;">
+        ℹ سيتم تفعيل الحساب فور الإنشاء. يمكن تعطيله لاحقاً من شاشة التعديل.
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="history.back()" class="btn-cancel">إلغاء</button>
+        <button type="submit" class="btn-submit">
+            <span class="material-symbols-outlined" style="font-size:15px; vertical-align:middle;">save</span>
+            إنشاء المستخدم
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

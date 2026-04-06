@@ -1,0 +1,80 @@
+﻿@{
+ ViewData["Title"] = "إجراء تحويل مالي";
+}
+
+<div class="max-w-4xl mx-auto pb-20 animate-in fade-in duration-500">
+ <div class="mb-8 flex justify-between items-center">
+ <div>
+ <h1 class="text-3xl font-black text-slate-800 flex items-center gap-3">
+ <span class="w-12 h-12 bg-emerald-500 text-white rounded-sm flex items-center justify-center shadow-sm border border-slate-200 shadow-emerald-200">
+ <i class="fas fa-exchange-alt"></i>
+ </span>
+ إجراء تحويل مالي داخلي
+ </h1>
+ <p class="text-slate-400 font-bold mt-2 text-sm">نقل السيولة بين الصناديق والبنوك (سيولد النظام قيد مزدوج آلياً).</p>
+ </div>
+ <a href="/FundTransfers/Index" class="bg-white border-2 border-slate-100 text-slate-500 px-6 py-3 rounded-sm font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">العودة للسجل</a>
+ </div>
+
+ @if (ViewBag.Error != null)
+ {
+ <div class="mb-6 bg-rose-50 border-r-4 border-rose-500 p-5 rounded-sm flex items-center gap-4">
+ <i class="fas fa-exclamation-triangle text-rose-500 text-xl"></i>
+ <p class="text-rose-800 text-sm font-black">@ViewBag.Error</p>
+ </div>
+ }
+
+ <form asp-action="Create" method="post" class="bg-white rounded-[3rem] shadow-sm border border-slate-200 shadow-slate-200/50 border border-slate-100 overflow-hidden">
+ @Html.AntiForgeryToken()
+
+ <div class="p-10 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row items-center gap-8">
+ <div class="flex-1 w-full">
+ <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 block"><i class="fas fa-arrow-up mr-1"></i> سحب من (المرسل) *</label>
+ <select name="FromAccountId" required class="w-full bg-white border border-rose-200 rounded-sm py-4 px-4 font-bold text-slate-700 outline-none focus:border-rose-500 cursor-pointer">
+ <option value="">-- اختر الصندوق أو البنك --</option>
+ @foreach (var item in ViewBag.FromAccounts as SelectList)
+ {
+ <option value="@item.Value">@item.Text</option>
+}
+ </select>
+ </div>
+ <div class="w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center shrink-0 shadow-sm border border-slate-200 md:mt-6 rotate-90 md:rotate-0">
+ <i class="fas fa-arrow-left"></i>
+ </div>
+ <div class="flex-1 w-full">
+ <label class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2 block"><i class="fas fa-arrow-down mr-1"></i> إيداع إلى (المستقبل) *</label>
+ <select name="ToAccountId" required class="w-full bg-white border border-emerald-200 rounded-sm py-4 px-4 font-bold text-slate-700 outline-none focus:border-emerald-500 cursor-pointer">
+ <option value="">-- اختر الصندوق أو البنك --</option>
+ @foreach (var item in ViewBag.ToAccounts as SelectList)
+ {
+ <option value="@item.Value">@item.Text</option>
+}
+ </select>
+ </div>
+ </div>
+
+ <div class="p-10 space-y-6">
+ <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+ <div>
+ <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">المبلغ المراد تحويله *</label>
+ <input type="number" step="0.01" name="Amount" required placeholder="0.00" class="w-full bg-slate-900 text-emerald-400 border-0 rounded-sm py-4 px-6 text-2xl font-mono font-black outline-none focus:ring-4 focus:ring-emerald-500/20 text-center md:text-right">
+ </div>
+ <div>
+ <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">رقم مرجعي / إشعار (اختياري)</label>
+ <input type="text" name="ReferenceNo" placeholder="مثال: رقم الحوالة البنكية..." class="w-full bg-slate-50 border border-slate-200 rounded-sm py-4 px-6 font-bold text-slate-700 outline-none focus:border-sky-500 h-[68px]">
+ </div>
+ </div>
+
+ <div>
+ <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">البيان / سبب التحويل *</label>
+ <input type="text" name="Notes" required placeholder="مثال: توريد مبيعات الصيدلية النقدية إلى الحساب البنكي..." class="w-full bg-slate-50 border border-slate-200 rounded-sm py-4 px-6 font-bold text-slate-700 outline-none focus:border-sky-500">
+ </div>
+
+ <div class="pt-6">
+ <button type="submit" class="w-full bg-emerald-600 text-white py-5 rounded-sm font-black text-xl shadow-sm border border-slate-200 shadow-emerald-600/30 hover:bg-emerald-700 hover:-translate-y-1 transition-all">
+ <i class="fas fa-check-double mr-2"></i> تنفيذ التحويل وتوليد القيد
+ </button>
+ </div>
+ </div>
+ </form>
+</div>

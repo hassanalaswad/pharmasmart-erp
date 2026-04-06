@@ -1,0 +1,145 @@
+@model PharmaSmartWeb.Models.Accounts
+
+@{
+    ViewData["Title"] = "تعديل الحساب المالي";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 2px; }
+    .page-sub { font-size: 12px; color: #64748b; font-weight: bold; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
+    .form-input, .form-select { border: 1px solid #cbd5e1; border-radius: 2px; padding: 8px 12px; font-size: 12px; font-weight: 700; background-color: #f8fafc; outline: none; width: 100%; }
+    .form-input:focus, .form-select:focus { border-color: #063955; background-color: white; }
+    .form-label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 6px; display: block; }
+    .radio-card { border: 1px solid #cbd5e1; border-radius: 2px; padding: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
+    .radio-input:checked + .radio-card { border-color: #063955; background-color: #f0f9ff; border-width: 2px; padding: 11px; }
+</style>
+
+<div class="max-w-4xl mx-auto pb-20 pt-6 px-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
+        <div>
+            <h1 class="page-title">تعديل بيانات الحساب</h1>
+            <p class="page-sub">تحديث معلومات الحساب المالي المدرج في الدليل المحاسبي.</p>
+        </div>
+        <a asp-action="Index" class="btn-secondary">
+            <span class="material-symbols-outlined text-[16px] rtl:rotate-180">arrow_forward</span>
+            العودة للدليل
+        </a>
+    </div>
+
+    <!-- Main Container -->
+    <div class="enterprise-panel border-t-4 border-t-[#063955]">
+        @if (ViewBag.Error != null)
+        {
+            <div class="bg-rose-50 border-r-4 border-[#e11d48] p-4 m-6 mb-0 rounded-sm flex items-center gap-3">
+                <span class="material-symbols-outlined text-[#e11d48]">warning</span>
+                <p class="text-[#e11d48] font-bold text-[12px]">@ViewBag.Error</p>
+            </div>
+        }
+
+        <form asp-action="Edit" method="post" class="p-6">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="AccountId" />
+
+            <!-- Current Account Summary Data -->
+            <div class="bg-slate-50 border border-slate-200 p-4 rounded-sm border-r-4 border-r-[#059669] flex items-center justify-between mb-8">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-white border border-slate-200 rounded-sm flex items-center justify-center text-[#059669]">
+                        <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase">الحساب الحالي</p>
+                        <h4 class="text-[14px] font-bold text-[#063955]">@Model.AccountName</h4>
+                    </div>
+                </div>
+                <div class="text-left font-mono font-bold text-[#063955] text-[16px] bg-white border border-slate-200 px-3 py-1.5 rounded-sm">
+                    @Model.AccountCode
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Branch / Domain Selection -->
+                <div class="md:col-span-2">
+                    <label class="form-label">نطاق وتوجيه الحساب</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" asp-for="BranchId" value="@ViewBag.ActiveBranchId" class="radio-input sr-only" />
+                            <div class="radio-card h-full flex flex-col items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[#0284c7] text-[24px]">store</span>
+                                <strong class="block font-bold text-[#063955] text-[13px]">حساب مخصص للفرع</strong>
+                                <span class="block text-[10px] text-slate-500">مرتبط بالفرع النشط الحالي فقط ويظهر في عملياته.</span>
+                            </div>
+                        </label>
+
+                        <label class="cursor-pointer relative">
+                            <input type="radio" asp-for="BranchId" value="" class="radio-input sr-only" />
+                            <div class="radio-card h-full flex flex-col items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[#059669] text-[24px]">public</span>
+                                <strong class="block font-bold text-[#063955] text-[13px]">حساب عام / رئيسي</strong>
+                                <span class="block text-[10px] text-slate-500">متاح لجميع الفروع ويستخدم للحسابات التجميعية الشاملة.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Parent Account -->
+                <div class="md:col-span-2">
+                    <label class="form-label">الحساب الرئيسي (يتفرع منه)</label>
+                    <select asp-for="ParentAccountId" asp-items="ViewBag.ParentAccounts" class="form-select">
+                        <option value="">-- حساب جذري (في المستوى الأول) --</option>
+                    </select>
+                </div>
+
+                <!-- Account Code -->
+                <div>
+                    <label class="form-label">كود الحساب</label>
+                    <input asp-for="AccountCode" required class="form-input font-mono text-left" dir="ltr" />
+                </div>
+
+                <!-- Account Name -->
+                <div>
+                    <label class="form-label">اسم الحساب المالي</label>
+                    <input asp-for="AccountName" required class="form-input" />
+                </div>
+
+                <!-- Account Type -->
+                <div class="opacity-80 pointer-events-none">
+                    <label class="form-label">التصنيف المحاسبي</label>
+                    <select asp-for="AccountType" required class="form-select">
+                        <option value="Assets">أصول (Assets)</option>
+                        <option value="Liabilities">خصوم (Liabilities)</option>
+                        <option value="Equity">حقوق ملكية (Equity)</option>
+                        <option value="Revenue">إيرادات (Revenue)</option>
+                        <option value="Expenses">مصروفات (Expenses)</option>
+                    </select>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="form-label">حالة الحساب</label>
+                    <select asp-for="IsActive" class="form-select">
+                        <option value="true">نشط (متاح للاستخدام)</option>
+                        <option value="false">موقوف (غير متاح للعمليات)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="mt-8 pt-6 border-t border-slate-200 flex flex-col-reverse sm:flex-row justify-end gap-3">
+                <a href="/Accounting/Index" class="btn-secondary px-8">
+                    إلغاء والتراجع
+                </a>
+                <button type="submit" class="btn-primary px-8">
+                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    حفظ التعديلات
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

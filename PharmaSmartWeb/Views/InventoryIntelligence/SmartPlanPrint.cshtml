@@ -1,0 +1,120 @@
+@model PharmaSmartWeb.Models.PurchasePlan
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "خطة الشراء الإستراتيجية الذكية (المعتمدة)";
+}
+
+<!-- No-Print Header Bar -->
+<div class="header-bar no-print" style="background: white; border: 1px solid #d1d5db; padding: 16px; margin: 16px auto; max-width: 900px; display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid #063955;">
+    <div>
+        <h1 style="font-size:18px; font-weight:900; color:#063955; margin:0;">@ViewData["Title"]</h1>
+        <p style="font-size:12px; color:#64748b; margin:4px 0 0 0;">استندت هذه الخطة لخوارزميات التنبؤ المتطورة والقيود المالية للمؤسسة.</p>
+    </div>
+    <button onclick="window.print()" style="background: #063955; color: white; border: none; padding: 8px 20px; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 4px;">🖨 طباعة التقرير / PDF</button>
+</div>
+
+<!-- Official Report Page -->
+<div class="page" style="width: 210mm; min-height: 297mm; margin: auto; background: white; padding: 40px; box-sizing: border-box;">
+    <!-- Top Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            @if (!string.IsNullOrEmpty(Settings.CompanyLogoPath))
+            {
+                <img src="@Settings.CompanyLogoPath" alt="@Settings.CompanyName" style="max-height:55px; max-width:110px; object-fit:contain;">
+            }
+            <div style="font-size: 18px; font-weight: bold; color: #063955;">@Settings.CompanyName</div>
+        </div>
+        <div>
+            <span style="border: 1px solid #000; padding: 5px 15px; font-size: 12px; font-weight: bold;">OFFICIAL PROCUREMENT PLAN</span>
+        </div>
+    </div>
+
+    <!-- Title -->
+    <div style="text-align: center; margin: 30px 0;">
+        <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #063955;">خطة الشراء الذكية</h2>
+        <span style="font-size: 12px; color: #555;">SMART PROCUREMENT PLAN (AI DRIVEN)</span>
+    </div>
+
+    <!-- Info Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border: 1px solid #ccc; padding: 15px; background: #f8fafc; margin-bottom: 25px;">
+        <div style="font-size: 13px; line-height: 1.8;">
+            <strong>اسم المؤسسة:</strong> @Settings.CompanyName<br>
+            <strong>رقم الخطة الآلي:</strong> PLN-@Model.PlanId.ToString("D5")<br>
+            <strong>تاريخ الإصدار:</strong> @Model.PlanDate.ToString("yyyy/MM/dd HH:mm")
+        </div>
+        <div style="font-size: 13px; line-height: 1.8;">
+            <strong>تم التوليد بواسطة:</strong> مستخدم مرخص (ذكاء مخزني)<br>
+            <strong>إجمالي تكلفة الأصناف:</strong> @Model.EstimatedTotalCost.ToString("N2") ر.ي<br>
+            <strong>حالة التعديل:</strong> @(Model.PlanDetails.Any(d => d.ApprovedQuantity != d.ProposedQuantity) ? "معدلة يدوياً من الإدارة" : "كما اقترحتها الخوارزمية (EOQ)")
+        </div>
+    </div>
+
+    <!-- Table -->
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th style="border: 1px solid #000; padding: 8px; background: #f0f0f0; text-align: right; width: 40px;">#</th>
+                <th style="border: 1px solid #000; padding: 8px; background: #f0f0f0; text-align: right;">الصنف (الدواء)</th>
+                <th style="border: 1px solid #000; padding: 8px; background: #f0f0f0; text-align: center; width: 80px;">الفئة (ABC)</th>
+                <th style="border: 1px solid #000; padding: 8px; background: #f0f0f0; text-align: center;">الطلب المتوقع والتنبؤ 🤖</th>
+                <th style="border: 1px solid #000; padding: 8px; background: #f0f0f0; text-align: center;">تكلفة الصنف</th>
+                <th style="border: 1px solid #000; padding: 8px; background: #e0f2fe; text-align: center; font-weight: 800;">الكمية المعتمدة</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{int count = 1;}
+            @foreach (var item in Model.PlanDetails.OrderBy(d => d.ABCCategory))
+            {
+                <tr>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">@count</td>
+                    <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">@item.Drug.DrugName</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">@item.ABCCategory</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center;" dir="ltr">
+                        @item.ForecastedDemand 
+                        @if (item.ForecastAccuracy > 0)
+                        {
+                            <br><span style="font-size: 10px; color: #059669;">Acc: @item.ForecastAccuracy%</span>
+                        }
+                    </td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">@item.TotalCost.ToString("N0")</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: 800; font-size: 16px;">
+                        @item.ApprovedQuantity
+                        @if (item.ApprovedQuantity != item.ProposedQuantity)
+                        {
+                            <span style="font-size: 10px; color: #dc2626; display:block;">(مُعدلة)</span>
+                        }
+                    </td>
+                </tr>
+                count++;
+            }
+        </tbody>
+    </table>
+
+    <div style="margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px;">
+        إجمالي قيمة الطلبية النهائية: <span style="font-size: 20px; color: #063955;">@Model.PlanDetails.Sum(x => x.TotalCost).ToString("N2")</span> ر.ي
+    </div>
+
+    <!-- Signatures -->
+    <div style="margin-top: 60px; display: flex; justify-content: space-between;">
+        <div style="text-align: center; width: 33%;">
+            <span style="display: block; margin-bottom: 30px; font-size:12px; color: #555;">مدير إدارة المشتريات والمخازن</span>
+            __________________________
+        </div>
+        <div style="text-align: center; width: 33%;">
+            <span style="display: block; margin-bottom: 30px; font-size:12px; color: #555;">المدير المالي</span>
+            __________________________
+        </div>
+        <div style="text-align: center; width: 33%;">
+            <span style="display: block; margin-bottom: 30px; font-size:12px; color: #555;">مدير عام المؤسسة (الاعتماد النهائي)</span>
+            __________________________
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top: 40px; font-size: 11px; display: flex; justify-content: space-between; border-top: 1px solid #ccc; padding-top: 8px; color: #64748b;">
+        <div>تم الطباعة بواسطة نظام PharmaSmart ERP - وحدة المشتريات الذكية</div>
+        <div>@DateTime.Now.ToString("yyyy-MM-dd HH:mm")</div>
+    </div>
+</div>

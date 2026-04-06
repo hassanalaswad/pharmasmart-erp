@@ -1,0 +1,144 @@
+@model IEnumerable<PharmaSmartWeb.Models.Branchinventory>
+
+@{
+    ViewData["Title"] = "جرد المخزون الداخلي";
+    var totalItems = Model.Count();
+    var depletedItems = Model.Count(x => x.StockQuantity <= 0);
+    var nearShortages = Model.Count(x => x.StockQuantity <= x.MinimumStockLevel && x.StockQuantity > 0);
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .form-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 8px 12px; font-size: 12px; font-weight: 700; background-color: #f8fafc; outline: none; width: 100%; }
+    .form-input:focus { border-color: #063955; background-color: white; }
+    .form-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 4px; display: block; }
+    .kpi-box { padding: 16px; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; flex-grow: 1; }
+    .kpi-value { font-size: 20px; font-weight: 800; color: #063955; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
+</style>
+
+<div class="p-6 space-y-4 max-w-7xl mx-auto">
+    <!-- Header Section -->
+    <div class="enterprise-panel p-5 print:hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="page-title">جرد المخزون الداخلي</h2>
+            <p class="page-sub">مراجعة الحالة اللحظية للأدوية والمستلزمات الطبية في نطاق: <span class="font-bold text-[#0284c7]">@ViewBag.BranchName</span></p>
+        </div>
+        <button onclick="window.print()" class="btn-secondary px-6" title="طباعة">
+            <i class="fas fa-print ml-2"></i> طباعة تقرير الجرد
+        </button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
+        <div class="kpi-box" style="border-right-color: #64748b;">
+            <p class="kpi-title">إجمالي الأصناف</p>
+            <h4 class="kpi-value">@totalItems</h4>
+        </div>
+        <div class="kpi-box" style="border-right-color: #d97706; background-color: #fffbeb; border-color: #fde68a;">
+            <p class="kpi-title text-[#d97706]">تحت حد الطلب</p>
+            <h4 class="kpi-value text-[#d97706]">@nearShortages</h4>
+        </div>
+        <div class="kpi-box" style="border-right-color: #e11d48; background-color: #fff1f2; border-color: #fecdd3;">
+            <p class="kpi-title text-[#e11d48]">أصناف نافدة</p>
+            <h4 class="kpi-value text-[#e11d48]">@depletedItems</h4>
+        </div>
+        <div class="kpi-box" style="border-right-color: #063955; background-color: #0f172a; border-color: #0f172a;">
+            <p class="kpi-title text-[#38bdf8]">تدقيق المخزون اللحظي</p>
+            <p class="text-sky-200/80 text-xs leading-relaxed max-w-[200px] mt-1">يتم تحديث هذه الأرصدة فورياً ارتباطاً بحركات البيع والشراء في الصيدلية.</p>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="enterprise-panel">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+            <h3 class="text-[14px] font-bold text-[#063955]">سجل الجرد</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="enterprise-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">كود الدواء</th>
+                        <th>الاسم التجاري</th>
+                        <th style="width: 140px;">النطاق</th>
+                        <th style="text-align: center; width: 120px;">الرصيد الفعلي</th>
+                        <th style="text-align: center; width: 120px;">حد الأمان</th>
+                        <th style="width: 100px;">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-[#64748b] font-bold">
+                                المخزن معطل أو لا توجد بضاعة مسجلة في هذا النطاق.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.OrderBy(i => i.Drug?.DrugName))
+                    {
+                        var isDepleted = item.StockQuantity <= 0;
+                        var isLow = item.StockQuantity <= item.MinimumStockLevel;
+                        
+                        var qtyColor = isDepleted ? "text-[#e11d48]" : isLow ? "text-[#d97706]" : "text-[#063955]";
+                        var statusText = isDepleted ? "نافد" : isLow ? "منخفض" : "آمن";
+                        var statusBg = isDepleted ? "bg-rose-100 text-rose-700 border-rose-200" : isLow ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-emerald-100 text-emerald-700 border-emerald-200";
+
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-mono text-[#0284c7] font-bold">#@item.DrugId.ToString("D4")</td>
+                            <td class="text-[12px] text-[#334155] font-bold">@item.Drug?.DrugName</td>
+                            <td>
+                                <span class="bg-slate-100 border border-slate-200 text-slate-600 px-2 py-1 rounded-sm text-[10px] font-bold">
+                                    @(item.Branch?.BranchName ?? "مجمع الفروع")
+                                </span>
+                            </td>
+                            <td class="text-center font-mono font-black text-[14px] @qtyColor">@item.StockQuantity</td>
+                            <td class="text-center font-mono font-bold text-slate-500">@item.MinimumStockLevel</td>
+                            <td>
+                                <span class="border px-2 py-1 rounded-sm text-[10px] font-bold @statusBg">
+                                    @statusText
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        #sidebar, header, nav, footer, .print\:hidden {
+            display: none !important;
+        }
+
+        body { background: white !important; }
+
+        main {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        .max-w-7xl {
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+
+        .enterprise-panel {
+            border: 1px solid #ccc !important;
+            box-shadow: none !important;
+            page-break-inside: auto;
+        }
+    }
+</style>

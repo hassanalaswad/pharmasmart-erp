@@ -1,0 +1,128 @@
+@model PharmaSmartWeb.Models.SettingsHubViewModel
+@using PharmaSmartWeb.Infrastructure
+@{
+    ViewData["Title"] = "إعدادات النظام";
+    ViewData["PageDescription"] = "التحكم في خوارزميات النظام، الأمن، والتهيئة المالية";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 4px; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .setting-card { padding: 16px; background: white; border: 1px solid #d1d5db; border-radius: 2px; text-decoration: none; transition: 0.2s; display: block; border-top-width: 4px; }
+    .setting-card:hover { background: #f8fafc; border-color: #94a3b8; }
+    .setting-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+    .setting-title { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+    .setting-desc { font-size: 11px; color: #475569; font-weight: bold; line-height: 1.5; }
+    .section-title { font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; margin-top: 32px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+</style>
+
+<div class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- Header Panel -->
+    <div class="enterprise-panel flex flex-col md:flex-row justify-between items-start md:items-center p-6 gap-4 bg-[#0f172a] text-white" style="border-color: #0f172a;">
+        <div>
+            <h1 class="page-title text-white">التهيئة المركزية والأمان</h1>
+            <p class="text-[12px] text-slate-400 font-bold max-w-2xl mt-1 leading-relaxed">
+                لوحة التحكم المتقدمة التي تتيح لك تخصيص سلوك خوارزميات النظام، المحاسبة، والأمان.
+            </p>
+        </div>
+        <div class="flex items-center justify-center p-4">
+            <span class="material-symbols-outlined text-[40px] text-slate-600">settings_suggest</span>
+        </div>
+    </div>
+
+    <!-- Financial & Security Settings (SuperAdmin Only) -->
+    @if(Model.IsSuperAdmin)
+    {
+        <h2 class="section-title">
+            <span class="material-symbols-outlined text-[#0284c7]">admin_panel_settings</span>
+            إعدادات الإدارة العليا والمالية
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Linking Branch Accounts -->
+            <a href="/FinancialSettings/Index" class="setting-card" style="border-top-color: #059669;">
+                <span class="material-symbols-outlined setting-icon text-[#059669]">account_tree</span>
+                <h3 class="setting-title text-[#063955]">الربط المحاسبي للفروع</h3>
+                <p class="setting-desc">ربط صناديق نقاط البيع وتكلفة البضاعة المباعة والإيرادات بالدليل المحاسبي تلقائياً.</p>
+            </a>
+
+            <!-- Branches Management -->
+            <a href="/Branches/Index" class="setting-card" style="border-top-color: #4f46e5;">
+                <span class="material-symbols-outlined setting-icon text-[#4f46e5]">store</span>
+                <h3 class="setting-title text-[#063955]">إدارة الفروع</h3>
+                <p class="setting-desc">عرض وإدارة كافة فروع الصيدلية، إضافة فروع جديدة وتعديل بياناتها.</p>
+            </a>
+
+            <!-- AI Forecasting Settings -->
+            <a href="/InventoryIntelligence/Index" class="setting-card" style="border-top-color: #9333ea;">
+                <span class="material-symbols-outlined setting-icon text-[#9333ea]">model_training</span>
+                <h3 class="setting-title text-[#063955]">خوارزميات التنبؤ (AI)</h3>
+                <p class="setting-desc">ضبط فترات ركود الأصناف ومعاملات المواسم لتحسين دقة توقع النواقص.</p>
+            </a>
+
+            <!-- Currency Settings -->
+            <a href="/Currencies/Index" class="setting-card" style="border-top-color: #d97706;">
+                <span class="material-symbols-outlined setting-icon text-[#d97706]">payments</span>
+                <h3 class="setting-title text-[#063955]">إدارة العملات والصرف</h3>
+                <p class="setting-desc">تهيئة العملات المسموحة وتعيين العملة الافتراضية للنظام وتحديث أسعار صرفها.</p>
+            </a>
+
+            <!-- System Backup -->
+            <a href="/Admin/Backup" class="setting-card" style="border-top-color: #0284c7;">
+                <span class="material-symbols-outlined setting-icon text-[#0284c7]">cloud_sync</span>
+                <h3 class="setting-title text-[#063955]">النسخ الاحتياطي</h3>
+                <p class="setting-desc">جدولة وتصدير نُسخ آمنة من قاعدة بيانات النظام بالكامل.</p>
+            </a>
+        </div>
+    }
+
+    <!-- POS & Operational Settings (SuperAdmin & Pharmacist) -->
+    @if(Model.IsSuperAdmin || Model.IsPharmacist)
+    {
+        <h2 class="section-title">
+            <span class="material-symbols-outlined text-[#0d9488]">point_of_sale</span>
+            إعدادات نقطة البيع والتشغيل (POS)
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Allow Negative Sales -->
+            <a href="/Sales/Index" class="setting-card flex gap-4" style="border-top: none; border-right-width: 4px; border-right-color: #e11d48; border-right-style: solid;">
+                <div class="flex-shrink-0 pt-1">
+                    <span class="material-symbols-outlined text-[20px] text-slate-400">production_quantity_limits</span>
+                </div>
+                <div>
+                    <h3 class="setting-title text-[#063955]">السماح بالبيع بالسالب</h3>
+                    <p class="setting-desc">السماح بتمرير الفواتير بغض النظر عن الرصيد الحالي للمادة (إجراء استثنائي).</p>
+                </div>
+                <div class="flex-shrink-0 flex items-start">
+                    <span class="w-8 h-4 bg-rose-200 rounded-full flex items-center p-0.5"><span class="w-3 h-3 bg-rose-600 rounded-full"></span></span>
+                </div>
+            </a>
+
+            <!-- Default Printer Setup -->
+            <a href="/Sales/POSIndex" class="setting-card flex gap-4" style="border-top: none; border-right-width: 4px; border-right-color: #94a3b8; border-right-style: solid;">
+                <div class="flex-shrink-0 pt-1">
+                    <span class="material-symbols-outlined text-[20px] text-slate-400">print</span>
+                </div>
+                <div>
+                    <h3 class="setting-title text-[#063955]">إعداد طابعة الإيصالات</h3>
+                    <p class="setting-desc">اختيار الطابعة الافتراضية للفرع الحالي وضبط عرض وهامش الورق الحراري.</p>
+                </div>
+            </a>
+
+            <!-- POS Interface Options -->
+            <a href="/Sales/POSIndex" class="setting-card flex gap-4" style="border-top: none; border-right-width: 4px; border-right-color: #94a3b8; border-right-style: solid;">
+                <div class="flex-shrink-0 pt-1">
+                    <span class="material-symbols-outlined text-[20px] text-slate-400">desktop_windows</span>
+                </div>
+                <div>
+                    <h3 class="setting-title text-[#063955]">مظهر واجهة البيع</h3>
+                    <p class="setting-desc">إظهار أو إخفاء أزرار الدفع السريع وتخصيص اختصارات المفاتيح.</p>
+                </div>
+            </a>
+        </div>
+    }
+</div>

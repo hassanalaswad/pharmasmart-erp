@@ -1,0 +1,346 @@
+@inject PharmaSmartWeb.Services.INavigationService Navigation
+@inject PharmaSmartWeb.Models.ApplicationDbContext DbContext
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+ <meta charset="utf-8"/>
+ <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+ <title>@ViewData["Title"] | @Settings.CompanyName</title>
+ 
+ <!-- Google Fonts Preconnect -->
+ 
+ 
+
+ <!-- Material Symbols Outlined (Icons) -->
+ 
+
+ <!-- Cairo Font (Arabic) -->
+ 
+
+ <!-- Cura Insight Unified Theme Dependencies -->
+ <script src="~/lib/tailwindcss.js"></script>
+ <script src="~/js/tailwind.config.js"></script>
+ <link href="~/css/cura-styles.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="~/css/local-fonts.css" />
+</head>
+<body class="text-on-surface flex rtl">
+@{
+ var currentController = Context.Request.RouteValues["controller"]?.ToString();
+ var currentAction = Context.Request.RouteValues["action"]?.ToString();
+
+ bool isMainHub = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) 
+ && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+
+ bool isSubPage = !string.IsNullOrEmpty(currentAction)
+ && !currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase)
+ && !currentAction.Equals("Login", StringComparison.OrdinalIgnoreCase)
+ && !currentAction.EndsWith("Hub", StringComparison.OrdinalIgnoreCase)
+ && !string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase);
+
+ bool isReportsModule = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+ && string.Equals(currentAction, "ReportsHub", StringComparison.OrdinalIgnoreCase);
+
+ string backUrl = $"/{currentController}/Index";
+}
+
+@if (!isMainHub)
+{
+<!-- Sidebar Navigation (ًںڑ€ Powered by Dynamic Navigation Engine) -->
+<aside class="print:hidden h-screen w-64 fixed right-0 top-0 border-l border-slate-100 bg-slate-50 z-50 flex flex-col p-4">
+ <div class="mb-6 px-2 flex items-center justify-between border-b border-slate-200 pb-4">
+ <a href="/Home/Index" class="flex items-center gap-2 text-primary hover:text-sky-900 transition-colors tooltip" title="العودة لبوابة النظام">
+ <img src="/images/Logo.png" class="h-8 max-w-[120px] object-contain" alt="Logo" onerror="this.style.display='none'" />
+ <span class="text-sm font-black tracking-tight">@Settings.CompanyName</span>
+ </a>
+ </div>
+ 
+ <div class="flex items-center gap-3 p-3 mb-4 bg-white rounded-sm border border-slate-100 shadow-sm">
+ <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-white overflow-hidden">
+ <span class="material-symbols-outlined text-[20px]">person</span>
+ </div>
+ <div>
+ <p class="text-sm font-bold text-slate-800">@User.Identity?.Name</p>
+ <p class="text-[10px] text-slate-500 font-medium">مستخدم النظام</p> 
+ </div>
+ </div>
+
+ <!-- Dynamic Menu Rendering -->
+ <nav class="space-y-1 flex-1 overflow-y-auto w-full custom-scrollbar pr-2">
+ @{
+ // 🛡️ استدعاء المحرك المركزي الموجه (يدعم الآن توزيع الوحدات وفصلها)
+ var allowedMenus = await Navigation.GetAllowedMenusAsync(User);
+ }
+
+ <!-- 🚀 التفريعات الديناميكية المفلترة عبر سجل السياسات والوحدة الحالية -->
+ @{ int groupIndex = 0; }
+ @foreach (var group in allowedMenus)
+ {
+ groupIndex++;
+ bool hasActiveChild = group.Items.Any(item => !string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
+
+ <div class="mt-2 mb-1">
+ <button type="button" onclick="document.getElementById('menu-group-@groupIndex').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" class="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-100 rounded-sm transition-colors group cursor-pointer focus:outline-none">
+ <div class="flex items-center gap-2">
+ <span class="material-symbols-outlined text-[18px] @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
+ <span class="text-[12px] font-black uppercase @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
+ </div>
+ <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-300 chevron @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
+ </button>
+ 
+ <div id="menu-group-@groupIndex" class="mt-1 space-y-1 @((hasActiveChild || isReportsModule) ? "" : "hidden") border-r-[3px] border-slate-100 mr-6 pr-3 overflow-hidden transition-all duration-300">
+ @foreach (var item in group.Items)
+ {
+ // Active State Logic
+ var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
+ var bgClass = isActive ? "bg-primary/10 text-primary font-bold rounded-sm shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-primary font-medium rounded-sm";
+
+ <a class="flex items-center gap-3 px-3 py-2 transition-all duration-200 @bgClass" href="@item.Url">
+ <span class="material-symbols-outlined text-[16px] @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
+ <span class="text-[12px]">@item.Title</span>
+ </a>
+ }
+ </div>
+ </div>
+ }
+ </nav>
+
+ <!-- Contextual Action Button based on Module -->
+ <div class="mt-4 pt-4 border-t border-slate-200">
+ @{
+ string activeUnit = "Main";
+ if (currentController == "Sales" || currentController == "Purchases") activeUnit = "Commercial";
+ else if (currentController == "Drugs" || currentController == "Inventory") activeUnit = "Inventory";
+ else if (currentController == "Accounting" || currentController == "JournalEntries") activeUnit = "Finance";
+ else if (currentController == "Admin" || currentController == "Branches" || currentController == "Users" || currentController == "Roles" || currentController == "Currencies" || currentController == "FinancialSettings") activeUnit = "SystemSettings";
+ else if (currentController == "Home" && (currentAction == "AdminHub" || currentAction == "SettingsHub")) activeUnit = "SystemSettings";
+ }
+ @if(activeUnit == "Commercial" && User.HasClaim("Permission", "Sales.Add"))
+ {
+ <a href="/Sales/Create" class="w-full py-3 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+ <span class="material-symbols-outlined" data-icon="add">add</span> فاتورة مبيعات
+ </a>
+ }
+ else if (activeUnit == "Finance" && User.HasClaim("Permission", "JournalEntries.View"))
+ {
+ <a href="/Vouchers/Index" class="w-full py-3 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+ <span class="material-symbols-outlined">receipt_long</span> إنشاء سند
+ </a>
+ }
+ else if (activeUnit == "Inventory" && User.HasClaim("Permission", "Drug.View"))
+ {
+ <a href="/Drugs/Create" class="w-full py-3 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+ <span class="material-symbols-outlined">add_box</span> بطاقة صنف
+ </a>
+ }
+ else if (activeUnit == "SystemSettings" && User.IsInRole("SuperAdmin"))
+ {
+ <a href="/Home/AdminHub" class="w-full py-3 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+ <span class="material-symbols-outlined">admin_panel_settings</span> لوحة الإدارة
+ </a>
+ }
+ else
+ {
+ <a href="/Home/DashboardHub" class="w-full py-3 bg-surface-container-high text-primary rounded-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors">
+ <span class="material-symbols-outlined">dashboard</span> لوحة النظام
+ </a>
+ }
+ </div>
+</aside>
+}
+
+<!-- Main Content Canvas -->
+<main class="print:!m-0 print:!p-0 @(isMainHub ? "" : "mr-64") p-5 min-h-screen flex-1 w-full max-w-full overflow-x-hidden bg-surface">
+
+<!-- Top Header Navigation -->
+<header class="print:hidden sticky top-0 z-40 flex justify-between items-center w-full px-6 py-4 bg-white rounded-sm mb-8 shadow-sm border border-slate-100">
+ <!-- Page Context -->
+ <div class="flex items-center gap-6">
+ @if (isSubPage)
+ {
+ <a href="@backUrl" class="w-10 h-10 flex items-center justify-center rounded-sm bg-surface-container-high text-secondary hover:bg-primary hover:text-white transition-all shadow-sm group" title="عودة للقائمة السابقة">
+ <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_forward</span>
+ </a>
+ <div class="h-8 w-px bg-slate-200"></div>
+ }
+ <div>
+ <div class="flex items-center gap-3">
+ <h2 class="text-2xl font-black text-primary tracking-tight">@ViewData["Title"]</h2>
+ </div>
+ @if(ViewData["PageDescription"] != null)
+ {
+ <p class="text-xs text-slate-500 font-bold mt-1">@ViewData["PageDescription"]</p>
+ }
+ </div>
+ @RenderSection("SubHeaderNav", required: false)
+ </div>
+
+ <!-- Search & Global Actions -->
+ <div class="flex items-center gap-4">
+ <!-- Dynamic header actions injected from the child view -->
+ @RenderSection("HeaderActions", required: false)
+
+ <!-- Branch Selector (For SuperAdmin) -->
+ @if (User.HasClaim("Permission", "System.ChangeBranch") && !isSubPage)
+ {
+ <form action="/Home/ChangeActiveBranch" method="post" class="flex m-0">
+ <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+ <div class="relative flex items-center bg-surface-container-highest rounded-full hover:bg-surface-variant transition-all h-10 w-48 border border-slate-200">
+ <span class="material-symbols-outlined text-xl text-primary pointer-events-none absolute right-3">storefront</span>
+ <select name="branchId" onchange="this.form.submit()" class="appearance-none bg-transparent w-full text-primary font-black text-sm border-none focus:ring-0 pr-10 pl-8 cursor-pointer h-full">
+ @{ 
+ var branchesList = DbContext.Branches.ToList();
+ var activeBranchIdClaim = User.Claims.FirstOrDefault(c => c.Type == "ReportScopeId")?.Value;
+ bool isAllBranches = string.IsNullOrEmpty(activeBranchIdClaim) || activeBranchIdClaim == "0"; 
+ }
+ @if (isAllBranches)
+ {
+ <option value="0" selected>كافة الفروع</option>
+ }
+ else
+ {
+ <option value="0">كافة الفروع</option>
+ }
+ @foreach (var br in branchesList)
+ {
+ bool isSelected = (!isAllBranches && activeBranchIdClaim == br.BranchId.ToString());
+ if (isSelected)
+ {
+ <option value="@br.BranchId" selected>@br.BranchName</option>
+ }
+ else
+ {
+ <option value="@br.BranchId">@br.BranchName</option>
+ }
+ }
+ </select>
+ <span class="material-symbols-outlined text-sm text-primary pointer-events-none absolute left-3">expand_more</span>
+ </div>
+ </form>
+ }
+ else
+ {
+ <div class="flex items-center gap-2 px-4 py-2 bg-surface-container-highest border border-slate-200 rounded-full text-primary font-black text-sm transition-all h-10 cursor-default whitespace-nowrap">
+ <span class="material-symbols-outlined text-xl">storefront</span>
+ @{
+ var branchName = ViewBag.ActiveBranchName?.ToString() ?? "الفرع الحالي";
+ if (User.Identity.IsAuthenticated)
+ {
+ var activeIdStr = User.Claims.FirstOrDefault(c => c.Type == "ReportScopeId")?.Value;
+ if (!string.IsNullOrEmpty(activeIdStr) && activeIdStr != "0" && int.TryParse(activeIdStr, out int bid))
+ {
+ var br = DbContext.Branches.FirstOrDefault(b => b.BranchId == bid);
+ if (br != null) branchName = br.BranchName;
+ }
+ else if (activeIdStr == "0")
+ {
+ branchName = "كافة الفروع (رؤية شاملة)";
+ }
+ }
+ }
+ <span>@branchName</span>
+ </div>
+ }
+
+
+ <a href="/Home/Notifications" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-container-highest transition-all text-secondary relative border border-slate-200" title="التنبيهات">
+ <span class="material-symbols-outlined text-[20px]">notifications</span>
+ <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full border-2 border-white"></span>
+ </a>
+ 
+ <a href="/Account/ChangePassword" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-variant transition-all text-secondary border border-slate-200" title="تغيير كلمة المرور">
+ <span class="material-symbols-outlined text-[20px]">key</span>
+ </a>
+
+ <a href="/Account/Logout" class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-50 hover:bg-error-container hover:text-error text-rose-400 transition-all border border-rose-100" title="تسجيل الخروج">
+ <span class="material-symbols-outlined text-[20px]">logout</span>
+ </a>
+ </div>
+</header>
+ 
+ <!-- Render Body -->
+ @RenderBody()
+
+</main>
+@RenderSection("Scripts", required: false)
+
+<style>
+ /* Custom Scrollbar for Sidebar Navigation */
+ .custom-scrollbar::-webkit-scrollbar {
+ width: 4px;
+ }
+ .custom-scrollbar::-webkit-scrollbar-track {
+ background: transparent;
+ }
+ .custom-scrollbar::-webkit-scrollbar-thumb {
+ background-color: #cbd5e1;
+ border-radius: 20px;
+ }
+ .bg-[#063955] {
+ background: linear-gradient(135deg, #00314e 0%, #004870 100%);
+ }
+</style>
+
+<script>
+ // ًںڑ€ Iframe Report Modal Interceptor (Context Preservation)
+ document.addEventListener('DOMContentLoaded', () => {
+ const reportLinks = document.querySelectorAll('aside a[href*="/Report/"], aside a[href*="/InventoryIntelligence/"], aside a[href*="/Inventory/Shortages"]');
+ 
+ reportLinks.forEach(link => {
+ const url = link.getAttribute('href');
+ // Exclude central report hubs
+ if(!url || url.includes('Index') || url.includes('AccountReports') || url.includes('BranchReports')) return; 
+ 
+ link.addEventListener('click', (e) => {
+ e.preventDefault();
+ window.openSystemReportModal(url);
+ });
+ });
+ });
+
+ // âœ… Global helper to open any page as a modal iframe (used by inline onclick handlers too)
+ window.openSystemReportModal = function(url) {
+ // Remove old iframe if it exists
+ const existing = document.getElementById('system-report-iframe-wrapper');
+ if (existing) existing.remove();
+
+ // Create wrapper overlay
+ const wrapper = document.createElement('div');
+ wrapper.id = 'system-report-iframe-wrapper';
+ wrapper.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:rgba(15,23,42,0.65);display:flex;align-items:stretch;backdrop-filter:blur(4px);';
+
+ // Close button
+ const closeBtn = document.createElement('button');
+ closeBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:28px;font-family:\'Material Symbols Outlined\';font-variation-settings:\'FILL\' 0,\'wght\' 400,\'GRAD\' 0,\'opsz\' 24">close</span>';
+ closeBtn.title = 'إغلاق (ESC)';
+ closeBtn.style.cssText = 'position:fixed;top:16px;left:16px;z-index:100000;width:44px;height:44px;border-radius:50%;background:#fff;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;color:#0f172a;transition:all 0.2s;';
+ closeBtn.onmouseenter = () => { closeBtn.style.background = '#f43f5e'; closeBtn.style.color = '#fff'; };
+ closeBtn.onmouseleave = () => { closeBtn.style.background = '#fff'; closeBtn.style.color = '#0f172a'; };
+ closeBtn.onclick = () => wrapper.remove();
+
+ // iframe
+ const iframe = document.createElement('iframe');
+ iframe.src = url;
+ iframe.id = 'system-report-iframe';
+ iframe.style.cssText = 'width:100%;height:100%;border:0;';
+
+ wrapper.appendChild(iframe);
+ wrapper.appendChild(closeBtn);
+ document.body.appendChild(wrapper);
+
+ // ESC to close
+ const onEsc = (e) => { if(e.key === 'Escape') { wrapper.remove(); document.removeEventListener('keydown', onEsc); } };
+ document.addEventListener('keydown', onEsc);
+ };
+
+ // Listen for cross-frame message to safely close the modal without navigating context
+ window.addEventListener('message', (e) => {
+ if(e.data === 'closeModal') {
+ const wrapper = document.getElementById('system-report-iframe-wrapper');
+ if(wrapper) wrapper.remove();
+ const iframe = document.getElementById('system-report-iframe');
+ if(iframe) iframe.remove();
+ }
+ });
+</script>
+</body>
+</html>

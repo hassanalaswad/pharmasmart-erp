@@ -1,0 +1,19 @@
+# Render.com service configuration
+# Docs: https://render.com/docs/yaml-spec
+
+services:
+  - type: web
+    name: pharmasmart-erp
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt    # أقرب region لمنطقة الاستضافة العربية
+    branch: main
+
+    # ── متغيرات البيئة ────────────────────────────────────────────────
+    # ⚠️ قم بتعيين DATABASE_URL في لوحة تحكم Render يدوياً (من قاعدة بياناتك)
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false        # يُعيَّن يدوياً من لوحة Render → لا يُحفظ في Git

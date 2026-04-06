@@ -1,0 +1,151 @@
+﻿@model IEnumerable<PharmaSmartWeb.Models.SystemLogs>
+
+@{
+ ViewData["Title"] = "سجلات الرقابة";
+}
+
+<style>
+ /* 🖨️ تنسيقات خاصة بالطباعة */
+ @@media print {
+ /* إخفاء العناصر غير الضرورية */
+ #sidebar,
+ header,
+ footer,
+ .print\:hidden {
+ display: none !important;
+ }
+
+ /* تمديد المحتوى الرئيسي ليأخذ كامل عرض الصفحة */
+ main {
+ margin: 0 !important;
+ padding: 0 !important;
+ width: 100% !important;
+ }
+
+ body {
+ background-color: white !important;
+ }
+ 
+ /* تحسين مظهر الجدول في الطباعة */
+ .bg-surface-container-lowest {
+ box-shadow: none !important;
+ border: none !important;
+ }
+
+ table {
+ border: 1px solid #e2e8f0 !important;
+ width: 100% !important;
+ font-size: 10pt !important;
+ }
+
+ th, td {
+ border: 1px solid #f1f5f9 !important;
+ padding: 8px !important;
+ color: black !important;
+ }
+ 
+ .text-primary {
+ color: black !important;
+ }
+ }
+</style>
+
+<div class="animate-in fade-in duration-500 pb-12 w-full">
+ <!-- Page Header Content -->
+ <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
+ <div>
+ <div class="flex items-center gap-3 mb-2">
+ <div class="w-12 h-12 bg-primary-container/10 rounded-sm flex items-center justify-center text-primary print:hidden">
+ <span class="material-symbols-outlined text-3xl" data-icon="history">history</span>
+ </div>
+ <h2 class="text-3xl font-extrabold text-primary tracking-tight">سجلات الرقابة (Audit Logs)</h2>
+ </div>
+ <p class="text-on-surface-variant max-w-2xl leading-relaxed">
+ تتبع ومراجعة جميع الأنشطة والعمليات التي تمت داخل النظام لضمان الشفافية والموثوقية.
+ </p>
+ </div>
+ <div class="flex gap-3 print:hidden">
+ <button onclick="window.print()" class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-tr from-primary to-primary-container text-white font-bold rounded-sm shadow-sm border border-slate-200 shadow-primary/20 hover:scale-[0.98] transition-all">
+ <span class="material-symbols-outlined text-sm" data-icon="print">print</span>
+ <span>طباعة التقرير</span>
+ </button>
+ </div>
+ </div>
+
+ <!-- Audit Logs Table Container -->
+ <div class="bg-surface-container-lowest rounded-sm shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-outline-variant/10">
+ <div class="overflow-x-auto">
+ <table class="w-full text-right border-collapse min-w-[800px]">
+ <thead>
+ <tr class="bg-surface-container/50 text-on-surface-variant border-b border-surface-container">
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">المستخدم</th>
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">الإجراء</th>
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">الشاشة</th>
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">التفاصيل</th>
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">التاريخ والوقت</th>
+ <th class="px-6 py-5 font-bold text-sm tracking-wide">عنوان IP</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-surface-container">
+ @if (!Model.Any())
+ {
+ <tr>
+ <td colspan="6" class="px-6 py-12 text-center text-slate-400 font-bold">
+ <span class="material-symbols-outlined text-4xl block mb-2 opacity-30">history_toggle_off</span>
+ لا توجد سجلات لعرضها حالياً.
+ </td>
+ </tr>
+ }
+ @foreach (var log in Model)
+ {
+ <tr class="hover:bg-surface-container-low/50 transition-colors">
+ <td class="px-6 py-4">
+ <div class="flex items-center gap-3">
+ <div class="w-10 h-10 rounded-sm bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold print:border print:border-slate-300">
+ @(log.User?.Username?.Substring(0, 1).ToUpper() ?? "?")
+ </div>
+ <div>
+ <p class="font-bold text-on-surface text-sm">@log.User?.Username</p>
+ </div>
+ </div>
+ </td>
+ <td class="px-6 py-4">
+ @if (log.Action == "Delete")
+ {
+ <span class="px-3 py-1 bg-error-container text-on-error-container text-xs font-bold rounded-full border border-error-container/50">حذف</span>
+ }
+ else if (log.Action == "Edit")
+ {
+ <span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold rounded-full border border-tertiary-fixed-dim/50">تعديل</span>
+ }
+ else if (log.Action == "Login")
+ {
+ <span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed text-xs font-bold rounded-full border border-primary-fixed-dim/50">تسجيل الدخول</span>
+ }
+ else
+ {
+ <span class="px-3 py-1 bg-secondary-container text-on-secondary-container text-xs font-bold rounded-full border border-secondary-fixed-dim/50">@log.Action</span>
+ }
+ </td>
+ <td class="px-6 py-4 font-bold text-sm text-primary">@log.ScreenName</td>
+ <td class="px-6 py-4">
+ <p class="text-sm text-on-surface-variant max-w-xs break-words">@log.Details</p>
+ </td>
+ <td class="px-6 py-4">
+ <p class="text-sm text-on-surface font-black">@log.CreatedAt.ToString("yyyy-MM-dd")</p>
+ <p class="text-[11px] text-on-surface-variant font-medium mt-0.5">@log.CreatedAt.ToString("HH:mm:ss")</p>
+ </td>
+ <td class="px-6 py-4 font-mono text-xs text-outline font-medium tracking-wider">@log.IPAddress</td>
+ </tr>
+ }
+ </tbody>
+ </table>
+ </div>
+ 
+ <!-- Pagination Area -->
+ <div class="px-6 py-4 bg-surface-container-lowest flex justify-between items-center border-t border-surface-container print:hidden">
+ <p class="text-xs text-on-surface-variant font-bold">إجمالي السجلات: @Model.Count()</p>
+ </div>
+ </div>
+</div>
+

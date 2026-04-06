@@ -1,0 +1,172 @@
+@{
+    ViewData["Title"] = "مركز التنبيهات وإشعارات النظام";
+    var shortages = ViewBag.ShortageItems as List<PharmaSmartWeb.Models.ShortageItemOverview>;
+    var expiring = ViewBag.ExpiringDrugs as List<PharmaSmartWeb.Models.ExpiringDrugOverview>;
+    var purchases = ViewBag.PurchaseAlerts as List<PharmaSmartWeb.Models.Purchases>;
+    int totalAlerts = (shortages?.Count ?? 0) + (expiring?.Count ?? 0) + (purchases?.Count ?? 0);
+}
+
+<div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12">
+    
+    <!-- 🟢 Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-end justify-between bg-white/70 border border-white/40 p-6 rounded-sm shadow-sm mb-8 mt-6">
+        <div>
+            <h1 class="text-3xl font-black text-primary mb-2 flex items-center gap-3">
+                <span class="material-symbols-outlined text-4xl text-warning">notifications_active</span>
+                مركز التنبيهات
+            </h1>
+            <p class="text-slate-500 text-sm font-medium">متابعة دقيقة للنواقص، تواريخ الصلاحية، وأوامر الشراء المعلقة للفرع: <span class="text-primary font-bold">@(ViewBag.ActiveBranchName ?? "الفرع الموحد")</span></p>
+        </div>
+        <div class="mt-4 md:mt-0 px-5 py-3 rounded-sm bg-error-container/30 border border-error-container text-error font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined rounded-full p-1 bg-error text-white text-sm">warning</span>
+            <span>@(totalAlerts) تنبيه يتطلب اتخاذ إجراء</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 🔴 1. Shortages Alerts (نواقص المخزون) -->
+        <div class="col-span-1 enterprise-panel rounded-sm p-6 border border-white/40 shadow-sm h-fit">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-full bg-error-container/50 text-error flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">production_quantity_limits</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">نواقص المخزون</h2>
+                    <p class="text-xs text-slate-500">أصناف تحت حد إعادة الطلب</p>
+                </div>
+                <span class="mr-auto bg-error text-white text-xs font-bold px-3 py-1 rounded-full">@(shortages?.Count ?? 0)</span>
+            </div>
+
+            @if (shortages == null || !shortages.Any())
+            {
+                <div class="text-center py-8">
+                    <span class="material-symbols-outlined text-5xl text-slate-200 mb-3">check_circle</span>
+                    <p class="text-slate-400 font-bold text-sm">لا توجد نواقص حرجة حالياً</p>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    @foreach(var item in shortages)
+                    {
+                        <div class="p-4 bg-white rounded-sm border border-slate-100 shadow-sm hover:border-error/30 transition-all group flex justify-between items-center relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800 mb-1">@item.DrugName</h3>
+                                <p class="text-xs text-error font-medium">يوجد نقص بمقدار: @item.ShortageAmount وحدة</p>
+                            </div>
+                            <a href="/Purchases/Create" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-error group-hover:text-white flex items-center justify-center transition-all" title="إنشاء أمر شراء">
+                                <span class="material-symbols-outlined text-sm">add_shopping_cart</span>
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- 🟡 2. Expiring Drugs (الأدوية المقتربة من الانتهاء) -->
+        <div class="col-span-1 enterprise-panel rounded-sm p-6 border border-white/40 shadow-sm h-fit">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-full bg-warning-container/50 text-amber-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">event_busy</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">تنبيهات الصلاحية</h2>
+                    <p class="text-xs text-slate-500">انتهاء قادم خلال شهرين</p>
+                </div>
+                <span class="mr-auto bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">@(expiring?.Count ?? 0)</span>
+            </div>
+
+            @if (expiring == null || !expiring.Any())
+            {
+                <div class="text-center py-8">
+                    <span class="material-symbols-outlined text-5xl text-slate-200 mb-3">verified</span>
+                    <p class="text-slate-400 font-bold text-sm">جميع التواريخ سليمة</p>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    @foreach(var ed in expiring)
+                    {
+                        var daysLeft = (ed.ExpiryDate - DateTime.Today).TotalDays;
+                        var isUrgent = daysLeft <= 30;
+                        var accentColor = isUrgent ? "bg-error" : "bg-warning";
+                        var textColor = isUrgent ? "text-error" : "text-amber-600";
+                        var borderColor = isUrgent ? "group-hover:border-error/30" : "group-hover:border-amber-400/30";
+
+                        <div class="p-4 bg-white rounded-sm border border-slate-100 shadow-sm @borderColor transition-all group flex justify-between items-center relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 @accentColor"></div>
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800 mb-1 truncate w-40" title="@ed.DrugName">@ed.DrugName</h3>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="material-symbols-outlined text-[14px] @textColor">schedule</span>
+                                    <span class="text-[11px] font-bold @textColor">ينتهي في: @ed.ExpiryDate.ToString("dd/MM/yyyy")</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-[10px] text-slate-400 mb-1">الكمية المقدرة</span>
+                                <span class="bg-slate-100 text-slate-600 font-bold text-xs px-3 py-1 rounded-sm">@ed.Quantity</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- 🔵 3. Purchase / Order Alerts (طلبات الشراء المعلقة) -->
+        <div class="col-span-1 enterprise-panel rounded-sm p-6 border border-white/40 shadow-sm h-fit">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-full bg-[#063955] text-white flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">pending_actions</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">طلبات الشراء</h2>
+                    <p class="text-xs text-slate-500">مشتريات معلقة / فواتير للموردين</p>
+                </div>
+                <span class="mr-auto bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">@(purchases?.Count ?? 0)</span>
+            </div>
+
+            @if (purchases == null || !purchases.Any())
+            {
+                <div class="text-center py-8">
+                    <span class="material-symbols-outlined text-5xl text-slate-200 mb-3">receipt_long</span>
+                    <p class="text-slate-400 font-bold text-sm">لا توجد طلبات أو فواتير معلقة</p>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    @foreach(var p in purchases)
+                    {
+                        <div class="p-4 bg-white rounded-sm border border-slate-100 shadow-sm hover:border-primary/30 transition-all group relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#063955]"></div>
+                            
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="font-bold text-xs text-slate-800 truncate w-40" title="@(p.Supplier?.SupplierName ?? "مورد غير معروف")">@(p.Supplier?.SupplierName ?? "مورد غير معروف")</h3>
+                                <span class="text-[10px] text-slate-400 font-medium">@p.PurchaseDate.ToString("dd MMM")</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                                <div>
+                                    <p class="text-[10px] text-slate-500 mb-1">صافي الفاتورة (#@p.InvoiceNumber)</p>
+                                    <p class="text-sm font-black text-primary">@p.NetAmount.ToString("N2") <span class="text-[10px] font-normal">ريال</span></p>
+                                </div>
+                                <div class="text-left">
+                                    <p class="text-[10px] text-slate-500 mb-1">المبلغ المتبقي</p>
+                                    <p class="text-xs font-bold text-error">@p.RemainingAmount.ToString("N2")</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 flex gap-2">
+                                <a href="/Purchases/Details/@p.PurchaseId" class="flex-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-center rounded-sm text-xs font-bold transition-colors">عـرض</a>
+                                <a href="/Vouchers/Create?type=Payment&SupplierId=@p.SupplierId" class="flex-1 py-1.5 bg-primary-container/20 hover:bg-primary-container/40 text-primary text-center rounded-sm text-xs font-bold transition-colors">سداد</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

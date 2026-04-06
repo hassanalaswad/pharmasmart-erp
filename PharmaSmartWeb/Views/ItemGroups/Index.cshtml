@@ -1,0 +1,150 @@
+@model IEnumerable<PharmaSmartWeb.Models.ItemGroups>
+
+@{
+    ViewData["Title"] = "الرموز والمجموعات العلاجية";
+    var totalGroups = Model.Count();
+    var totalDrugs = Model.Sum(x => x.Drugs?.Count ?? 0);
+    var latestGroup = Model.OrderByDescending(x => x.GroupId).FirstOrDefault();
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
+    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; }
+    .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
+    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .enterprise-table tr:hover td { background: #f8fafc; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
+    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-muted { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 2px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-edit { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .btn-del { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+</style>
+
+<!-- Page Header -->
+<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
+    <div>
+        <h1 class="page-title">الرموز والمجموعات العلاجية</h1>
+        <p class="page-sub">إدارة وتصنيف الأدوية حسب الفئات العلاجية والمجموعات البديلة.</p>
+    </div>
+    <a href="/ItemGroups/Create" class="btn-primary">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        إضافة مجموعة جديدة
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #059669;">
+        <span class="material-symbols-outlined" style="color:#059669; font-size:18px;">check_circle</span>
+        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #e11d48;">
+        <span class="material-symbols-outlined" style="color:#e11d48; font-size:18px;">error</span>
+        <span style="font-size:13px; color:#e11d48; font-weight:600;">@TempData["Error"]</span>
+    </div>
+}
+
+<!-- KPIs -->
+<div class="grid grid-cols-3 gap-3 mb-4">
+    <div class="enterprise-kpi">
+        <div class="kpi-title">إجمالي المجموعات</div>
+        <div class="kpi-value">@totalGroups</div>
+    </div>
+    <div class="enterprise-kpi">
+        <div class="kpi-title">أدوية مصنفة</div>
+        <div class="kpi-value" style="color:#063955;">@totalDrugs</div>
+    </div>
+    <div class="enterprise-kpi">
+        <div class="kpi-title">أحدث مجموعة مضافة</div>
+        <div style="font-size:13px; font-weight:700; color:#063955; margin-top:4px;">@(latestGroup?.GroupName ?? "لا يوجد")</div>
+        <div style="font-size:10px; color:#94a3b8; font-family:monospace;">@(string.IsNullOrEmpty(latestGroup?.GroupCode) ? "-" : latestGroup.GroupCode)</div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="enterprise-panel">
+    <div class="enterprise-header flex justify-between items-center">
+        <span>قائمة المجموعات العلاجية — (@totalGroups مجموعة)</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="enterprise-table">
+            <thead>
+                <tr>
+                    <th>رمز المجموعة</th>
+                    <th>اسم المجموعة العلاجية</th>
+                    <th style="text-align:center;">عدد الأدوية المرتبطة</th>
+                    <th>الحالة</th>
+                    <th style="text-align:center;">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            <span style="font-family:monospace; font-size:11px; font-weight:700; background:#f1f5f9; color:#063955; padding:2px 8px; border-radius:2px; border:1px solid #e2e8f0;">
+                                @(string.IsNullOrEmpty(item.GroupCode) ? "-" : item.GroupCode)
+                            </span>
+                        </td>
+                        <td><strong>@item.GroupName</strong></td>
+                        <td style="text-align:center;">
+                            <span class="status-badge status-muted">@(item.Drugs?.Count ?? 0) دواء</span>
+                        </td>
+                        <td>
+                            @if (item.IsActive)
+                            {
+                                <span class="status-badge status-success">نشط</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;">غير نشط</span>
+                            }
+                        </td>
+                        <td style="text-align:center;">
+                            <div style="display:flex; justify-content:center; gap:6px;">
+                                <a href="/ItemGroups/Edit/@item.GroupId" class="btn-sm btn-edit">
+                                    <span class="material-symbols-outlined" style="font-size:13px;">edit</span>
+                                    تعديل
+                                </a>
+                                @if (item.Drugs == null || item.Drugs.Count == 0)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@item.GroupId" method="post"
+                                          onsubmit="return confirm('تأكيد الحذف للمجموعة العلاجية؟');" style="display:inline;">
+                                        <button type="submit" class="btn-sm btn-del">
+                                            <span class="material-symbols-outlined" style="font-size:13px;">delete</span>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">
+                            <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px;">category</span>
+                            لا توجد مجموعات علاجية مسجلة.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div style="padding:8px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:11px; color:#64748b;">
+        إجمالي: @totalGroups مجموعة علاجية — @totalDrugs دواء مصنف
+    </div>
+</div>

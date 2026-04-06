@@ -1,0 +1,534 @@
+@model PharmaSmartWeb.Models.Sales
+
+@{
+    ViewData["Title"] = "تسجيل فاتورة بيع / نقطة البيع";
+}
+
+<script src="~/lib/sweetalert2.js"></script>
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; justify-content: space-between; align-items: center; }
+    
+    .form-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 9px 12px; font-size: 13px; background: #f8fafc; font-weight:700;}
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .input-icon-container { position: relative; }
+    .input-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    .form-control-with-icon { padding-right: 36px; }
+
+    .btn-submit { background: linear-gradient(135deg, #00314e 0%, #004870 100%); color: white; border: none; padding: 10px 24px; border-radius: 2px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.1s; }
+    .btn-submit:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    
+    .search-big { width: 100%; border: 2px dashed #063955; background: #f0f9ff; border-radius: 2px; padding: 16px 48px 16px 16px; font-size: 16px; font-weight: 700; color: #063955; outline: none; }
+    .search-big::placeholder { color: #7dd3fc; }
+    
+    .summary-box { background: #063955; color: white; border-radius: 2px; padding: 20px; position: relative; overflow: hidden; margin-bottom: 24px; }
+    .summary-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+    .summary-value { font-size: 32px; font-weight: 900; font-family: monospace; line-height: 1; }
+    
+    .payment-box { padding: 12px; border: 1px solid #cbd5e1; border-radius: 2px; background: #f8fafc; margin-bottom: 12px; }
+    .payment-inner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .payment-inner label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .payment-input { width: 100px; text-align: center; border: 1px solid #cbd5e1; background: white; border-radius: 2px; padding: 4px; font-family: monospace; font-weight: 700; font-size: 13px; outline: none; }
+    .payment-input:focus { border-color: #063955; }
+    
+    .cart-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .cart-table th { background: #f1f5f9; color: #64748b; padding: 10px 8px; text-align: right; font-weight: 700; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+    .cart-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .cart-input { width: 100%; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 4px; text-align: center; font-family: monospace; font-weight: 700; outline: none; }
+    .cart-input:focus { border-bottom-color: #063955; }
+    
+    .btn-icon { background: transparent; color: #94a3b8; border: none; cursor: pointer; display: inline-flex; justify-content: center; align-items: center;}
+    .btn-icon:hover { color: #ef4444; }
+</style>
+
+<form id="salesForm" asp-action="Create" method="post" style="max-width:1200px; margin:0 auto; padding: 24px 16px;">
+    @Html.AntiForgeryToken()
+    <div id="hiddenInputsContainer"></div>
+
+    <!-- Header Actions -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+        <div>
+            <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">المبيعات / تسجيل فاتورة بيع</div>
+            <h2 style="font-size:24px; font-weight:900; color:#063955; margin:0;">فاتورة مبيعات جديدة</h2>
+        </div>
+        <div style="display:flex; gap:12px;">
+            <a href="/Home/CommercialHub" class="btn-cancel">
+                <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span> إلغاء
+            </a>
+            <button type="button" onclick="submitPOS()" id="btnSaveSales" disabled class="btn-submit">
+                حفظ وإصدار الفاتورة
+            </button>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 350px; gap:24px;">
+        
+        <!-- Main Form Column -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+            
+            <div class="enterprise-panel" style="padding:24px; border-top:4px solid #063955;">
+                <div style="display:flex; flex-direction:column; gap:24px; margin-bottom:24px;">
+                    <div>
+                        <label class="form-label">
+                            <span>العميل / مبيعات آجلة</span>
+                            <span style="color:#64748b;">* (اختياري للنقدي، إلزامي للآجل)</span>
+                        </label>
+                        <div class="input-icon-container">
+                            <select asp-for="CustomerId" asp-items="ViewBag.Customers" id="CustomerId" onchange="validatePayments()" class="form-control form-control-with-icon">
+                                <option value="">-- عميل مبيعات نقدية (سريعة) --</option>
+                            </select>
+                            <span class="material-symbols-outlined input-icon">person_search</span>
+                        </div>
+                        <button type="button" onclick="openCustomerModal()" style="margin-top:6px; display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:2px; padding:5px 10px; cursor:pointer; white-space:nowrap;">
+                            <span class="material-symbols-outlined" style="font-size:13px;">person_add</span> إضافة عميل سريع
+                        </button>
+                    </div>
+                </div>
+
+                <div style="position:relative;">
+                    <label class="form-label">بحث سريع باستخدام الباركود أو اسم الدواء</label>
+                    <div class="input-icon-container">
+                        <input type="text" id="barcodeScanner" autofocus autocomplete="off" class="search-big" placeholder="امسح الباركود أو ادخل اسم المنتج..." />
+                        <span class="material-symbols-outlined input-icon" style="color:#0284c7; right:16px;">barcode_scanner</span>
+                    </div>
+                    <div id="searchResults" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; border-radius:2px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-height:250px; overflow-y:auto; z-index:50;"></div>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="overflow:hidden;">
+                <div class="enterprise-header">
+                    <span>تفاصيل الأصناف المباعة</span>
+                </div>
+                
+                <div style="min-height:250px; position:relative;">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th style="width:140px; text-align:center;">الكمية والوحدة</th>
+                                <th style="width:100px; text-align:left;">السعر</th>
+                                <th style="width:120px; text-align:left;">الإجمالي</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                    
+                    <div id="emptyCartMsg" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; background:white;">
+                        <span class="material-symbols-outlined" style="font-size:48px; opacity:0.3;">qr_code_scanner</span>
+                        <p style="font-weight:700; font-size:13px; margin-top:8px;">السلة فارغة، قم بمسح باركود المنتج لإضافته</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar / Summary Column -->
+        <div>
+            
+            <div class="summary-box">
+                <div class="summary-title">الصافي المطلوب من العميل</div>
+                <div class="summary-value" id="lblNetTotal">0.00</div>
+                
+                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.2); padding-top:16px;">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+                        <span style="opacity:0.8;">الإجمالي قبل التخفيض:</span>
+                        <span id="lblSubTotal" style="font-family:monospace; font-weight:700;">0.00</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:700; color:#fde047;">طرح خصم إضافي (-):</span>
+                        <input type="number" step="0.01" id="inputDiscount" value="0" oninput="calculateTotals()" onfocus="this.select()" style="width:60px; text-align:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white; font-family:monospace; font-weight:700; padding:2px; border-radius:2px; outline:none;" />
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center;">
+                        <span style="font-weight:700; color:#fde047;">إضافة ضريبة (+):</span>
+                        <input type="number" step="0.01" id="inputTax" value="0" oninput="calculateTotals()" onfocus="this.select()" style="width:60px; text-align:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white; font-family:monospace; font-weight:700; padding:2px; border-radius:2px; outline:none;" />
+                    </div>
+                </div>
+                
+                <div style="position:absolute; right:-20px; bottom:-20px; font-size:120px; opacity:0.05; pointer-events:none;">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="padding:16px;">
+                <h4 style="font-size:12px; font-weight:900; color:#063955; margin-bottom:16px; display:flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">payments</span> التوجيه المالي (طريقة الدفع)
+                </h4>
+
+                <!-- Cash -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#059669;"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> نقداً</label>
+                        <input type="number" step="0.01" name="CashAmount" id="valCash" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-emerald-700" />
+                    </div>
+                    <select name="CashAccountId" id="accCash" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- الصندوق --</option>
+                        @foreach (var acc in ViewBag.CashAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                </div>
+
+                <!-- Bank -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#0284c7;"><span class="material-symbols-outlined" style="font-size:14px;">account_balance</span> شبكة/بنك</label>
+                        <input type="number" step="0.01" name="BankAmount" id="valBank" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-sky-700" />
+                    </div>
+                    <select name="BankAccountId" id="accBank" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- البنك المتلقي --</option>
+                        @foreach (var acc in ViewBag.BankAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                </div>
+
+                <!-- Credit -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:2px;">
+                    <label style="font-size:12px; font-weight:700; color:#dc2626; display:flex; align-items:center; gap:4px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">history_edu</span> متبقي آجل (دين)
+                    </label>
+                    <span id="lblCredit" style="font-family:monospace; font-weight:900; color:#dc2626; font-size:16px;">0.00</span>
+                </div>
+
+                <div id="paymentWarning" style="display:none; background:#fee2e2; color:#ef4444; padding:8px; border-radius:2px; font-size:11px; font-weight:700; text-align:center; margin-top:12px;"></div>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<!-- Modal إضافة عميل -->
+<div id="customerModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:100; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:white; width:100%; max-width:500px; border-radius:2px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div class="enterprise-header" style="justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="color:#063955;">person_add</span> إضافة عميل سريع
+            </div>
+            <button type="button" onclick="closeCustomerModal()" style="background:none; border:none; cursor:pointer; color:#64748b;"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        
+        <div id="quickCustomerForm" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+            @Html.AntiForgeryToken()
+            <div id="quickCustomerError" style="display:none; background:#fee2e2; color:#ef4444; padding:12px; border-radius:2px; font-size:12px; font-weight:700;"></div>
+
+            <div>
+                <label class="form-label">الاسم الكامل / اسم الشركة <span style="color:#ef4444;">*</span></label>
+                <input id="qc-name" required placeholder="مثال: أحمد محمد الزهراني" class="form-control" />
+            </div>
+            <div>
+                <label class="form-label">رقم الجوال (اختياري)</label>
+                <input id="qc-phone" dir="ltr" placeholder="05XXXXXXXX" class="form-control text-right" />
+            </div>
+            <div>
+                <label class="form-label">الحد الائتماني (اختياري)</label>
+                <input id="qc-credit" type="number" step="0.01" min="0" value="0" class="form-control" />
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:8px;">
+                <button type="button" onclick="closeCustomerModal()" class="form-control" style="flex:1; background:#f1f5f9; color:#475569; text-align:center; cursor:pointer;">
+                    إلغاء
+                </button>
+                <button type="button" onclick="submitQuickCustomer()" id="btnQuickCustomerSave" class="form-control" style="flex:1; background:#063955; color:white; border-color:#063955; text-align:center; cursor:pointer; font-weight:900;">
+                    تسجيل وإضافة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const systemCurrency = '@Settings.Currency';
+    const inventoryDrugs = @Html.Raw(ViewBag.DrugsJson ?? "[]");
+    let cart = [];
+
+    const searchInput = document.getElementById('barcodeScanner');
+    const resultsDiv = document.getElementById('searchResults');
+
+    // بحث وباركود سريع
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        if (!query) { resultsDiv.style.display = 'none'; return; }
+
+        const matches = inventoryDrugs.filter(d =>
+            d.name.toLowerCase().includes(query) ||
+            (d.barcode && d.barcode.toLowerCase() === query) ||
+            d.id.toString() === query
+        );
+
+        if (matches.length === 1 && (query === matches[0].barcode?.toLowerCase() || query === matches[0].id.toString())) {
+            addToCart(matches[0]);
+            return;
+        }
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(d => `
+                <div onclick='addToCart(${JSON.stringify(d).replace(/'/g, "&#39;")})' style="padding:12px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:700; font-size:13px; color:#0f172a;">${d.name}</div>
+                    <div style="text-align:left;">
+                        <div style="color:#063955; font-family:monospace; font-weight:900; font-size:14px;">${d.price.toFixed(2)}</div>
+                        <div style="font-size:10px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:10px; margin-top:4px;">المخزون: ${d.stock} ${d.subUnit}</div>
+                    </div>
+                </div>
+            `).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:12px; font-weight:700;">غير موجود أو الرصيد صفر</div>';
+            resultsDiv.style.display = 'block';
+        }
+    });
+
+    document.addEventListener('click', (e) => { 
+        if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) resultsDiv.style.display = 'none'; 
+    });
+
+    function addToCart(drug) {
+        let existing = cart.find(i => i.id === drug.id && i.unitType === 'sub');
+        if (existing) {
+            if(existing.uiQty < drug.stock) existing.uiQty++;
+            else Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'الكمية لا تكفي بالمخزن', showConfirmButton: false, timer: 2000});
+        } else {
+            cart.push({
+                uid: Date.now(), id: drug.id, name: drug.name,
+                packPrice: drug.price, packCost: drug.cost,
+                mainUnit: drug.mainUnit, subUnit: drug.subUnit,
+                conv: drug.convFactor, maxStock: drug.stock,
+                uiQty: 1, unitType: 'sub'
+            });
+        }
+        searchInput.value = ''; searchInput.focus(); resultsDiv.style.display = 'none';
+        renderCart();
+    }
+
+    function updateItem(uid, field, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+
+        if (field === 'uiQty') {
+            let val = parseFloat(value) || 1;
+            let requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
+            if (requiredPills > item.maxStock) {
+                Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'الكمية المطلوبة أكبر من المخزون', showConfirmButton: false, timer: 2000});
+                renderCart(); return;
+            }
+            item[field] = val;
+        } else if (field === 'unitType') {
+            item[field] = value;
+            let requiredPills = item.unitType === 'main' ? (item.uiQty * item.conv) : item.uiQty;
+            if (requiredPills > item.maxStock) {
+                item.uiQty = 1;
+                Swal.fire({toast: true, position: 'top-end', icon: 'info', title: 'تم تعديل الكمية لـ 1 لتناسب المخزون', showConfirmButton: false, timer: 2000});
+            }
+        }
+        renderCart();
+    }
+
+    function removeItem(uid) { cart = cart.filter(i => i.uid !== uid); renderCart(); }
+
+    function renderCart() {
+        const tbody = document.getElementById('cartBody');
+        const emptyMsg = document.getElementById('emptyCartMsg');
+        const hiddenContainer = document.getElementById('hiddenInputsContainer');
+
+        if (cart.length === 0) { 
+            tbody.innerHTML = ''; 
+            emptyMsg.style.display = 'flex'; 
+            hiddenContainer.innerHTML = ''; 
+            calculateTotals(); 
+            return; 
+        }
+
+        emptyMsg.style.display = 'none';
+        let html = '', hiddenHtml = '';
+
+        cart.forEach((item, index) => {
+            let isMain = item.unitType === 'main';
+            let displayPrice = isMain ? item.packPrice : (item.packPrice / item.conv);
+            let subTotal = item.uiQty * displayPrice;
+            let serverQty = isMain ? (item.uiQty * item.conv) : item.uiQty;
+            let serverUnitPrice = item.packPrice / item.conv;
+
+            html += `
+                <tr>
+                    <td><strong style="color:#063955; font-size:13px;">${item.name}</strong></td>
+                    <td>
+                        <div style="display:flex; justify-content:center; align-items:center; gap:4px;">
+                            <input type="number" min="1" value="${item.uiQty}" onchange="updateItem(${item.uid}, 'uiQty', this.value)" style="width:60px; text-align:center; padding:4px; border:1px solid #cbd5e1; border-radius:2px; font-family:monospace; font-weight:700; outline:none;" />
+                            <select onchange="updateItem(${item.uid}, 'unitType', this.value)" style="padding:4px; border:1px solid #cbd5e1; background:#f1f5f9; border-radius:2px; font-size:11px; font-weight:700; outline:none; cursor:pointer;">
+                                <option value="sub" ${!isMain ? 'selected' : ''}>${item.subUnit}</option>
+                                <option value="main" ${isMain ? 'selected' : ''}>${item.mainUnit}</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td style="text-align:left; font-family:monospace; font-size:14px; font-weight:700; color:#64748b;">${displayPrice.toFixed(2)}</td>
+                    <td style="text-align:left; font-family:monospace; font-size:15px; font-weight:900; color:#063955;">${subTotal.toFixed(2)}</td>
+                    <td style="text-align:center;">
+                        <button type="button" onclick="removeItem(${item.uid})" class="btn-icon">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            hiddenHtml += `
+                <input type="hidden" name="Saledetails[${index}].DrugId" value="${item.id}" />
+                <input type="hidden" name="Saledetails[${index}].Quantity" value="${serverQty}" />
+                <input type="hidden" name="Saledetails[${index}].UnitPrice" value="${serverUnitPrice}" />
+            `;
+        });
+
+        tbody.innerHTML = html; hiddenContainer.innerHTML = hiddenHtml; calculateTotals();
+    }
+
+    function calculateTotals() {
+        let subTotal = 0;
+        cart.forEach(item => {
+            let isMain = item.unitType === 'main';
+            let displayPrice = isMain ? item.packPrice : (item.packPrice / item.conv);
+            subTotal += (item.uiQty * displayPrice);
+        });
+
+        const discount = parseFloat(document.getElementById('inputDiscount').value) || 0;
+        const tax = parseFloat(document.getElementById('inputTax').value) || 0;
+
+        let netTotal = subTotal - discount + tax;
+        if(netTotal < 0) netTotal = 0;
+
+        document.getElementById('lblSubTotal').innerText = subTotal.toFixed(2);
+        document.getElementById('lblNetTotal').innerText = netTotal.toFixed(2);
+
+        let cashInput = document.getElementById('valCash');
+        let bankInput = document.getElementById('valBank');
+        if (parseFloat(cashInput.value) === 0 && parseFloat(bankInput.value) === 0 && netTotal > 0) {
+            cashInput.value = netTotal.toFixed(2);
+        }
+
+        validatePayments(netTotal);
+    }
+
+    function validatePayments(passedNet = null) {
+        const net = passedNet !== null ? passedNet : parseFloat(document.getElementById('lblNetTotal').innerText) || 0;
+        const cash = parseFloat(document.getElementById('valCash').value) || 0;
+        const bank = parseFloat(document.getElementById('valBank').value) || 0;
+        const customerId = document.getElementById('CustomerId').value;
+        const accCash = document.getElementById('accCash').value;
+        const accBank = document.getElementById('accBank').value;
+
+        const warningBox = document.getElementById('paymentWarning');
+        const btnSave = document.getElementById('btnSaveSales');
+
+        let credit = net - (cash + bank);
+        if (credit < 0.01) credit = 0;
+        document.getElementById('lblCredit').innerText = credit.toFixed(2);
+
+        let isValid = true, errorMsg = "";
+
+        if (cart.length === 0) isValid = false;
+        else if ((cash + bank) - net > 0.01) { isValid = false; errorMsg = "إجمالي المدفوع أكبر من الفاتورة!"; }
+        else if (cash > 0 && !accCash) { isValid = false; errorMsg = "الرجاء تحديد صندوق النقد!"; }
+        else if (bank > 0 && !accBank) { isValid = false; errorMsg = "الرجاء تحديد الحساب البنكي!"; }
+        else if (credit > 0 && !customerId) { isValid = false; errorMsg = "يجب اختيار العميل عند وجود متبقٍ آجل!"; }
+
+        if (isValid) {
+            btnSave.disabled = false;
+            warningBox.style.display = 'none';
+        } else {
+            btnSave.disabled = true;
+            if (errorMsg && cart.length > 0) { 
+                warningBox.innerText = errorMsg; 
+                warningBox.style.display = 'block'; 
+            } else {
+                warningBox.style.display = 'none';
+            }
+        }
+    }
+
+    function submitPOS() {
+        if(!document.getElementById('btnSaveSales').disabled) {
+            const form = document.getElementById('salesForm');
+            let cashVal = parseFloat(document.getElementById('valCash').value) || 0;
+            let bankVal = parseFloat(document.getElementById('valBank').value) || 0;
+            let accCash = document.getElementById('accCash').value;
+            let accBank = document.getElementById('accBank').value;
+
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAmount" value="${cashVal}" />`);
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAmount" value="${bankVal}" />`);
+            if(cashVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAccountId" value="${accCash}" />`);
+            if(bankVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAccountId" value="${accBank}" />`);
+
+            form.submit();
+        }
+    }
+
+    function openCustomerModal() {
+        document.getElementById('customerModal').style.display = 'flex';
+        document.getElementById('qc-name').value = '';
+        document.getElementById('qc-phone').value = '';
+        document.getElementById('qc-credit').value = '0';
+        document.getElementById('quickCustomerError').style.display = 'none';
+        setTimeout(() => document.getElementById('qc-name').focus(), 100);
+    }
+    
+    function closeCustomerModal() {
+        document.getElementById('customerModal').style.display = 'none';
+    }
+
+    async function submitQuickCustomer() {
+        const name = document.getElementById('qc-name').value.trim();
+        const phone = document.getElementById('qc-phone').value.trim();
+        const credit = parseFloat(document.getElementById('qc-credit').value) || 0;
+        const errorDiv = document.getElementById('quickCustomerError');
+        const btn = document.getElementById('btnQuickCustomerSave');
+
+        if (!name) {
+            errorDiv.textContent = 'يرجى إدخال اسم العميل أو الشركة.';
+            errorDiv.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> جاري الحفظ...';
+
+        try {
+            const token = document.querySelector('#quickCustomerForm input[name="__RequestVerificationToken"]').value;
+            const res = await fetch('/Customers/QuickCreate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ fullName: name, phone: phone, creditLimit: credit })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeCustomerModal();
+                let listRes = await fetch('/Sales/GetCustomersList');
+                if (listRes.ok) {
+                    let customers = await listRes.json();
+                    let select = document.getElementById('CustomerId');
+                    select.innerHTML = '<option value="">-- عميل نقدية (سريعة) --</option>';
+                    customers.forEach(c => {
+                        let opt = document.createElement('option');
+                        opt.value = c.id; opt.textContent = c.name;
+                        if (c.id === data.customerId) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    validatePayments();
+                }
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تمت إضافة العميل بنجاح ✓', showConfirmButton: false, timer: 2500 });
+            } else {
+                errorDiv.textContent = data.message || 'حدث خطأ أثناء الحفظ.';
+                errorDiv.style.display = 'block';
+            }
+        } catch(err) {
+            errorDiv.textContent = 'تعذر الاتصال بالخادم. تأكد من الاتصال وأعد المحاولة.';
+            errorDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'تسجيل وإضافة';
+        }
+    }
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "F12" || event.keyCode === 123) {
+            event.preventDefault(); submitPOS();
+        }
+    });
+
+</script>

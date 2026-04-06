@@ -1,0 +1,278 @@
+@model PharmaSmartWeb.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "لوحة التحكم الرئيسية";
+}
+
+<!-- KPI Section: Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Sales Card -->
+    <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm border-r-4 border-sky-900">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-sky-50 rounded-sm text-sky-900">
+                <span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+            </div>
+            <span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">@(Model.InvoicesCount) فاتورة اليوم</span>
+        </div>
+        <p class="text-slate-500 text-sm mb-1">إجمالي المبيعات (الصافي اليوم)</p>
+        <h3 class="text-2xl font-black text-primary">@Model.TodaySales.ToString("N2") <span class="text-[12px] text-slate-400 font-normal">@Settings.Currency</span></h3>
+    </div>
+    <!-- Inventory Card -->
+    <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-slate-50 rounded-sm text-slate-600">
+                <span class="material-symbols-outlined" data-icon="inventory">inventory</span>
+            </div>
+        </div>
+        <p class="text-slate-500 text-sm mb-1">المخزون المتوفر (إجمالي القطع)</p>
+        <h3 class="text-2xl font-black text-primary">@Model.TotalStockQuantity.ToString("N0") قطعة</h3>
+    </div>
+    <!-- Shortage Alert Card -->
+    <div class="bg-tertiary-fixed p-6 rounded-sm shadow-sm relative overflow-hidden">
+        <div class="relative z-10">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-white/50 rounded-sm text-on-tertiary-fixed">
+                    <span class="material-symbols-outlined" data-icon="warning">warning</span>
+                </div>
+            </div>
+            <p class="text-on-tertiary-fixed/70 text-sm mb-1">تنبيهات النواقص (تحت الحد)</p>
+            <h3 class="text-2xl font-black text-on-tertiary-fixed">@Model.ShortagesCount أدوية</h3>
+        </div>
+        <div class="absolute -bottom-4 -left-4 opacity-10">
+            <span class="material-symbols-outlined text-8xl" data-icon="priority_high">priority_high</span>
+        </div>
+    </div>
+    <!-- Recent Operations Card -->
+    <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm">
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-2 bg-sky-50 rounded-sm text-sky-900">
+                <span class="material-symbols-outlined" data-icon="history">history</span>
+            </div>
+        </div>
+        <p class="text-slate-500 text-sm mb-1">العمليات المسجلة (system logs)</p>
+        <h3 class="text-2xl font-black text-primary">@Model.SystemLogsCount عملية</h3>
+    </div>
+</section>
+
+<!-- Main Dashboard Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Journal Details (Recent Transactions) - 2/3 width -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="bg-white rounded-sm p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-xl font-bold text-primary">أحدث العمليات المالية</h2>
+                    <p class="text-xs text-slate-500">القيود اليومية الأخيرة المؤثرة مالياً</p>
+                </div>
+                <a href="/JournalEntries/Index" class="text-sky-700 text-sm font-bold hover:underline">عرض الكل</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right">
+                    <thead>
+                        <tr class="text-slate-400 text-xs border-b border-slate-50">
+                            <th class="pb-4 font-medium">رقم القيد</th>
+                            <th class="pb-4 font-medium">الحساب</th>
+                            <th class="pb-4 font-medium">النوع</th>
+                            <th class="pb-4 font-medium">مدين</th>
+                            <th class="pb-4 font-medium">دائن</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @if(!Model.RecentJournals.Any())
+                        {
+                            <tr><td colspan="5" class="py-4 text-center text-sm text-slate-500 border-none">لا توجد عمليات مسجلة متوفرة</td></tr>
+                        }
+                        @foreach(var j in Model.RecentJournals)
+                        {
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 text-sm font-bold border-none">@j.TrxNumber</td>
+                                <td class="py-4 text-sm border-none">@j.AccountName</td>
+                                <td class="py-4 border-none">
+                                    @{
+                                        var bgClass = j.Type == "إيرادات" ? "bg-green-50 text-green-700" : (j.Type == "خصوم" || j.Type == "مصروف" ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700");
+                                    }
+                                    <span class="px-2 py-1 @bgClass text-[10px] rounded-md font-bold">@j.Type</span>
+                                </td>
+                                <td class="py-4 text-sm font-bold text-sky-900 border-none">@(j.Debit > 0 ? j.Debit.ToString("N2") : "0.00") <span class="text-[10px] text-slate-400">@Settings.Currency</span></td>
+                                <td class="py-4 text-sm font-bold text-sky-900 border-none">@(j.Credit > 0 ? j.Credit.ToString("N2") : "0.00") <span class="text-[10px] text-slate-400">@Settings.Currency</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Branches Performance Chart / Status -->
+        @if(Model.IsSuperAdmin && ViewBag.BranchStatsJson != null)
+        {
+            <div class="bg-white rounded-sm p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-primary mb-6">مقارنة أداء الفروع (المبيعات هذا الشهر)</h2>
+                <div class="w-full h-64">
+                    <canvas id="branchesChart"></canvas>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Branches Status -->
+            <div class="bg-white rounded-sm p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-primary mb-6">حالة الفروع (Branches)</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    @if(!Model.BranchStatuses.Any())
+                    {
+                        <p class="text-sm text-slate-500">لا توجد فروع مسجلة</p>
+                    }
+                    @foreach(var b in Model.BranchStatuses)
+                    {
+                        <div class="p-4 bg-slate-50 rounded-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-slate-500">@b.Location</p>
+                                <p class="text-sm font-bold">@b.BranchName</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full @(b.IsActive ? "bg-green-500" : "bg-slate-300")"></span>
+                                <span class="text-[10px] font-bold @(b.IsActive ? "text-green-600" : "text-slate-400")">@(b.IsActive ? "نشط" : "غير نشط")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Right Column - Sidebar Widgets -->
+    <div class="space-y-8">
+        <!-- Expiry Alerts (DrugBatches) -->
+        <div class="bg-white rounded-sm p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-bold text-primary">صلاحية الأدوية القريبة</h2>
+                <span class="material-symbols-outlined text-error" data-icon="event_busy">event_busy</span>
+            </div>
+            <div class="space-y-4">
+                @if(!Model.ExpiringDrugs.Any())
+                {
+                    <p class="text-sm text-slate-500">لا توجد أدوية قريبة الانتهاء.</p>
+                }
+                @foreach(var ed in Model.ExpiringDrugs)
+                {
+                    var daysLeft = (ed.ExpiryDate - DateTime.Today).TotalDays;
+                    var borderClass = daysLeft <= 30 ? "border-error bg-error-container/20" : "border-amber-400 bg-amber-50";
+                    var textClass = daysLeft <= 30 ? "text-error" : "text-amber-700";
+
+                    <div class="p-4 border-r-2 @borderClass rounded-sm">
+                        <p class="text-sm font-bold text-on-surface">@ed.DrugName</p>
+                        <div class="flex justify-between items-center mt-1">
+                            <p class="text-[10px] @textClass font-medium">ينتهي في: @ed.ExpiryDate.ToString("dd/MM/yyyy")</p>
+                            <p class="text-[10px] text-slate-500">الكمية: @ed.Quantity</p>
+                        </div>
+                    </div>
+                }
+            </div>
+            <a href="/StockExpiryReport?filter=near" class="w-full mt-6 py-2 text-sky-900 border border-sky-100 rounded-sm text-xs font-bold hover:bg-sky-50 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-sm">event_busy</span>
+                إدارة تواريخ الصلاحية
+            </a>
+        </div>
+        
+        <!-- Stock Shortages -->
+        <div class="bg-primary-container text-white rounded-sm p-6 shadow-sm">
+            <h2 class="text-lg font-bold mb-4">نواقص المخزون الحاسمة</h2>
+            <ul class="space-y-3">
+                @if(!Model.ShortageItems.Any())
+                {
+                    <li class="text-sm">لا توجد نواقص حرجة حالياً.</li>
+                }
+                @foreach(var sh in Model.ShortageItems)
+                {
+                    <li class="flex justify-between items-center border-b border-white/10 pb-2 border-none">
+                        <span class="text-xs">@sh.DrugName</span>
+                        <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">نقص @sh.ShortageAmount</span>
+                    </li>
+                }
+            </ul>
+            <a href="/Purchases/Create" class="mt-6 w-full py-2 bg-white text-primary font-bold rounded-sm text-xs flex items-center justify-center gap-2 hover:bg-white">
+                <span class="material-symbols-outlined text-sm" data-icon="add_shopping_cart">add_shopping_cart</span>
+                طلب توريد جديد
+            </a>
+        </div>
+
+        <!-- System Health/Logs Summary -->
+        <div class="enterprise-panel rounded-sm p-6 border border-white/20 shadow-sm">
+            <h2 class="text-sm font-bold text-primary mb-4">حالة النظام</h2>
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 rounded-full border-4 border-sky-900 border-t-transparent animate-spin-slow"></div>
+                <div>
+                    <p class="text-xs font-bold">مزامنة البيانات</p>
+                    <p class="text-[10px] text-slate-500">البيانات مباشرة</p>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-sky-900 w-[94%]"></div>
+                </div>
+                <p class="text-[10px] text-left text-slate-500">تحديث فوري</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contextual FAB (Only for main dashboard) -->
+<a href="/Home/ReportsHub" class="fixed bottom-8 left-8 w-16 h-16 rounded-full bg-[#063955] text-white flex items-center justify-center shadow-sm hover:scale-110 transition-transform z-50 shadow-sm border border-slate-200">
+    <span class="material-symbols-outlined text-3xl" data-icon="add_chart">add_chart</span>
+</a>
+
+@section Scripts {
+    @if(Model.IsSuperAdmin && ViewBag.BranchStatsJson != null)
+    {
+        <script src="~/lib/chart.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var rawData = @Html.Raw(ViewBag.BranchStatsJson);
+                var labels = rawData.map(d => d.BranchName);
+                var salesData = rawData.map(d => d.TotalSales);
+                var profitData = rawData.map(d => d.TotalProfit);
+                
+                var ctx = document.getElementById('branchesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'إجمالي المبيعات',
+                                data: salesData,
+                                backgroundColor: '#004870',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'صافي الأرباح',
+                                data: profitData,
+                                backgroundColor: '#84b7e4',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { font: { family: 'Manrope' } }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f2f4f6' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { family: 'Manrope', size: 12 } }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    }
+}

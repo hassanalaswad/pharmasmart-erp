@@ -1,0 +1,153 @@
+@model IEnumerable<PharmaSmartWeb.Models.Systemscreens>
+
+@{
+    ViewData["Title"] = "إدارة مصفوفة الصلاحيات";
+    var roleId = ViewBag.RoleId;
+    var currentPermissions = ViewBag.CurrentPermissions as List<PharmaSmartWeb.Models.Screenpermissions> ?? new List<PharmaSmartWeb.Models.Screenpermissions>();
+
+    var groupedScreens = Model.GroupBy(s => s.ScreenCategory);
+}
+
+<div class="max-w-6xl mx-auto pb-24 animate-in fade-in duration-500">
+    <!-- Header Section -->
+    <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-slate-400 text-xs font-bold mb-4">
+                <a href="/Home/Index" class="hover:text-sky-600 transition-colors">الرئيسية</a>
+                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                <a href="/Roles/Index" class="hover:text-sky-600 transition-colors">مجموعات الصلاحيات</a>
+                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                <span class="text-sky-700">تعديل الصلاحيات</span>
+            </nav>
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-amber-100 rounded-sm flex items-center justify-center text-amber-600 shadow-sm border border-slate-200 shadow-amber-900/10">
+                    <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black text-primary tracking-tight">صلاحيات: <span class="text-sky-600">@ViewBag.RoleArabicName</span></h1>
+                    <p class="text-on-surface-variant text-sm mt-1">تحديد ما يمكن لهذه المجموعة رؤيته أو تعديله في النظام</p>
+                </div>
+            </div>
+        </div>
+        <a asp-action="Index" class="bg-surface text-primary border border-surface-variant px-5 py-2.5 rounded-sm font-bold flex items-center gap-2 shadow-sm hover:border-primary hover:text-primary transition-all">
+            <span class="material-symbols-outlined">arrow_forward</span>
+            <span>رجوع للقائمة</span>
+        </a>
+    </header>
+
+    <!-- Master Actions/Info Bar -->
+    <div class="bg-surface-container-lowest border border-surface-variant rounded-sm p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <span class="material-symbols-outlined">info</span>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-primary mb-1">تنبيهات أمنية</p>
+                <p class="text-xs text-on-surface-variant">تغيير الصلاحيات سيطبق فورياً على جميع المستخدمين التابعين لهذه المجموعة لإخراجهم من الشاشات المسحوبة.</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="text-xs px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-sm hover:bg-slate-200 transition-colors" onclick="document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true)">
+                اختيار الكل
+            </button>
+            <button type="button" class="text-xs px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-sm hover:bg-slate-200 transition-colors" onclick="document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false)">
+                إلغاء الكل
+            </button>
+        </div>
+    </div>
+
+    <form asp-action="UpdatePermissions" method="post" id="permissionsForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="roleId" value="@roleId" />
+
+        <div class="space-y-6">
+            @{ int i = 0; }
+            @foreach (var group in groupedScreens)
+            {
+                <div class="bg-surface-container-lowest border border-surface-variant rounded-sm overflow-hidden shadow-sm">
+                    <!-- Module Header -->
+                    <div class="bg-surface-container p-4 border-b border-surface-variant flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors outline-none" onclick="this.nextElementSibling.classList.toggle('hidden');">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary">folder_open</span>
+                            <h3 class="font-bold text-on-surface text-lg">@group.Key</h3>
+                        </div>
+                        <span class="material-symbols-outlined text-on-surface-variant">keyboard_arrow_down</span>
+                    </div>
+
+                    <!-- Permissions Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="bg-surface-container-low text-on-surface-variant text-sm border-b border-surface-variant">
+                                    <th class="py-3 px-4 font-bold rounded-tr-xl">الشاشة / الموديول</th>
+                                    <th class="py-3 px-4 text-center font-bold">عرض</th>
+                                    <th class="py-3 px-4 text-center font-bold">إضافة</th>
+                                    <th class="py-3 px-4 text-center font-bold">تعديل</th>
+                                    <th class="py-3 px-4 text-center font-bold">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var screen in group)
+                                {
+                                    var existingPerm = currentPermissions.FirstOrDefault(p => p.ScreenId == screen.ScreenId);
+                                    
+                                    <tr class="border-b border-surface-variant/50 hover:bg-surface-container-lowest/50 transition-colors">
+                                        <td class="py-4 px-4">
+                                            <input type="hidden" name="permissions[@i].ScreenId" value="@screen.ScreenId" />
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-sm text-primary">@screen.ScreenArabicName</span>
+                                                <span class="text-[10px] text-slate-400 font-mono">@screen.ScreenName</span>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-4 text-center">
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="hidden" name="permissions[@i].CanView" value="false" />
+                                                <input type="checkbox" name="permissions[@i].CanView" value="true" class="sr-only peer" @(existingPerm != null && existingPerm.CanView ? "checked" : "")>
+                                                <span class="block w-11 h-6 bg-surface-variant rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></span>
+                                            </label>
+                                        </td>
+                                        <td class="py-4 px-4 text-center">
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="hidden" name="permissions[@i].CanAdd" value="false" />
+                                                <input type="checkbox" name="permissions[@i].CanAdd" value="true" class="sr-only peer" @(existingPerm != null && existingPerm.CanAdd ? "checked" : "")>
+                                                <span class="block w-11 h-6 bg-surface-variant rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 shadow-inner"></span>
+                                            </label>
+                                        </td>
+                                        <td class="py-4 px-4 text-center">
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="hidden" name="permissions[@i].CanEdit" value="false" />
+                                                <input type="checkbox" name="permissions[@i].CanEdit" value="true" class="sr-only peer" @(existingPerm != null && existingPerm.CanEdit ? "checked" : "")>
+                                                <span class="block w-11 h-6 bg-surface-variant rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 shadow-inner"></span>
+                                            </label>
+                                        </td>
+                                        <td class="py-4 px-4 text-center">
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="hidden" name="permissions[@i].CanDelete" value="false" />
+                                                <input type="checkbox" name="permissions[@i].CanDelete" value="true" class="sr-only peer" @(existingPerm != null && existingPerm.CanDelete ? "checked" : "")>
+                                                <span class="block w-11 h-6 bg-surface-variant rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500 shadow-inner"></span>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                    i++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Sticky Footer Actions -->
+        <div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-surface-variant p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50">
+            <div class="max-w-6xl mx-auto flex justify-end gap-3">
+                <a asp-action="Index" class="px-6 py-3 bg-surface-container text-primary font-bold rounded-sm hover:bg-surface-container-high transition-colors">
+                    إلغاء
+                </a>
+                <button type="submit" class="px-8 py-3 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-sm shadow-sm border border-slate-200 shadow-sky-900/20 active:scale-95 transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined">save</span>
+                    حفظ مصفوفة الصلاحيات
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

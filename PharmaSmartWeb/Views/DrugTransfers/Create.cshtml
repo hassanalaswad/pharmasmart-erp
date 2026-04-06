@@ -1,0 +1,317 @@
+@{
+    ViewData["Title"] = "إصدار بضاعة لفرع";
+}
+
+<script src="~/lib/sweetalert2.js"></script>
+
+<div class="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500 mt-6 h-[calc(100vh-140px)]">
+
+    <!-- Right Side: Main Transaction Area -->
+    <section class="flex-1 flex flex-col gap-6 overflow-hidden">
+    
+        <!-- Barcode Scanner Input -->
+        <div class="bg-surface-container-lowest shadow-sm rounded-sm p-6 flex items-center gap-4 border-r-4 border-primary-container shrink-0">
+            <div class="flex-1 relative">
+                <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-primary" style="font-variation-settings: 'FILL' 1;">barcode_scanner</span>
+                <input type="text" id="barcodeScanner" autofocus autocomplete="off" placeholder="قم بمسح الباركود أو ابحث عن الدواء..."
+                       class="w-full pr-12 pl-4 py-4 bg-surface-container-low border-none rounded-sm focus:ring-2 focus:ring-primary-container/50 transition-all text-right font-bold text-on-surface outline-none">
+                <div id="searchResults" class="hidden absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-sm shadow-sm border border-slate-200 border border-surface-container max-h-64 overflow-y-auto z-50 divide-y divide-surface-container-low shadow-sm"></div>
+            </div>
+            <button class="bg-primary text-white px-8 py-4 rounded-sm font-bold hover:bg-primary-container active:scale-95 transition-transform flex items-center gap-2 shadow-sm shadow-primary/20">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+                إضافة
+            </button>
+        </div>
+
+        <!-- Drugs Selection Table -->
+        <div class="bg-surface-container-lowest shadow-sm rounded-sm overflow-hidden flex-1 flex flex-col border border-surface-container">
+            <div class="p-6 border-b border-surface-container-low flex justify-between items-center bg-surface-container-low/50 shrink-0">
+                <h3 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-container">medical_information</span>
+                    الأدوية المحددة للتحويل
+                </h3>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto no-scrollbar p-0">
+                <form id="transferForm" asp-action="ProcessTransfer" method="post" class="h-full flex flex-col">
+                    @Html.AntiForgeryToken()
+                    <div id="hiddenInputsContainer"></div>
+
+                    <table class="w-full text-right border-collapse relative">
+                        <thead class="bg-surface-container/50 text-outline text-[11px] font-bold uppercase tracking-widest border-b border-surface-container sticky top-0 z-10 ">
+                            <tr>
+                                <th class="px-6 py-4">اسم الدواء / الوصف</th>
+                                <th class="px-6 py-4 text-center w-32">المخزون الحالي</th>
+                                <th class="px-6 py-4 text-center w-40">الكمية الصادرة</th>
+                                <th class="px-6 py-4 text-center w-16">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody" class="divide-y divide-surface-container-low">
+                            <!-- Items will be injected here via JS -->
+                        </tbody>
+                    </table>
+                    
+                    <div id="emptyCartMsg" class="flex-1 flex flex-col items-center justify-center text-outline gap-4 mt-12 mb-12">
+                        <span class="material-symbols-outlined text-7xl opacity-30">inventory_2</span>
+                        <p class="font-bold text-lg">الشحنة فارغة، أضف أصناف للإرسال</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Left Side: Sidebar/Summary -->
+    <aside class="w-full md:w-[400px] shrink-0 bg-surface-container-lowest shadow-sm border border-surface-container rounded-sm p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar">
+        <div class="space-y-1 shrink-0">
+            <h2 class="text-2xl font-black text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+                إصدار المخزون
+            </h2>
+            <p class="text-[11px] font-bold text-on-surface-variant">أدخل تفاصيل الوجهة والملاحظات لإتمام العملية بنجاح</p>
+        </div>
+
+        <!-- Configuration Section -->
+        <div class="space-y-5 flex-1">
+            <div class="space-y-2">
+                <label class="text-[11px] font-bold text-outline tracking-widest uppercase block px-1">الفرع المستلم (الوجهة) <span class="text-error">*</span></label>
+                <div class="relative">
+                    <select form="transferForm" name="ToBranchId" id="ToBranchId" required class="w-full bg-surface-container-low border border-outline-variant rounded-sm py-4 pr-10 pl-4 appearance-none shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-right font-bold text-on-surface cursor-pointer">
+                        <option value="">اختر فرع الوجهة...</option>
+                        @foreach (var item in ViewBag.Branches as SelectList) { <option value="@item.Value">@item.Text</option> }
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none">swap_calls</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[11px] font-bold text-outline tracking-widest uppercase block px-1">ملاحظات التحويل (اختياري)</label>
+                <textarea form="transferForm" name="Notes" rows="3" class="w-full bg-surface-container-low border border-outline-variant rounded-sm p-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-right font-bold text-on-surface resize-none" placeholder="اكتب أي ملاحظات إضافية هنا..."></textarea>
+            </div>
+            
+            <div id="validationWarning" class="hidden bg-error-container/40 p-4 rounded-sm border border-error/20 flex gap-3 items-start animate-pulse">
+                <span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+                <div class="text-[11px] font-bold text-on-error-container leading-relaxed" id="validationWarningText"></div>
+            </div>
+        </div>
+
+        <!-- Summary Stats (Static for UI feel, dynamic via JS if needed) -->
+        <div class="bg-surface-container-low/50 rounded-sm p-5 border border-surface-container space-y-3 shrink-0">
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-outline font-bold text-[11px] uppercase tracking-widest">حالة الشحنة:</span>
+                <span class="flex items-center gap-1.5 text-[10px] font-bold bg-primary-fixed block px-3 py-1 rounded-full text-on-primary-fixed">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    قيد التجهيز
+                </span>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="mt-auto pt-2 shrink-0">
+            <button type="button" onclick="submitTransfer()" id="btnSaveTransfer" disabled class="w-full bg-gradient-to-bl from-primary to-primary-container text-white py-4 rounded-sm font-black text-lg shadow-sm border border-slate-200 shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                تنفيذ النقل وإصدار البضاعة
+            </button>
+            <p class="text-[10px] text-center font-bold text-outline mt-3">سيتم تحديث المخزون فوراً وإصدار إشعار للفرع المستلم.</p>
+        </div>
+    </aside>
+
+</div>
+
+@section Scripts {
+    <script>
+        const inventoryItems = @Html.Raw(ViewBag.DrugsJson);
+        let cartItems = [];
+
+        const searchInput = document.getElementById('barcodeScanner');
+        const searchResults = document.getElementById('searchResults');
+        const cartBody = document.getElementById('cartBody');
+        const emptyCartMsg = document.getElementById('emptyCartMsg');
+        const hiddenInputsContainer = document.getElementById('hiddenInputsContainer');
+        const btnSaveTransfer = document.getElementById('btnSaveTransfer');
+        const validationWarning = document.getElementById('validationWarning');
+        const validationWarningText = document.getElementById('validationWarningText');
+        const toBranchSelect = document.getElementById('ToBranchId');
+
+        // Search logic
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            searchResults.innerHTML = '';
+            
+            if (query.length === 0) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            const matches = inventoryItems.filter(item => 
+                (item.name && item.name.toLowerCase().includes(query)) ||
+                (item.barcode && item.barcode.toLowerCase().includes(query))
+            ).slice(0, 10);
+
+            if (matches.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-center text-slate-500 font-bold">لا توجد نتائج مطابقة</div>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            matches.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'p-4 hover:bg-slate-50 cursor-pointer transition-colors flex justify-between items-center';
+                div.innerHTML = `
+                    <div>
+                        <div class="font-black text-slate-800">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono mt-0.5">${item.barcode || 'بدون باركود'}</div>
+                    </div>
+                    <div class="text-left">
+                        <div class="font-black text-sky-600">${item.stock} <span class="text-xs font-normal">متاح</span></div>
+                    </div>
+                `;
+                div.onclick = () => {
+                    addToCart(item);
+                    searchInput.value = '';
+                    searchResults.classList.add('hidden');
+                };
+                searchResults.appendChild(div);
+            });
+            searchResults.classList.remove('hidden');
+        });
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // Add to cart
+        function addToCart(item) {
+            const existing = cartItems.find(x => x.id === item.id);
+            if (existing) {
+                if (existing.qty < item.stock) {
+                    existing.qty++;
+                    renderCart();
+                } else {
+                    Swal.fire({ toast: true, position: 'top', icon: 'warning', title: 'الكمية تتجاوز المخزون المتاح!', showConfirmButton: false, timer: 3000 });
+                }
+            } else {
+                cartItems.push({ ...item, qty: 1 });
+                renderCart();
+            }
+        }
+
+        function removeFromCart(id) {
+            cartItems = cartItems.filter(x => x.id !== id);
+            renderCart();
+        }
+
+        function updateQty(id, newQty) {
+            const item = cartItems.find(x => x.id === id);
+            if (!item) return;
+            
+            let qty = parseInt(newQty);
+            if (isNaN(qty) || qty <= 0) qty = 1;
+            
+            if (qty > item.stock) {
+                qty = item.stock;
+                Swal.fire({ toast: true, position: 'top', icon: 'warning', title: 'تم تعديل الكمية لأقصى رصيد متاح', showConfirmButton: false, timer: 3000 });
+            }
+            
+            item.qty = qty;
+            renderCart();
+        }
+
+        function renderCart() {
+            cartBody.innerHTML = '';
+            hiddenInputsContainer.innerHTML = '';
+            
+            if (cartItems.length === 0) {
+                emptyCartMsg.classList.remove('hidden');
+                validateForm();
+                return;
+            }
+            
+            emptyCartMsg.classList.add('hidden');
+
+            cartItems.forEach((item, index) => {
+                // UI Row
+                const row = document.createElement('tr');
+                row.className = 'bg-white hover:bg-slate-50 transition-colors group';
+                row.innerHTML = `
+                    <td class="p-4 rounded-r-2xl border-b border-slate-50">
+                        <div class="font-black text-slate-800">${item.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">${item.barcode || '-'}</div>
+                    </td>
+                    <td class="p-4 text-center border-b border-slate-50">
+                        <input type="number" min="1" max="${item.stock}" value="${item.qty}"
+                               onchange="updateQty(${item.id}, this.value)"
+                               class="w-20 text-center bg-slate-100 border-none rounded-sm py-2 font-black text-sky-700 outline-none focus:ring-2 focus:ring-sky-500">
+                    </td>
+                    <td class="p-4 text-center border-b border-slate-50">
+                        <span class="font-mono font-black text-slate-600">${item.stock}</span>
+                    </td>
+                    <td class="p-4 rounded-l-2xl text-left border-b border-slate-50">
+                        <button type="button" onclick="removeFromCart(${item.id})" class="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-sm transition-all">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                cartBody.appendChild(row);
+
+                // Hidden Inputs for Binding
+                hiddenInputsContainer.innerHTML += `
+                    <input type="hidden" name="Details[${index}].DrugId" value="${item.id}" />
+                    <input type="hidden" name="Details[${index}].Quantity" value="${item.qty}" />
+                `;
+            });
+
+            validateForm();
+        }
+
+        toBranchSelect.addEventListener('change', validateForm);
+
+        function validateForm() {
+            let isValid = true;
+            let warningMsg = '';
+
+            if (!toBranchSelect.value) {
+                isValid = false;
+                warningMsg = 'يرجى تحديد الفرع المستقبل المستلم للبضاعة.';
+            } else if (cartItems.length === 0) {
+                isValid = false;
+                warningMsg = 'يجب إضافة صنف واحد على الأقل للشحنة.';
+            }
+
+            if (!isValid) {
+                validationWarningText.innerText = warningMsg;
+                validationWarning.classList.remove('hidden');
+                btnSaveTransfer.disabled = true;
+                btnSaveTransfer.classList.add('cursor-not-allowed', 'opacity-50');
+                btnSaveTransfer.classList.remove('hover:scale-[1.02]');
+            } else {
+                validationWarning.classList.add('hidden');
+                btnSaveTransfer.disabled = false;
+                btnSaveTransfer.classList.remove('cursor-not-allowed', 'opacity-50');
+                btnSaveTransfer.classList.add('hover:scale-[1.02]');
+            }
+        }
+
+        function submitTransfer() {
+            if (btnSaveTransfer.disabled) return;
+            
+            Swal.fire({
+                title: 'تأكيد إرسال البضاعة؟',
+                text: "سيتم خصم الكميات من مخزنك الحالي وتحويلها لحالة (في الطريق).",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0ea5e9',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'نعم، إرسال الشحنة',
+                cancelButtonText: 'إلغاء',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('transferForm').submit();
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,143 @@
+@model IEnumerable<PharmaSmartWeb.Models.Currencies>
+@{
+    ViewData["Title"] = "إدارة العملات وأسعار الصرف";
+    var baseCurrencyName = Model.FirstOrDefault(c => c.IsBaseCurrency)?.CurrencyName ?? "لا يوجد";
+    var baseCurrencyCode = Model.FirstOrDefault(c => c.IsBaseCurrency)?.CurrencyCode ?? "-";
+    var activeCurrenciesCount = Model.Count(c => c.IsActive);
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 2px; }
+    .page-sub { font-size: 12px; color: #64748b; font-weight: bold; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-sm-edit { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 4px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .btn-sm-edit:hover { background: #fef3c7; color: #b45309; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
+    .kpi-card { padding: 16px; background: white; border: 1px solid #d1d5db; border-radius: 2px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+    .kpi-value { font-size: 20px; font-weight: 800; color: #063955; }
+    .status-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; border: 1px solid transparent; }
+    .status-active { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+    .status-inactive { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .type-badge-base { background: #fff7ed; color: #c2410c; border-color: #ffedd5; }
+    .type-badge-foreign { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+</style>
+
+<div class="max-w-[1200px] mx-auto pb-12 pt-6 px-6">
+    
+    @if (TempData["Success"] != null)
+    {
+        <div class="enterprise-panel border-r-4 border-r-[#059669] p-4 mb-6 flex items-center gap-3">
+            <span class="material-symbols-outlined text-[#059669] text-[20px]">check_circle</span>
+            <span class="text-[13px] font-bold text-[#059669]">@TempData["Success"]</span>
+        </div>
+    }
+
+    <!-- Header Section -->
+    <div class="enterprise-panel border-t-4 border-t-[#063955] p-5 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="page-title">إدارة العملات وأسعار الصرف</h1>
+            <p class="page-sub mt-1">قم بتهيئة العملات المتاحة في النظام وأسعار صرفها</p>
+        </div>
+        <div class="flex gap-3">
+            @if (ViewData["CanViewCurrencies"] as bool? == true)
+            {
+                <a asp-action="Create" class="btn-primary">
+                    <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                    إضافة عملة جديدة
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- KPIs Component -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="kpi-card border-r-4 border-r-[#063955]">
+            <p class="kpi-title text-[#063955]">العملة الأساسية (المرجعية)</p>
+            <h4 class="kpi-value text-[#063955]">@baseCurrencyName</h4>
+            <p class="text-[10px] text-slate-500 font-bold mt-1 uppercase">ISO: @baseCurrencyCode</p>
+        </div>
+        <div class="kpi-card border-r-4 border-r-[#0284c7]">
+            <p class="kpi-title text-[#0284c7]">العملات النشطة</p>
+            <h4 class="kpi-value text-[#0284c7]">@activeCurrenciesCount</h4>
+            <p class="text-[10px] text-slate-500 font-bold mt-1">عملة مسجلة في النظام</p>
+        </div>
+        <div class="kpi-card border-r-4 border-r-[#059669] flex-row items-center justify-between">
+            <div class="flex flex-col">
+                <p class="kpi-title text-[#059669] mb-1">آخر تحديث للصرف</p>
+                <h4 class="kpi-value text-[#059669] text-[16px]">تقرير اليوم</h4>
+            </div>
+            <div class="w-12 h-12 rounded-sm bg-emerald-50 text-[#059669] border border-emerald-200 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[24px]">currency_exchange</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="enterprise-panel">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <h3 class="text-[14px] font-bold text-[#063955] flex items-center gap-2 m-0">
+                <span class="material-symbols-outlined text-[18px]">list_alt</span>
+                سجل أسعار الصرف
+            </h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="enterprise-table">
+                <thead>
+                    <tr>
+                        <th>اسم العملة</th>
+                        <th class="text-center">الكود (ISO)</th>
+                        <th class="text-center">سعر الصرف</th>
+                        <th class="text-center">النوع</th>
+                        <th class="text-center">الحالة</th>
+                        <th class="text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-sm bg-sky-50 text-[#0284c7] border border-sky-100 flex items-center justify-center font-black text-[12px]">
+                                        @(string.IsNullOrEmpty(item.CurrencyCode) ? "-" : item.CurrencyCode.Substring(0, 1))
+                                    </div>
+                                    <span class="font-bold text-[#063955] text-[13px]">@item.CurrencyName</span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-sm font-mono text-[11px] font-bold border border-slate-200">
+                                    @item.CurrencyCode
+                                </span>
+                            </td>
+                            <td class="text-center font-mono font-black text-[#063955] text-[14px]">
+                                @item.ExchangeRate.ToString("G4")
+                            </td>
+                            <td class="text-center">
+                                <span class="status-badge @(item.IsBaseCurrency ? "type-badge-base" : "type-badge-foreign")">
+                                    @(item.IsBaseCurrency ? "عملة محلية (مرجعية)" : "عملة أجنبية")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="status-badge @(item.IsActive ? "status-active" : "status-inactive")">
+                                    @(item.IsActive ? "مفعل" : "غير مفعل")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Edit" asp-route-id="@item.CurrencyId" class="btn-sm-edit" title="تعديل">
+                                    <span class="material-symbols-outlined text-[14px]">edit</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

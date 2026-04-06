@@ -1,0 +1,90 @@
+@model PharmaSmartWeb.Models.Suppliers
+
+@{
+    ViewData["Title"] = $"تعديل المورد: {Model.SupplierName}";
+    Layout = "_ModalLayout";
+}
+
+<style>
+    .form-label { font-size: 11px; font-weight: 700; color: #063955; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 7px 10px; font-size: 13px; background: #f8fafc; }
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .section-title { font-size: 11px; font-weight: 700; color: #475569; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-submit { background: #d97706; color: white; border: none; padding: 9px 24px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #d1d5db; padding: 9px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e11d48; margin-bottom: 14px; }
+    .info-row { background: #f1f5f9; border: 1px solid #e2e8f0; border-right: 4px solid #94a3b8; border-radius: 2px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+</style>
+
+<form asp-action="Edit" method="post">
+    @if (ViewBag.Error != null || TempData["Error"] != null)
+    {
+        <div class="alert-error">⚠ @(ViewBag.Error ?? TempData["Error"])</div>
+    }
+
+    <input type="hidden" asp-for="SupplierId" />
+    <input type="hidden" asp-for="AccountId" />
+    <input type="hidden" asp-for="CreatedAt" />
+
+    <!-- Read-Only Account Info -->
+    <div class="info-row">
+        <span class="material-symbols-outlined" style="font-size:18px; color:#475569;">account_balance</span>
+        <div>
+            <div style="font-size:10px; color:#94a3b8; font-weight:600;">الحساب المالي المرتبط بالدليل</div>
+            <div style="font-size:12px; font-weight:700; color:#0f172a;">
+                @(Model.Account?.AccountCode ?? "---") — @(Model.Account?.AccountName ?? "غير مربوط")
+            </div>
+        </div>
+        <span style="margin-right:auto; font-size:10px; background:#e2e8f0; padding:2px 8px; border-radius:2px; color:#475569; font-weight:700;">للقراءة فقط</span>
+    </div>
+
+    <!-- Form Fields -->
+    <div class="section-title">بيانات المورد</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+        <div>
+            <label class="form-label">اسم المورد <span style="color:#e11d48;">*</span></label>
+            <input asp-for="SupplierName" required class="form-control" placeholder="مثال: شركة الأدوية العالمية" />
+        </div>
+        <div>
+            <label class="form-label">المسؤول عن التواصل</label>
+            <input asp-for="ContactPerson" class="form-control" placeholder="الاسم الثلاثي للمندوب" />
+        </div>
+        <div>
+            <label class="form-label">رقم الهاتف / الجوال</label>
+            <input asp-for="Phone" class="form-control" dir="ltr" placeholder="05XXXXXXXX" type="tel" />
+        </div>
+        <div>
+            <label class="form-label">العنوان بالتفصيل</label>
+            <input asp-for="Address" class="form-control" placeholder="المدينة، الحي، اسم الشارع، رقم المبنى" />
+        </div>
+    </div>
+
+    <!-- Status Toggle -->
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:2px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span class="material-symbols-outlined" style="font-size:18px; color:#063955;">verified_user</span>
+            <div>
+                <div style="font-size:12px; font-weight:700; color:#063955;">حالة المورد (النشاط)</div>
+                <div style="font-size:10px; color:#94a3b8;">تفعيل أو إيقاف التعامل مع المورد (الإيقاف لن يؤثر على السجلات السابقة)</div>
+            </div>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" name="IsActive" value="true" @(Model.IsActive == true ? "checked" : "") style="width:16px; height:16px; cursor:pointer;" />
+            <input type="hidden" name="IsActive" value="false" />
+            <span style="font-size:12px; font-weight:700; color:#063955;">@(Model.IsActive == true ? "نشط" : "غير نشط")</span>
+        </label>
+    </div>
+
+    <!-- Footer Actions -->
+    <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:14px; border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="history.back()" class="btn-cancel">إلغاء التعديل</button>
+        <button type="submit" class="btn-submit">
+            <span class="material-symbols-outlined" style="font-size:15px;">save</span>
+            حفظ التحديثات
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

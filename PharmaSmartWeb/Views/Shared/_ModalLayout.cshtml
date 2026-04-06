@@ -1,0 +1,119 @@
+@using PharmaSmartWeb.Infrastructure
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"] | PharmaSmart ERP</title>
+    @* Assets *@
+    
+    
+    
+    
+    <script src="@AppAssets.CSS.Tailwind"></script>
+    <link rel="stylesheet" href="@AppAssets.CSS.FontAwesome">
+    <link rel="stylesheet" href="@AppAssets.CSS.AppCustom">
+    <!-- Cura Insight Unified Theme Dependencies -->
+    <script src="~/js/tailwind.config.js"></script>
+    <link href="~/css/cura-styles.css" rel="stylesheet"/>
+    <style type="text/tailwindcss">
+        @@layer utilities {
+            .enterprise-panel {
+                @@apply bg-white shadow-none border border-slate-300 rounded-[2px];
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: #f1f5f9;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #94a3b8;
+                border-radius: 2px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #64748b;
+            }
+        }
+        body { font-family: tahoma, 'Cairo', sans-serif; }
+        
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        .zoom-in { animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @@keyframes zoomIn { from { transform: scale(0.98); } to { transform: scale(1); } }
+        
+        @@media print {
+            html, body {
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+            .enterprise-panel {
+                position: static !important;
+                max-height: none !important;
+                height: auto !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+                transform: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+            }
+            .custom-scrollbar {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            .fixed {
+                display: none !important;
+            }
+            .print\:hidden {
+                display: none !important;
+            }
+            .sticky {
+                position: static !important;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="~/css/local-fonts.css" />
+</head>
+<!-- Replaced background blur with solid enterprise overlay -->
+<body class="bg-black/40 min-h-screen py-6 px-4 flex items-center justify-center relative overscroll-none print:py-0 print:px-0 print:bg-white print:block">
+    
+    <!-- Modal Container -->
+    <div class="enterprise-panel w-[98vw] @(ViewBag.ModalWidth ?? "max-w-[1400px]") h-auto max-h-[95vh] flex flex-col overflow-hidden relative fade-in zoom-in print:shadow-none print:w-full print:h-auto print:border-none print:rounded-none">
+        
+        <!-- Header -->
+        <div class="print:hidden bg-slate-50 border-b border-slate-300 p-4 flex justify-between items-center sticky top-0 z-20">
+            <h2 class="text-[16px] font-black text-[#063955] flex items-center gap-3 m-0">
+                <span class="material-symbols-outlined text-[#063955] text-[20px]">layers</span>
+                @ViewData["Title"]
+            </h2>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="window.print()" class="text-[#059669] bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 px-4 py-2 rounded-sm font-bold text-[12px] transition-all flex items-center gap-2 h-[34px]">
+                    <span class="material-symbols-outlined text-[16px]">print</span> طباعة
+                </button>
+                <!-- Esc Btn -->
+                <button type="button" onclick="if(window.parent !== window) { window.parent.postMessage('closeModal', '*'); } else { history.back(); }" class="print:hidden w-[34px] h-[34px] rounded-sm flex items-center justify-center bg-white border border-slate-300 hover:bg-rose-50 hover:border-rose-300 text-slate-500 hover:text-rose-600 transition-all font-bold group">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="relative z-10 flex-1 overflow-y-auto custom-scrollbar bg-white print:p-0 print:overflow-visible text-slate-800 print:text-black">
+            @RenderBody()
+        </div>
+        
+    </div>
+
+    <!-- Removed decorative background elements -->
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

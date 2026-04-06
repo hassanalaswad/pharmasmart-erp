@@ -1,0 +1,53 @@
+@model PharmaSmartWeb.Models.ItemGroups
+
+@{
+    ViewData["Title"] = $"تعديل مجموعة: {Model.GroupCode}";
+    Layout = "_ModalLayout";
+    ViewBag.ModalWidth = "max-w-[600px]";
+}
+
+<form asp-action="Edit" method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="GroupId" />
+
+    <div class="grid grid-cols-2 gap-6">
+        <div class="space-y-2">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">الرمز (Code)</label>
+            <input asp-for="GroupCode" class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 font-mono font-black outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 uppercase transition-all">
+        </div>
+        <div class="space-y-2">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">اسم المجموعة <span class="text-rose-500">*</span></label>
+            <input asp-for="GroupName" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 font-bold outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all">
+        </div>
+    </div>
+
+    <div class="space-y-2">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ملاحظات / وصف</label>
+        <input asp-for="Description" class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 font-bold outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all">
+    </div>
+
+    <div class="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-sm mt-4">
+        <div>
+            <h4 class="font-black text-slate-700 text-sm">تفعيل المجموعة</h4>
+            <p class="text-[11px] text-slate-500 font-bold mt-1">تحديد ما إذا كانت المجموعة الدوائية ستظهر في قوائم اختيار الأدوية وتوجيه المخزون.</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="IsActive" value="true" @(Model.IsActive == true ? "checked" : "") class="sr-only peer">
+            <input type="hidden" name="IsActive" value="false" />
+            <span class="block w-14 h-7 bg-slate-200 rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></span>
+        </label>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 bg-white shadow-[0_-10px_15px_-3px_rgba(255,255,255,1)]">
+        <button type="button" onclick="history.back()" class="px-6 py-2.5 rounded-sm font-black bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">cancel</span> إلغاء التعديل
+        </button>
+        <button type="submit" class="bg-amber-500 text-white px-8 py-2.5 rounded-sm font-black shadow-sm border border-slate-200 shadow-amber-500/30 hover:bg-amber-600 transition-all flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">sync_alt</span> حفظ التحديثات
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

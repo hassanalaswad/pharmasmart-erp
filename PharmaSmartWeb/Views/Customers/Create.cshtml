@@ -1,0 +1,97 @@
+@model PharmaSmartWeb.Models.Customers
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "إضافة عميل جديد";
+    var returnUrl = Context.Request.Query["returnUrl"].FirstOrDefault() ?? "/Customers/Index";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .form-label { font-size: 11px; font-weight: 700; color: #063955; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 7px 10px; font-size: 13px; background: #f8fafc; }
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .section-title { font-size: 12px; font-weight: 700; color: #475569; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-submit { background: #063955; color: white; border: none; padding: 9px 24px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #d1d5db; padding: 9px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e11d48; margin-bottom: 16px; }
+</style>
+
+<!-- Back nav -->
+<div style="margin-bottom:12px;">
+    <a href="@returnUrl" style="font-size:12px; color:#063955; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+        <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+        رجوع
+    </a>
+</div>
+
+<div class="enterprise-panel mb-4 p-3">
+    <h1 style="font-size:16px; font-weight:700; color:#063955;">إضافة عميل جديد</h1>
+    <p style="font-size:12px; color:#64748b;">أدخل بيانات العميل الجديد لتسجيله في النظام.</p>
+</div>
+
+<div class="enterprise-panel" style="padding:20px;">
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert-error">⚠ @ViewBag.Error</div>
+    }
+
+    <form asp-action="Create" asp-route-returnUrl="@returnUrl" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="isPopup" value="false" />
+
+        <div class="section-title">البيانات الشخصية والاتصال</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+            <div>
+                <label class="form-label">الاسم الكامل / اسم الشركة <span style="color:#e11d48;">*</span></label>
+                <input asp-for="FullName" required class="form-control" placeholder="مثال: محمد علي / شركة النور" />
+            </div>
+            <div>
+                <label class="form-label">رقم الجوال لتلقي الإشعارات</label>
+                <input asp-for="Phone" dir="ltr" class="form-control" style="text-align:right;" />
+            </div>
+        </div>
+
+        <div class="section-title">المالية والائتمان</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+            <div>
+                <label class="form-label">الحد الائتماني (الديون المسموحة)</label>
+                <input asp-for="CreditLimit" type="number" step="0.01" class="form-control" />
+            </div>
+            <div>
+                <label class="form-label">العنوان والتفاصيل الأخرى</label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:2px; padding:14px; margin-bottom:16px;">
+            <label class="form-label" style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#063955;">account_tree</span>
+                التوجيه المحاسبي الآلي للأصول
+            </label>
+            <select name="ParentAccountId" required class="form-control" style="background:white;">
+                <option value="">-- في أي مجموعة مالية ينتمي العميل؟ (اختر مجموعة) --</option>
+                @if (ViewBag.ParentAccounts != null)
+                {
+                    foreach (var acc in ViewBag.ParentAccounts)
+                    {
+                        <option value="@acc.Value">@acc.Text</option>
+                    }
+                }
+            </select>
+            <p style="font-size:10px; color:#94a3b8; margin-top:6px;">ستقوم شجرة الحسابات بإنشاء حساب مستقل تحت هذه المجموعة لتقييد مديونيات العميل.</p>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:14px; border-top:1px solid #e2e8f0;">
+            <a href="@returnUrl" class="btn-cancel">
+                <span class="material-symbols-outlined" style="font-size:15px;">cancel</span>
+                إلغاء العملية
+            </a>
+            <button type="submit" class="btn-submit">
+                <span class="material-symbols-outlined" style="font-size:15px;">check_circle</span>
+                تسجيل وتسريع إنشاء الحساب
+            </button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,219 @@
+@model PharmaSmartWeb.Models.Journalentries
+
+@{
+    ViewData["Title"] = "إضافة قيد يومية جديد";
+}
+
+<!-- Content Canvas -->
+<div class="p-4 md:p-5 max-w-6xl mx-auto w-full pb-20">
+    <form asp-action="Create" method="post" id="journalForm">
+        @Html.AntiForgeryToken()
+
+        <!-- Journal Entry Header -->
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
+            <div class="space-y-1">
+                <div class="flex items-center gap-2 text-primary font-bold mb-2">
+                    <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                    <span class="text-xs md:text-sm tracking-wider uppercase">محاسبة مالية</span>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-on-surface">إضافة قيد يومية جديد</h2>
+                <p class="text-slate-500 text-sm md:text-base max-w-md leading-relaxed mt-2">يرجى إدخال تفاصيل القيد المحاسبي بدقة. النظام سيقوم بالتحقق من توازن القيد تلقائياً قبل السماح بالحفظ.</p>
+            </div>
+            <div class="flex flex-col items-end gap-3">
+                <!-- Dynamic Balance Indicator -->
+                <div id="balanceStatus" class="flex items-center gap-2 px-5 py-3 rounded-sm bg-error-container text-on-error-container shadow-sm transition-all duration-300">
+                    <span id="balanceIcon" class="material-symbols-outlined">warning</span>
+                    <span id="balanceText" class="font-bold text-sm">القيد غير متزن</span>
+                    <div class="h-4 w-px bg-on-error-container/20 mx-1"></div>
+                    <span id="balanceDiff" class="font-mono text-lg font-black">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="mb-6 bg-error-container/30 border-r-4 border-error p-4 rounded-sm flex items-center gap-3 animate-pulse">
+                <span class="material-symbols-outlined text-error">error</span>
+                <p class="text-error text-sm font-black">@ViewBag.Error</p>
+            </div>
+        }
+
+        <!-- Form Details -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-1 space-y-2">
+                <label class="block text-sm font-bold text-slate-700 mr-1">تاريخ العملية</label>
+                <div class="relative">
+                    <input asp-for="JournalDate" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")"
+                           class="w-full bg-surface-container-lowest border-none shadow-sm rounded-sm py-3 px-4 focus:ring-2 focus:ring-primary/20 transition-all text-on-surface font-semibold pl-12">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">calendar_today</span>
+                </div>
+            </div>
+            <div class="lg:col-span-2 space-y-2">
+                <label class="block text-sm font-bold text-slate-700 mr-1">الوصف العام / البيان</label>
+                <input asp-for="Description" required placeholder="مثال: سداد قيمة فواتير المستلزمات الطبية لشهر أكتوبر"
+                       class="w-full bg-surface-container-lowest border-none shadow-sm rounded-sm py-3 px-4 focus:ring-2 focus:ring-primary/20 transition-all font-semibold">
+            </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div class="bg-surface-container-lowest rounded-sm shadow-sm overflow-hidden mb-6 border border-slate-100">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse" id="detailsTable">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs md:text-sm font-bold border-b border-slate-100">
+                            <th class="py-4 px-6">الحساب (الكود والاسم)</th>
+                            <th class="py-4 px-6 w-32 md:w-48">مدين (Debit)</th>
+                            <th class="py-4 px-6 w-32 md:w-48">دائن (Credit)</th>
+                            <th class="py-4 px-6 w-16 md:w-20 text-center">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-slate-700">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-slate-100/50 border-t-2 border-slate-200">
+                            <td class="py-4 px-6 text-slate-500 font-bold">الإجمالي الكلي</td>
+                            <td class="py-4 px-6 text-emerald-700 font-black font-mono text-lg" id="sumDebit">0.00</td>
+                            <td class="py-4 px-6 text-error font-black font-mono text-lg" id="sumCredit">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Table Actions -->
+        <button type="button" onclick="addRow()" class="flex items-center gap-2 px-6 py-4 rounded-sm border-2 border-dashed border-slate-200 text-slate-500 hover:border-primary hover:text-primary hover:bg-primary-container/5 transition-all font-bold w-full justify-center group mb-8">
+            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">add</span>
+            إضافة حساب آخر للقيد المزدوج
+        </button>
+
+        <!-- Sticky Footer Actions -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-surface-container-lowest rounded-sm shadow-sm border border-slate-200 border border-slate-100 sticky bottom-4 z-40">
+            <div class="flex items-center gap-4 order-2 sm:order-1 w-full sm:w-auto">
+                <a href="/JournalEntries/Index" class="flex-1 sm:flex-none px-8 py-3.5 rounded-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors text-center">إلغاء الأمر</a>
+                
+                <button type="submit" id="saveBtn" disabled class="flex-1 sm:flex-none px-8 py-3.5 rounded-sm font-black bg-slate-300 text-white cursor-not-allowed transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-sm">save</span>
+                    حفظ وترحيل القيد
+                </button>
+            </div>
+            <div class="flex items-center gap-6 order-1 sm:order-2 w-full sm:w-auto justify-end">
+                <div class="flex flex-col items-end">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">الفرق للتوازن</span>
+                    <span class="text-xl font-black text-rose-600 font-mono" id="differenceAmount">0.00</span>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    let rowCount = 0;
+    const accounts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Accounts));
+
+    function addRow() {
+        let options = accounts.map(a => `<option value="${a.accountId}">${a.accountCode} - ${a.accountName}</option>`).join('');
+
+        let html = `
+        <tr id="row_${rowCount}" class="group hover:bg-slate-50/50 transition-colors animate-in fade-in slide-in-from-top-2 duration-300">
+            <td class="py-5 px-6">
+                <select name="Journaldetails[${rowCount}].AccountId" required
+                        class="w-full bg-slate-50 border-none rounded-sm p-3 text-xs md:text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 text-on-surface cursor-pointer">
+                    <option value="">-- اختر الحساب المالي --</option>
+                    ${options}
+                </select>
+            </td>
+            <td class="py-5 px-6">
+                <div class="flex items-center gap-2">
+                    <span class="text-emerald-600 font-bold hidden md:inline">$</span>
+                    <input name="Journaldetails[${rowCount}].Debit" type="number" step="0.01" value="0.00"
+                           onfocus="this.select()" oninput="calculateTotals()"
+                           class="w-full bg-emerald-50 border border-emerald-100 rounded-sm text-emerald-800 font-mono font-bold py-2.5 px-3 focus:ring-2 focus:ring-emerald-300/50 outline-none text-right">
+                </div>
+            </td>
+            <td class="py-5 px-6">
+                <div class="flex items-center gap-2">
+                    <span class="text-error font-bold hidden md:inline">$</span>
+                    <input name="Journaldetails[${rowCount}].Credit" type="number" step="0.01" value="0.00"
+                           onfocus="this.select()" oninput="calculateTotals()"
+                           class="w-full bg-error-container/30 border border-error/20 rounded-sm text-error font-mono font-bold py-2.5 px-3 focus:ring-2 focus:ring-error/30 outline-none text-right">
+                </div>
+            </td>
+            <td class="py-5 px-6 text-center">
+                <button type="button" onclick="removeRow(${rowCount})"
+                        class="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-error hover:bg-error-container/30 rounded-sm transition-all">
+                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+            </td>
+        </tr>
+        `;
+
+        document.querySelector('#detailsTable tbody').insertAdjacentHTML('beforeend', html);
+        rowCount++;
+        calculateTotals();
+    }
+
+    function removeRow(id) {
+        if (document.querySelectorAll('#detailsTable tbody tr').length > 2) {
+            document.getElementById(`row_${id}`).remove();
+            calculateTotals();
+        }
+    }
+
+    function calculateTotals() {
+        let totalDebit = 0;
+        let totalCredit = 0;
+
+        document.querySelectorAll('input[name*=".Debit"]').forEach(input => totalDebit += parseFloat(input.value || 0));
+        document.querySelectorAll('input[name*=".Credit"]').forEach(input => totalCredit += parseFloat(input.value || 0));
+
+        let difference = Math.abs(totalDebit - totalCredit);
+        let isBalanced = difference < 0.01 && totalDebit > 0;
+
+        document.getElementById('sumDebit').innerText = totalDebit.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        document.getElementById('sumCredit').innerText = totalCredit.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        document.getElementById('differenceAmount').innerText = difference.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+        const statusBox = document.getElementById('balanceStatus');
+        const balanceIcon = document.getElementById('balanceIcon');
+        const balanceText = document.getElementById('balanceText');
+        const balanceDiff = document.getElementById('balanceDiff');
+        const saveBtn = document.getElementById('saveBtn');
+
+        balanceDiff.innerText = difference.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+        if (isBalanced) {
+            statusBox.className = 'flex items-center gap-2 px-5 py-3 rounded-sm bg-green-100 text-green-700 shadow-sm transition-all duration-300';
+            balanceIcon.innerText = "check_circle";
+            balanceText.innerText = "القيد متوازن";
+            document.getElementById('differenceAmount').classList.replace('text-rose-600', 'text-green-600');
+            
+            saveBtn.disabled = false;
+            saveBtn.className = "flex-1 sm:flex-none px-8 py-3.5 rounded-sm font-black bg-gradient-to-tr from-primary to-primary-container text-white shadow-sm border border-slate-200 shadow-sky-900/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2";
+        } else {
+            statusBox.className = 'flex items-center gap-2 px-5 py-3 rounded-sm bg-error-container text-on-error-container shadow-sm transition-all duration-300 animate-pulse';
+            balanceIcon.innerText = "warning";
+            balanceText.innerText = "القيد غير متزن";
+            document.getElementById('differenceAmount').classList.replace('text-green-600', 'text-rose-600');
+
+            saveBtn.disabled = true;
+            saveBtn.className = "flex-1 sm:flex-none px-8 py-3.5 rounded-sm font-black bg-slate-300 text-white cursor-not-allowed flex items-center justify-center gap-2 transition-all";
+        }
+    }
+
+    window.onload = function() {
+        addRow();
+        addRow();
+    };
+
+    document.getElementById('journalForm').onsubmit = function(e) {
+        let totalDebit = 0, totalCredit = 0;
+        document.querySelectorAll('input[name*=".Debit"]').forEach(i => totalDebit += parseFloat(i.value || 0));
+        document.querySelectorAll('input[name*=".Credit"]').forEach(i => totalCredit += parseFloat(i.value || 0));
+
+        if (Math.abs(totalDebit - totalCredit) > 0.01 || totalDebit <= 0) {
+            e.preventDefault();
+        }
+    };
+</script>

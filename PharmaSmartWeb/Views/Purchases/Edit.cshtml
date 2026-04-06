@@ -1,0 +1,426 @@
+@model PharmaSmartWeb.Models.Purchases
+
+@{
+    ViewData["Title"] = "تعديل فاتورة مشتريات - Cura Insight";
+}
+
+<script src="~/lib/sweetalert2.js"></script>
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; justify-content: space-between; align-items: center; }
+    
+    .form-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 9px 12px; font-size: 13px; background: #f8fafc; font-weight:700;}
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .input-icon-container { position: relative; }
+    .input-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; text-align: left; }
+    .form-control-with-icon { padding-right: 36px; }
+
+    .btn-submit { background: linear-gradient(135deg, #00314e 0%, #004870 100%); color: white; border: none; padding: 10px 24px; border-radius: 2px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.1s; }
+    .btn-submit:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    
+    .summary-box { background: #063955; color: white; border-radius: 2px; padding: 20px; position: relative; overflow: hidden; margin-bottom: 24px; border-top: 4px solid #0284c7; }
+    .summary-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+    .summary-value { font-size: 32px; font-weight: 900; font-family: monospace; line-height: 1; }
+    
+    .payment-box { padding: 12px; border: 1px solid #cbd5e1; border-radius: 2px; background: #f8fafc; margin-bottom: 12px; }
+    .payment-inner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .payment-inner label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    
+    .cart-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .cart-table th { background: #f1f5f9; color: #64748b; padding: 10px 8px; text-align: right; font-weight: 700; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+    .cart-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .cart-input { width: 100%; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 4px; text-align: center; font-family: monospace; font-weight: 700; outline: none; }
+    .cart-input:focus { border-bottom-color: #063955; }
+    
+    .btn-icon { background: transparent; color: #94a3b8; border: none; cursor: pointer; }
+    .btn-icon:hover { color: #ef4444; }
+</style>
+
+<div style="max-width:1400px; margin:0 auto; padding-bottom:60px; padding-top:24px;">
+    
+    <!-- Header Section -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:32px; flex-wrap:wrap; gap:24px;">
+        <div>
+            <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">
+                <a href="/Purchases/Index" style="color:#64748b; text-decoration:none;">المشتريات</a> / <span style="color:#0284c7;">تعديل الفاتورة #@Model.InvoiceNumber</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="background:#fef3c7; color:#d97706; padding:8px; border-radius:2px; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:28px;">edit_document</span>
+                </div>
+                <div>
+                    <h1 style="font-size:24px; font-weight:900; color:#063955; margin:0;">تعديل فاتورة المشتريات</h1>
+                    <p style="font-size:12px; color:#64748b; margin-top:4px; max-width:600px; font-weight:700;">تعديل البضاعة المستلمة وتحديث التشغيلات وأرصدة المخزون. تأكد من مطابقة الكميات الفعلية مع المستندات الورقية قبل الحفظ.</p>
+                </div>
+            </div>
+        </div>
+        
+        <a href="/Purchases/Index" class="btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">undo</span> إلغاء والرجوع
+        </a>
+    </div>
+
+    <!-- Main Form -->
+    <form asp-action="Edit" method="post" id="purchaseForm" style="display:flex; flex-direction:column; gap:24px;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="PurchaseId" />
+        <input type="hidden" asp-for="CreatedAt" />
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="enterprise-panel" style="background:#fff1f2; border-right:4px solid #e11d48; padding:16px; margin-bottom:24px; display:flex; align-items:center; gap:16px;">
+                <span class="material-symbols-outlined" style="color:#e11d48; font-size:24px;">error</span>
+                <p style="color:#e11d48; font-size:13px; font-weight:700;">@ViewBag.Error</p>
+            </div>
+        }
+
+        <!-- 1. Form Section Grid -->
+        <div class="enterprise-panel" style="padding:20px; border-top:4px solid #d97706; border-radius:2px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:24px;">
+                
+                <div>
+                    <label class="form-label">رقم الفاتورة <span style="color:#e11d48;">*</span></label>
+                    <div class="input-icon-container">
+                        <input asp-for="InvoiceNumber" required class="form-control form-control-with-icon" type="text" placeholder="مثال: Inv-1002" />
+                        <span class="material-symbols-outlined input-icon">tag</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">المورد <span style="color:#e11d48;">*</span></label>
+                    <div class="input-icon-container">
+                        <select asp-for="SupplierId" asp-items="ViewBag.Suppliers" required class="form-control form-control-with-icon">
+                            <option value="">-- اختر المورد --</option>
+                        </select>
+                        <span class="material-symbols-outlined input-icon">local_shipping</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="form-label">حالة الدفع <span style="color:#e11d48;">*</span></label>
+                    <select asp-for="PaymentStatus" id="paymentStatus" onchange="toggleCashAccount()" class="form-control">
+                        <option value="Unpaid">آجل (ذمم دائنة)</option>
+                        <option value="Paid">مدفوع نقداً/بنكي</option>
+                    </select>
+                </div>
+                
+                <div id="cashAccountDiv" style="display:none;">
+                    <label class="form-label" style="color:#d97706;">حساب الدفع</label>
+                    <select name="PaidFromAccountId" id="PaidFromAccountId" class="form-control" style="background:#fffbeb; border-color:#fde68a; color:#b45309;">
+                        <option value="">-- اختر الحساب --</option>
+                        @if (ViewBag.CashAccounts != null)
+                        {
+                            <optgroup label="الصناديق النقدية">
+                                @foreach (var acc in ViewBag.CashAccounts)
+                                {
+                                    <option value="@acc.AccountId">@acc.AccountName</option>
+                                }
+                            </optgroup>
+                        }
+                        @if (ViewBag.BankAccounts != null)
+                        {
+                            <optgroup label="الحسابات البنكية">
+                                @foreach (var acc in ViewBag.BankAccounts)
+                                {
+                                    <option value="@acc.AccountId">@acc.AccountName</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Items Table Section -->
+        <div class="enterprise-panel" style="overflow:hidden;">
+            <div class="enterprise-header" style="background:#063955; color:white; border-bottom:none;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined">inventory</span>
+                    <span style="font-weight:900;">الأصناف والتشغيلات المستلمة</span>
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <button type="button" onclick="openDrugModal()" style="background:#0284c7; color:white; border:none; padding:6px 12px; border-radius:2px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">add_circle</span> إضافة صنف لمنظومة الأدوية
+                    </button>
+                    <button type="button" onclick="addRow()" style="background:#d97706; color:white; border:none; padding:6px 12px; border-radius:2px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">format_list_bulleted_add</span> إدراج سطر بالفاتورة
+                    </button>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto; min-height:200px;">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th style="width:250px;">اسم المنتج</th>
+                            <th style="width:120px; text-align:center;">رقم التشغيلة (Batch)</th>
+                            <th style="width:120px; text-align:center;">تاريخ الانتهاء</th>
+                            <th style="width:80px; text-align:center;">الكمية</th>
+                            <th style="width:80px; text-align:center;">بونص</th>
+                            <th style="width:100px; text-align:center;">التكلفة</th>
+                            <th style="width:100px; text-align:center;">سعر البيع</th>
+                            <th style="width:120px; text-align:left;">الإجمالي</th>
+                            <th style="width:40px; text-align:center;">إزالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. Footer / Totals Section -->
+        <div style="display:grid; grid-template-columns:1fr 400px; gap:24px;">
+            
+            <!-- Notes Section -->
+            <div class="enterprise-panel" style="padding:20px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                    <span class="material-symbols-outlined" style="color:#d97706;">sticky_note_2</span>
+                    <span style="font-weight:900; color:#063955; font-size:12px;">ملاحظات الفاتورة</span>
+                </div>
+                <textarea asp-for="Notes" style="width:100%; border:1px solid #cbd5e1; background:#f8fafc; border-radius:2px; padding:12px; font-size:13px; font-weight:700; color:#0f172a; resize:none; outline:none;" placeholder="أدخل أي ملاحظات تتعلق بالشحن أو حالة البضاعة المستلمة..." rows="6"></textarea>
+            </div>
+
+            <!-- Totals Summary Card -->
+            <div>
+                <div class="summary-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <span style="font-size:12px; font-weight:900; color:rgba(255,255,255,0.8);">الإجمالي (Total):</span>
+                        <span style="font-size:24px; font-weight:900; font-family:monospace;" id="lblTotal">0.00</span>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(217,119,6,0.2); border:1px solid rgba(217,119,6,0.3); padding:8px; border-radius:2px; margin-bottom:16px;">
+                        <span style="font-size:11px; font-weight:900; color:#fde047;">قيمة البونص المستلم:</span>
+                        <span style="font-size:14px; font-weight:900; font-family:monospace; color:#fde047;" id="lblBonusTotal">0.00</span>
+                    </div>
+                    
+                    <div style="border-top:1px solid rgba(255,255,255,0.2); padding-top:16px; margin-bottom:16px;">
+                        <label style="font-size:10px; font-weight:900; color:rgba(255,255,255,0.6); text-transform:uppercase; margin-bottom:4px; display:block;">الخصم (Discount)</label>
+                        <input type="number" step="0.01" asp-for="Discount" id="inputDiscount" oninput="calculateNet()" onfocus="this.select()" style="width:100%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#34d399; font-family:monospace; font-weight:900; padding:8px; text-align:center; border-radius:2px; outline:none;" min="0">
+                    </div>
+
+                    <div style="border-top:1px dashed rgba(255,255,255,0.3); padding-top:16px;">
+                        <span style="font-size:10px; font-weight:900; color:#7dd3fc; text-transform:uppercase; margin-bottom:4px; display:block;">الصافي النهائي (Net Amount)</span>
+                        <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:8px;">
+                            <span style="font-size:42px; font-weight:900; font-family:monospace; color:white; letter-spacing:-1px;" id="lblNet">0.00</span>
+                            <span style="font-size:14px; font-weight:900; color:#7dd3fc;">SAR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSave" style="width:100%; padding:16px; font-size:16px;" class="btn-submit" disabled>
+                    <span class="material-symbols-outlined" style="font-size:20px;">lock</span> يرجى إدخال الأصناف السليمة
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Modal Iframe -->
+    <div id="drugModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:100; align-items:center; justify-content:center; padding:16px;">
+        <div style="background:white; width:100%; max-width:1100px; height:95vh; border-radius:2px; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+            <div class="enterprise-header">
+                <div style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">medication</span> تعريف صنف جديد</div>
+                <button type="button" onclick="closeDrugModal()" style="background:none; border:none; cursor:pointer; color:#64748b;"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div style="flex:1; position:relative; background:#f8fafc;">
+                <div id="modalLoader" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+                    <span class="material-symbols-outlined animate-spin" style="font-size:32px; color:#063955;">progress_activity</span>
+                    <span style="font-size:12px; font-weight:900; color:#64748b;">جاري تحميل بطاقة الصنف...</span>
+                </div>
+                <iframe id="drugIframe" style="width:100%; height:100%; border:none; position:relative; z-index:10;" onload="document.getElementById('modalLoader').style.display='none'"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let drugs = @Html.Raw(ViewBag.DrugsJson ?? "[]");
+    const existingDetails = @Html.Raw(ViewBag.ExistingDetailsJson ?? "[]");
+    let rowCount = 0;
+
+    function openDrugModal() {
+        document.getElementById('drugModal').style.display = 'flex';
+        document.getElementById('modalLoader').style.display = 'flex';
+        document.getElementById('drugIframe').src = '/Drugs/Create?isPopup=true';
+    }
+
+    function closeDrugModal() {
+        document.getElementById('drugModal').style.display = 'none';
+        document.getElementById('drugIframe').src = '';
+    }
+
+    window.addEventListener('message', async function(event) {
+        if (event.data === 'drug_added_success') {
+            closeDrugModal();
+            await refreshDrugsList();
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, icon: 'success', title: 'تمت إضافة الصنف وتحديث القائمة بنجاح!' });
+        }
+    });
+
+    async function refreshDrugsList() {
+        try {
+            const response = await fetch('/Purchases/GetDrugsList');
+            if (response.ok) {
+                drugs = await response.json();
+                document.querySelectorAll('.drug-select').forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">-- اختر المنتج --</option>' +
+                        drugs.map(d => `<option value="${d.id}" data-unit="${d.unit}">${d.name}</option>`).join('');
+                    select.value = currentValue;
+                });
+            }
+        } catch (e) { console.error('Failed to load drugs list', e); }
+    }
+
+    function toggleCashAccount() {
+        const status = document.getElementById('paymentStatus').value;
+        const cashDiv = document.getElementById('cashAccountDiv');
+        const cashSelect = document.getElementById('PaidFromAccountId');
+        if (status === 'Paid') {
+            cashDiv.style.display = 'block';
+            cashSelect.required = true;
+        } else {
+            cashDiv.style.display = 'none';
+            cashSelect.required = false;
+            cashSelect.value = '';
+        }
+    }
+
+    function addRow(detail = null) {
+        let options = drugs.map(d => `<option value="${d.id}" data-unit="${d.unit}">${d.name}</option>`).join('');
+
+        let html = `
+            <tr id="row_${rowCount}" style="border-bottom:1px solid #e2e8f0; transition:background 0.1s;">
+                <td style="padding:8px 12px;">
+                    <select name="Purchasedetails[${rowCount}].DrugId" onchange="updateUnitHint(${rowCount}, this)" style="width:100%; border:1px solid #cbd5e1; background:white; border-radius:2px; padding:6px; font-size:12px; font-weight:700; outline:none;" required>
+                        <option value="">-- اختر المنتج --</option>
+                        ${options}
+                    </select>
+                    <div id="unitHint_${rowCount}" style="font-size:10px; color:#0284c7; font-weight:900; margin-top:4px; display:none; background:#e0f2fe; padding:2px 4px; display:inline-block; border-radius:2px;">الوحدة: <span></span></div>
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="text" name="Purchasedetails[${rowCount}].BatchNumber" value="${detail ? detail.batchNumber : ''}" placeholder="BATCH-XX" class="cart-input" style="font-family:monospace; text-transform:uppercase;" required>
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="month" name="Purchasedetails[${rowCount}].ExpiryDate" value="${detail ? detail.expiryDate.substring(0,7) : ''}" class="cart-input" style="color:#e11d48;" required>
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="number" name="Purchasedetails[${rowCount}].Quantity" value="${detail ? detail.quantity : 1}" min="1" step="1" oninput="calculateNet()" class="cart-input" required>
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="number" name="Purchasedetails[${rowCount}].BonusQuantity" value="${detail ? detail.bonusQuantity : 0}" min="0" step="1" oninput="calculateNet()" class="cart-input" style="color:#059669;">
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="number" step="0.01" name="Purchasedetails[${rowCount}].CostPrice" value="${detail ? detail.costPrice : 0}" oninput="calculateNet()" onfocus="this.select()" placeholder="0.00" class="cart-input" style="color:#e11d48;" required>
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <input type="number" step="0.01" name="Purchasedetails[${rowCount}].SellingPrice" value="${detail ? detail.sellingPrice : 0}" onfocus="this.select()" placeholder="0.00" class="cart-input" style="color:#059669;" required>
+                </td>
+                <td style="padding:8px 12px; text-align:left; font-family:monospace; font-weight:900; font-size:14px; color:#063955;" id="subTotal_${rowCount}">
+                    0.00
+                </td>
+                <td style="padding:8px 12px; text-align:center;">
+                    <button type="button" onclick="removeRow(${rowCount})" class="btn-icon">
+                        <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        document.getElementById('tableBody').insertAdjacentHTML('beforeend', html);
+
+        if (detail) {
+            const selectElement = document.querySelector(`[name="Purchasedetails[${rowCount}].DrugId"]`);
+            selectElement.value = detail.drugId;
+            updateUnitHint(rowCount, selectElement);
+        }
+        rowCount++; calculateNet();
+    }
+
+    function updateUnitHint(idx, selectElement) {
+        const hintDiv = document.getElementById(`unitHint_${idx}`);
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            hintDiv.querySelector('span').innerText = selectedOption.getAttribute('data-unit') || 'غير محدد';
+            hintDiv.style.display = 'inline-block';
+        } else { hintDiv.style.display = 'none'; }
+    }
+
+    function removeRow(idx) { document.getElementById(`row_${idx}`).remove(); calculateNet(); }
+
+    function calculateNet() {
+        let total = 0, bonusTotal = 0, hasEmptyCost = false, hasInvalidDate = false;
+
+        for (let i = 0; i < rowCount; i++) {
+            const row = document.getElementById(`row_${i}`);
+            if (row) {
+                const qty = parseFloat(document.querySelector(`[name="Purchasedetails[${i}].Quantity"]`).value) || 0;
+                const bonusQty = parseFloat(document.querySelector(`[name="Purchasedetails[${i}].BonusQuantity"]`).value) || 0;
+                const cost = parseFloat(document.querySelector(`[name="Purchasedetails[${i}].CostPrice"]`).value) || 0;
+                const expiryObj = document.querySelector(`[name="Purchasedetails[${i}].ExpiryDate"]`);
+                
+                const sub = qty * cost; const bonusValue = bonusQty * cost;
+                
+                if (cost <= 0) hasEmptyCost = true;
+                if (!expiryObj.value) hasInvalidDate = true;
+
+                document.getElementById(`subTotal_${i}`).innerText = sub.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                total += sub; bonusTotal += bonusValue;
+            }
+        }
+
+        const discount = parseFloat(document.getElementById('inputDiscount').value) || 0;
+        const tax = 0; // Tax seems not explicitly in the calc here or maybe added later, but I follow the original JS
+        const net = total - discount + tax;
+
+        document.getElementById('lblTotal').innerText = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('lblBonusTotal').innerText = bonusTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('lblNet').innerText = net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const btnSave = document.getElementById('btnSave');
+        const rowsExist = document.querySelectorAll('#tableBody tr').length > 0;
+
+        if (!rowsExist || total <= 0 || hasEmptyCost || hasInvalidDate) {
+            btnSave.disabled = true;
+            btnSave.style.background = '#cbd5e1';
+            btnSave.style.color = '#94a3b8';
+            if(!rowsExist) { btnSave.innerHTML = '<span class="material-symbols-outlined">lock</span> الفاتورة فارغة (أضف أصناف القطعة السفلية)'; }
+            else if (hasEmptyCost) { btnSave.innerHTML = '<span class="material-symbols-outlined">warning</span> يرجى إدخال أسعار التكلفة للكل بشكل صحيح'; }
+            else if (hasInvalidDate) { btnSave.innerHTML = '<span class="material-symbols-outlined">event_busy</span> يرجى إدخال تاريخ الصلاحية للأصناف'; }
+            else { btnSave.innerHTML = '<span class="material-symbols-outlined">cancel</span> الفاتورة بحاجة لمراجعة (الإجمالي صفر)'; }
+        } else {
+            btnSave.disabled = false;
+            btnSave.style.background = 'linear-gradient(135deg, #00314e 0%, #004870 100%)';
+            btnSave.style.color = 'white';
+            btnSave.innerHTML = '<span class="material-symbols-outlined text-2xl">save_as</span> حفظ التعديلات بالمستودع والمالية';
+        }
+    }
+
+    window.onload = function() {
+        if(existingDetails && existingDetails.length > 0) {
+            existingDetails.forEach(detail => addRow(detail));
+        } else {
+            addRow();
+        }
+        toggleCashAccount();
+    };
+
+    document.getElementById('purchaseForm').onsubmit = function(e) { 
+        if(document.querySelectorAll('#tableBody tr').length === 0) { 
+            e.preventDefault(); 
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'رفض العملية', 
+                text: 'لا يمكن حفظ فاتورة توريد صفرية / فارغة.', 
+                confirmButtonColor: '#063955',
+                confirmButtonText: 'حسناً'
+            }); 
+        } 
+    };
+</script>

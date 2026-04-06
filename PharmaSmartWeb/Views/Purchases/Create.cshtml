@@ -1,0 +1,520 @@
+@model PharmaSmartWeb.Models.Purchases
+
+@{
+    ViewData["Title"] = "تسجيل فاتورة مشتريات (توريد)";
+}
+
+<script src="~/lib/sweetalert2.js"></script>
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; justify-content: space-between; align-items: center; }
+    
+    .form-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 9px 12px; font-size: 13px; background: #f8fafc; font-weight:700;}
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .input-icon-container { position: relative; }
+    .input-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    .form-control-with-icon { padding-right: 36px; }
+
+    .btn-submit { background: linear-gradient(135deg, #00314e 0%, #004870 100%); color: white; border: none; padding: 10px 24px; border-radius: 2px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.1s; }
+    .btn-submit:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    
+    .search-big { width: 100%; border: 2px dashed #063955; background: #f0f9ff; border-radius: 2px; padding: 16px 48px 16px 16px; font-size: 16px; font-weight: 700; color: #063955; outline: none; }
+    .search-big::placeholder { color: #7dd3fc; }
+    
+    .summary-box { background: #063955; color: white; border-radius: 2px; padding: 20px; position: relative; overflow: hidden; margin-bottom: 24px; }
+    .summary-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+    .summary-value { font-size: 32px; font-weight: 900; font-family: monospace; line-height: 1; }
+    
+    .payment-box { padding: 12px; border: 1px solid #cbd5e1; border-radius: 2px; background: #f8fafc; margin-bottom: 12px; }
+    .payment-inner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .payment-inner label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .payment-input { width: 100px; text-align: center; border: 1px solid #cbd5e1; background: white; border-radius: 2px; padding: 4px; font-family: monospace; font-weight: 700; font-size: 13px; outline: none; }
+    .payment-input:focus { border-color: #063955; }
+    
+    .cart-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .cart-table th { background: #f1f5f9; color: #64748b; padding: 10px 8px; text-align: right; font-weight: 700; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+    .cart-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .cart-input { width: 100%; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 4px; text-align: center; font-family: monospace; font-weight: 700; outline: none; }
+    .cart-input:focus { border-bottom-color: #063955; }
+    
+    .btn-icon { background: transparent; color: #94a3b8; border: none; cursor: pointer; }
+    .btn-icon:hover { color: #ef4444; }
+</style>
+
+@if (ViewBag.Error != null)
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            Swal.fire({
+                icon: 'error',
+                title: 'تنبيه هام من النظام',
+                text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Error)),
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#ef4444'
+            });
+        });
+    </script>
+}
+
+<form id="purchasesForm" asp-action="Create" method="post" style="max-width:1200px; margin:0 auto; padding: 24px 16px;">
+    @Html.AntiForgeryToken()
+    <div id="hiddenInputsContainer"></div>
+
+    <!-- Header Actions -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+        <div>
+            <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">المشتريات / تسجيل فاتورة توريد</div>
+            <h2 style="font-size:24px; font-weight:900; color:#063955; margin:0;">فاتورة مشتريات جديدة</h2>
+        </div>
+        <div style="display:flex; gap:12px;">
+            <a href="/Home/PurchasesHub" class="btn-cancel">
+                <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span> إلغاء
+            </a>
+            <button type="button" onclick="submitSecureForm()" id="btnSaveSales" disabled class="btn-submit">
+                حفظ وتسجيل بالمخزون
+            </button>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 350px; gap:24px;">
+        
+        <!-- Main Form Column -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+            
+            <div class="enterprise-panel" style="padding:24px; border-top:4px solid #063955;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
+                    <div>
+                        <label class="form-label">
+                            <span>المورد</span>
+                            <span style="color:#ef4444;">* إلزامي</span>
+                        </label>
+                        <div class="input-icon-container">
+                            <select asp-for="SupplierId" asp-items="ViewBag.Suppliers" class="form-control form-control-with-icon" required>
+                                <option value="">اختر المورد...</option>
+                            </select>
+                            <span class="material-symbols-outlined input-icon">local_shipping</span>
+                        </div>
+                        <button type="button" onclick="openSupplierModal()" style="margin-top:6px; display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:2px; padding:5px 10px; cursor:pointer; white-space:nowrap;">
+                            <span class="material-symbols-outlined" style="font-size:13px;">add</span> إضافة مورد جديد
+                        </button>
+                        <div style="display:none"><!-- placeholder for layout closing -->
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">
+                            <span>رقم الفاتورة (المرجع)</span>
+                            <span style="color:#ef4444;">* إلزامي</span>
+                        </label>
+                        <div class="input-icon-container">
+                            <input type="text" asp-for="InvoiceNumber" class="form-control form-control-with-icon" placeholder="مثلاً: INV-2023-001" required />
+                            <span class="material-symbols-outlined input-icon">receipt_long</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="position:relative;">
+                    <label class="form-label">البحث عن دواء / إضافة صنف</label>
+                    <div class="input-icon-container">
+                        <input type="text" id="drugSearch" autocomplete="off" class="search-big" placeholder="ابحث باسم الدواء، الكود..." />
+                        <span class="material-symbols-outlined input-icon" style="color:#0284c7; right:16px;">medication</span>
+                    </div>
+                    <div id="searchResults" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; border-radius:2px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-height:250px; overflow-y:auto; z-index:50;"></div>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="overflow:hidden;">
+                <div class="enterprise-header">
+                    <span>تفاصيل الأصناف</span>
+                    <button type="button" onclick="openDrugModal()" style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#0284c7; background:transparent; border:none; cursor:pointer;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">add</span> تعريف صنف جديد
+                    </button>
+                </div>
+                
+                <div style="min-height:250px; position:relative;">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الدواء / الصنف</th>
+                                <th style="width:60px; text-align:center;">الكمية</th>
+                                <th style="width:60px; text-align:center;">بونص</th>
+                                <th style="width:80px; text-align:center;">س.الشراء</th>
+                                <th style="width:80px; text-align:center;">س.البيع</th>
+                                <th style="width:100px; text-align:center;">التشغيلة</th>
+                                <th style="width:110px; text-align:center;">الانتهاء</th>
+                                <th style="width:80px; text-align:left;">الإجمالي</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                    
+                    <div id="emptyCartMsg" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; background:white;">
+                        <span class="material-symbols-outlined" style="font-size:48px; opacity:0.3;">receipt_long</span>
+                        <p style="font-weight:700; font-size:13px; margin-top:8px;">لم يتم إضافة أصناف للفاتورة بعد</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar / Summary Column -->
+        <div>
+            
+            <div class="summary-box">
+                <div class="summary-title">الصافي المطلوب للمورد</div>
+                <div class="summary-value" id="lblNetTotal">0.00</div>
+                
+                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.2); padding-top:16px;">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+                        <span style="opacity:0.8;">الإجمالي قبل التخفيض:</span>
+                        <span id="lblSubTotal" style="font-family:monospace; font-weight:700;">0.00</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center;">
+                        <span style="font-weight:700; color:#fde047;">خصم مكتسب (-):</span>
+                        <input type="text" id="inputDiscount" value="@Model.Discount" name="Discount" oninput="calculateTotals()" onfocus="this.select()" style="width:60px; text-align:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white; font-family:monospace; font-weight:700; padding:2px; border-radius:2px; outline:none;" />
+                    </div>
+                </div>
+                
+                <div style="position:absolute; right:-20px; bottom:-20px; font-size:120px; opacity:0.05; pointer-events:none;">
+                    <span class="material-symbols-outlined">account_balance_wallet</span>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="padding:16px;">
+                <h4 style="font-size:12px; font-weight:900; color:#063955; margin-bottom:16px; display:flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">payments</span> التوجيه المالي (طريقة الدفع)
+                </h4>
+
+                <!-- Cash -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#059669;"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> نقداً</label>
+                        <input type="text" name="CashAmount" id="valCash" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-emerald-700" />
+                    </div>
+                    <select name="CashAccountId" id="accCash" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- الصندوق --</option>
+                        @foreach (var acc in ViewBag.CashAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                    <div id="lblCashRequired" style="display:none; font-size:9px; font-weight:700; color:#ef4444; margin-top:4px;">* يرجى تحديد الصندوق</div>
+                </div>
+
+                <!-- Bank -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#0284c7;"><span class="material-symbols-outlined" style="font-size:14px;">account_balance</span> بنك</label>
+                        <input type="text" name="BankAmount" id="valBank" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-sky-700" />
+                    </div>
+                    <select name="BankAccountId" id="accBank" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- البنك --</option>
+                        @foreach (var acc in ViewBag.BankAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                    <div id="lblBankRequired" style="display:none; font-size:9px; font-weight:700; color:#ef4444; margin-top:4px;">* يرجى تحديد البنك</div>
+                </div>
+
+                <!-- Credit -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:2px;">
+                    <label style="font-size:12px; font-weight:700; color:#dc2626; display:flex; align-items:center; gap:4px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">history</span> باقي (آجل)
+                    </label>
+                    <span id="lblCredit" style="font-family:monospace; font-weight:900; color:#dc2626; font-size:16px;">0.00</span>
+                </div>
+
+                <div id="paymentWarning" style="display:none; background:#fee2e2; color:#ef4444; padding:8px; border-radius:2px; font-size:11px; font-weight:700; text-align:center; margin-top:12px;"></div>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<!-- Drug Modal -->
+<div id="drugModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:100; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:white; width:100%; max-width:1100px; height:85vh; border-radius:2px; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+        <div class="enterprise-header">
+            <div style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">medication</span> تعريف صنف جديد</div>
+            <button type="button" onclick="closeDrugModal()" style="background:none; border:none; cursor:pointer; color:#64748b;"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div style="flex:1; position:relative; background:#f8fafc;">
+            <div id="modalLoader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                <span class="material-symbols-outlined animate-spin" style="font-size:32px; color:#063955;">progress_activity</span>
+            </div>
+            <iframe id="drugIframe" style="width:100%; height:100%; border:none; position:relative; z-index:10;" onload="document.getElementById('modalLoader').style.display='none'"></iframe>
+        </div>
+    </div>
+</div>
+
+<!-- Supplier Quick-Add Modal (Popup) -->
+<div id="supplierModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:200; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:white; width:100%; max-width:600px; border-radius:2px; display:flex; flex-direction:column; box-shadow:0 20px 40px rgba(0,0,0,0.3); border-top:4px solid #059669; animation: slideDown 0.2s ease;">
+        <div style="background:#f0fdf4; border-bottom:1px solid #d1fae5; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="color:#059669; font-size:20px;">domain_add</span>
+                <span style="font-size:14px; font-weight:800; color:#065f46;">إضافة مورد جديد</span>
+            </div>
+            <button type="button" onclick="closeSupplierModal()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; align-items:center;">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div style="position:relative; min-height:300px;">
+            <div id="supplierModalLoader" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:white;">
+                <span class="material-symbols-outlined" style="font-size:32px; color:#059669; animation: spin 1s linear infinite;">progress_activity</span>
+            </div>
+            <iframe id="supplierIframe" style="width:100%; min-height:380px; height:auto; border:none; display:block;" onload="onSupplierIframeLoad()"></iframe>
+        </div>
+    </div>
+</div>
+<style>
+    @@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+
+
+<script>
+    const inventoryDrugs = @Html.Raw(ViewBag.DrugsJson ?? "[]");
+    let cart = [];
+    const cartDataRaw = @Html.Raw(ViewBag.RecoveredCartJson ?? "[]");
+    if (cartDataRaw && cartDataRaw.length > 0) {
+        cart = cartDataRaw;
+        setTimeout(renderCart, 100);
+    }
+
+    function parseLocalFloat(val) {
+        if (!val) return 0;
+        let str = val.toString().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/,/g, '');
+        return parseFloat(str) || 0;
+    }
+
+    function sanitizeFormInputsForServer() {
+        const textInputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+        textInputs.forEach(input => {
+            if (input.value && /[٠-٩۰-۹]/.test(input.value)) {
+                let val = input.value.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+                input.value = val;
+            }
+        });
+    }
+
+    function openDrugModal() {
+        document.getElementById('drugModal').style.display = 'flex';
+        document.getElementById('modalLoader').style.display = 'flex';
+        document.getElementById('drugIframe').src = '/Drugs/Create?isPopup=true';
+    }
+    function closeDrugModal() {
+        document.getElementById('drugModal').style.display = 'none';
+        document.getElementById('drugIframe').src = '';
+    }
+
+    // === Supplier Quick-Add Popup ===
+    function openSupplierModal() {
+        const modal = document.getElementById('supplierModal');
+        modal.style.display = 'flex';
+        document.getElementById('supplierModalLoader').style.display = 'flex';
+        document.getElementById('supplierIframe').src = '/Suppliers/Create?isPopup=true';
+    }
+    function closeSupplierModal() {
+        document.getElementById('supplierModal').style.display = 'none';
+        document.getElementById('supplierIframe').src = '';
+    }
+    function onSupplierIframeLoad() {
+        document.getElementById('supplierModalLoader').style.display = 'none';
+    }
+
+    window.addEventListener('message', async function(event) {
+        if (event.data === 'drug_added_success') {
+            closeDrugModal();
+            try {
+                const response = await fetch('/Purchases/GetDrugsList');
+                if (response.ok) {
+                    const freshDrugs = await response.json();
+                    inventoryDrugs.length = 0;
+                    inventoryDrugs.push(...freshDrugs);
+                    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'تمت إضافة الصنف للقائمة بنجاح!' });
+                }
+            } catch (e) { console.error(e); }
+        }
+        if (event.data === 'supplier_added_success') {
+            closeSupplierModal();
+            // Reload supplier dropdown via AJAX
+            try {
+                const res = await fetch('/Suppliers/GetSuppliersList');
+                if (res.ok) {
+                    const suppliers = await res.json();
+                    const sel = document.getElementById('SupplierId');
+                    const currentVal = sel.value;
+                    while (sel.options.length > 1) sel.remove(1);
+                    suppliers.forEach(s => {
+                        const opt = new Option(s.supplierName, s.supplierId);
+                        sel.add(opt);
+                    });
+                    // Select the newly added supplier (last one)
+                    if (suppliers.length > 0) sel.value = suppliers[suppliers.length-1].supplierId;
+                }
+            } catch(e) { console.error(e); }
+            Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'تمت إضافة المورد بنجاح!' });
+        }
+    });
+
+    const searchInput = document.getElementById('drugSearch');
+    const resultsDiv = document.getElementById('searchResults');
+
+    searchInput.addEventListener('keydown', function(e) { if(e.key === 'Enter') e.preventDefault(); });
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        if (query.length < 2) { resultsDiv.style.display = 'none'; return; }
+
+        const matches = inventoryDrugs.filter(d => d.name.toLowerCase().includes(query) || (d.barcode && d.barcode.toLowerCase() === query));
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(d => `
+                <div onclick='addToCart(${JSON.stringify(d).replace(/'/g, "&#39;")})' style="padding:12px 16px; cursor:pointer; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:700; font-size:13px; color:#0f172a;">${d.name}</div>
+                    <div style="font-size:10px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:2px;">${d.unit}</div>
+                </div>
+            `).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:12px; font-weight:700;">لا يوجد صنف مطابق.</div>';
+            resultsDiv.style.display = 'block';
+        }
+    });
+
+    document.addEventListener('click', (e) => { if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) resultsDiv.style.display = 'none'; });
+
+    function addToCart(drug) {
+        const uniqueId = Date.now();
+        let today = new Date(); today.setFullYear(today.getFullYear() + 1);
+        cart.push({ uid: uniqueId, id: drug.id, name: drug.name, qty: 1, bonus: 0, cost: 0, sell: 0, batch: '', expiry: today.toISOString().split('T')[0] });
+        searchInput.value = ''; searchInput.focus(); resultsDiv.style.display = 'none';
+        renderCart();
+    }
+
+    function updateItem(uid, field, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (item) {
+            item[field] = (field === 'qty' || field === 'bonus' || field === 'cost' || field === 'sell') ? parseLocalFloat(value) : value;
+            if (field === 'qty' || field === 'cost') renderCart();
+        }
+    }
+
+    function removeItem(uid) { cart = cart.filter(i => i.uid !== uid); renderCart(); }
+
+    function renderCart() {
+        const tbody = document.getElementById('cartBody');
+        const emptyMsg = document.getElementById('emptyCartMsg');
+        const hiddenContainer = document.getElementById('hiddenInputsContainer');
+
+        if (cart.length === 0) { tbody.innerHTML = ''; emptyMsg.style.display = 'flex'; hiddenContainer.innerHTML = ''; calculateTotals(); return; }
+
+        emptyMsg.style.display = 'none';
+        let html = '', hiddenHtml = '';
+
+        cart.forEach((item, index) => {
+            const sub = item.qty * item.cost;
+            html += `
+                <tr>
+                    <td><div style="font-weight:700; color:#063955; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${item.name}">${item.name}</div></td>
+                    <td><input type="number" value="${item.qty}" min="1" onchange="updateItem(${item.uid}, 'qty', this.value)" class="cart-input" required></td>
+                    <td><input type="number" value="${item.bonus}" onchange="updateItem(${item.uid}, 'bonus', this.value)" class="cart-input" style="color:#64748b;"></td>
+                    <td><input type="number" step="0.01" value="${item.cost}" onchange="updateItem(${item.uid}, 'cost', this.value)" class="cart-input" required></td>
+                    <td><input type="number" step="0.01" value="${item.sell}" onchange="updateItem(${item.uid}, 'sell', this.value)" class="cart-input" style="color:#0284c7;" required></td>
+                    <td><input type="text" value="${item.batch}" onchange="updateItem(${item.uid}, 'batch', this.value)" class="cart-input" placeholder="التشغيلة" required></td>
+                    <td><input type="date" value="${item.expiry}" onchange="updateItem(${item.uid}, 'expiry', this.value)" class="cart-input" style="font-size:10px;" required></td>
+                    <td style="text-align:left; font-family:monospace; font-weight:900; color:#063955;">${sub.toFixed(2)}</td>
+                    <td style="text-align:center;"><button type="button" onclick="removeItem(${item.uid})" class="btn-icon"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button></td>
+                </tr>
+            `;
+            hiddenHtml += `
+                <input type="hidden" name="Purchasedetails[${index}].DrugId" value="${item.id}" />
+                <input type="hidden" name="Purchasedetails[${index}].Quantity" value="${item.qty}" />
+                <input type="hidden" name="Purchasedetails[${index}].BonusQuantity" value="${item.bonus}" />
+                <input type="hidden" name="Purchasedetails[${index}].CostPrice" value="${item.cost}" />
+                <input type="hidden" name="Purchasedetails[${index}].SellingPrice" value="${item.sell}" />
+                <input type="hidden" name="Purchasedetails[${index}].BatchNumber" value="${item.batch}" />
+                <input type="hidden" name="Purchasedetails[${index}].ExpiryDate" value="${item.expiry}" />
+            `;
+        });
+        tbody.innerHTML = html; hiddenContainer.innerHTML = hiddenHtml; calculateTotals();
+    }
+
+    function calculateTotals() {
+        let subTotal = cart.reduce((sum, item) => sum + (item.qty * item.cost), 0);
+        const discount = parseLocalFloat(document.getElementById('inputDiscount').value);
+        let netTotal = subTotal - discount;
+        if(netTotal < 0) netTotal = 0;
+
+        document.getElementById('lblSubTotal').innerText = subTotal.toFixed(2);
+        document.getElementById('lblNetTotal').innerText = netTotal.toFixed(2);
+        validatePayments(netTotal);
+    }
+
+    function validatePayments(passedNet = null) {
+        const netStr = document.getElementById('lblNetTotal').innerText;
+        const net = passedNet !== null ? passedNet : parseLocalFloat(netStr);
+
+        const cash = parseLocalFloat(document.getElementById('valCash').value);
+        const bank = parseLocalFloat(document.getElementById('valBank').value);
+
+        const accCash = document.getElementById('accCash');
+        const accBank = document.getElementById('accBank');
+        const lblCashRequired = document.getElementById('lblCashRequired');
+        const lblBankRequired = document.getElementById('lblBankRequired');
+
+        if (cash > 0) { accCash.required = true; lblCashRequired.style.display = 'block'; }
+        else { accCash.required = false; lblCashRequired.style.display = 'none'; }
+
+        if (bank > 0) { accBank.required = true; lblBankRequired.style.display = 'block'; }
+        else { accBank.required = false; lblBankRequired.style.display = 'none'; }
+
+        const supplierId = document.getElementById('SupplierId').value;
+        const warning = document.getElementById('paymentWarning');
+        const btnSave = document.getElementById('btnSaveSales');
+
+        let credit = net - (cash + bank);
+        if (credit < 0.01) credit = 0;
+
+        document.getElementById('lblCredit').innerText = credit.toFixed(2);
+
+        let isValid = true, errorMsg = "", hasEmptyCost = false;
+        cart.forEach(i => { if(i.cost <= 0) hasEmptyCost = true; });
+
+        if (cart.length === 0) { isValid = false; }
+        else if (hasEmptyCost) { isValid = false; errorMsg = "الرجاء تحديد سعر التكلفة لجميع الأصناف!"; }
+        else if (!supplierId) { isValid = false; errorMsg = "يجب تحديد المورد أولاً!"; }
+        else if ((cash + bank) - net > 0.01) { isValid = false; errorMsg = "المبلغ المدفوع أكبر من إجمالي الفاتورة!"; }
+        else if (cash > 0 && !accCash.value) { isValid = false; errorMsg = "يرجى تحديد الصندوق الذي سيتم الدفع منه."; }
+        else if (bank > 0 && !accBank.value) { isValid = false; errorMsg = "يرجى تحديد البنك للحوالة."; }
+
+        if (isValid) { btnSave.disabled = false; warning.style.display = 'none'; }
+        else { btnSave.disabled = true; if (errorMsg && cart.length > 0) { warning.innerText = errorMsg; warning.style.display = 'block'; } else { warning.style.display = 'none'; } }
+    }
+
+    document.getElementById('SupplierId').addEventListener('change', validatePayments);
+
+    function submitSecureForm() {
+        const form = document.getElementById('purchasesForm');
+        if (!form.checkValidity()) {
+            const invalidInputs = form.querySelectorAll(':invalid');
+            invalidInputs.forEach(input => {
+                input.style.borderColor = '#ef4444';
+                input.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.style.borderColor = '#cbd5e1';
+                        if (this.classList.contains('cart-input')) this.style.borderBottomColor = '#cbd5e1';
+                    }
+                }, { once: true });
+            });
+            Swal.fire({ icon: 'warning', title: 'بيانات ناقصة', text: 'يرجى تعبئة الحقول المطلوبة.', confirmButtonText: 'حسناً', confirmButtonColor: '#ba1a1a' });
+            form.reportValidity();
+            return;
+        }
+
+        renderCart();
+        if(!document.getElementById('btnSaveSales').disabled) {
+            sanitizeFormInputsForServer();
+            form.submit();
+        }
+    }
+</script>

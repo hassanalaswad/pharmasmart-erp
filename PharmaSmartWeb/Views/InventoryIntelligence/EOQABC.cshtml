@@ -1,0 +1,187 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "الذكاء المخزني المالي (ABC, EOQ & Budget)";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 4px; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .kpi-box { padding: 16px; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; }
+    .alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 16px; border-radius: 2px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 12px; }
+    .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 2px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 12px; }
+</style>
+
+<div class="w-full mx-auto p-6 space-y-4">
+
+    <!-- Header Panel -->
+    <div class="enterprise-panel flex flex-col md:flex-row justify-between items-start md:items-center p-5 gap-4">
+        <div>
+            <h1 class="page-title">الذكاء المخزني وخطط المشتريات</h1>
+            <p class="page-sub">دمج باريتو (ABC) والطلب (EOQ) مع الميزانية المالية والأدوية المنقذة للحياة.</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnCalcABC" onclick="runABCAlgorithm()" class="btn-secondary">
+                <i class="fas fa-sync"></i> 1. تحديث خوارزمية ABC
+            </button>
+            <button id="btnGetEOQ" onclick="fetchEOQRecommendations()" class="btn-primary" style="background: #059669;">
+                <i class="fas fa-magic"></i> 2. توليد خطة الشراء
+            </button>
+        </div>
+    </div>
+
+    <!-- Liquidity Panel -->
+    <div id="liquidityContainer" class="hidden enterprise-panel p-6 bg-[#0f172a] text-white" style="border-color: #0f172a;">
+        <div class="flex justify-between items-end mb-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-widest text-[#34d399] mb-1">السيولة النقدية المتاحة (صناديق وبنوك)</p>
+                <h2 id="lblLiquidity" class="text-3xl font-mono font-black tracking-tighter">0.00</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-[11px] font-bold uppercase tracking-widest text-[#fb7185] mb-1">تكلفة الطلبية المقترحة</p>
+                <h2 id="lblOrderCost" class="text-2xl font-mono font-black tracking-tighter text-[#cbd5e1]">0.00</h2>
+            </div>
+        </div>
+        <div class="w-full bg-[#1e293b] rounded-none h-2">
+            <div id="budgetProgressBar" class="bg-[#10b981] h-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div id="alert-container" class="mb-4 hidden"></div>
+
+    <!-- Data Table Panel -->
+    <div class="enterprise-panel">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+            <h3 class="text-[14px] font-bold text-[#063955] flex items-center gap-2">
+                <i class="fas fa-clipboard-list text-[#0284c7]"></i> خطة المشتريات الموجهة
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="enterprise-table">
+                <thead>
+                    <tr>
+                        <th style="width: 250px;">الصنف (الدواء)</th>
+                        <th style="text-align: center;">التصنيف</th>
+                        <th style="text-align: center;" title="بناءً على تحليل Prophet ومعدل الاستهلاك">الطلب المتوقع والتنبؤ 🤖</th>
+                        <th style="text-align: center;">التكلفة التقديرية</th>
+                        <th style="text-align: center; background: #ecfdf5; color: #065f46;">الكمية المقترحة (EOQ)</th>
+                        <th style="text-align: center; background: #f0f9ff; color: #0284c7;">الكمية المعتمدة</th>
+                        <th style="text-align: left;">حالة الميزانية</th>
+                    </tr>
+                </thead>
+                <tbody id="eoq-table-body">
+                    <tr><td colspan="7" class="p-10 text-center text-slate-500 font-bold">اضغط على "توليد خطة الشراء" للبدء بالتحليل وسحب توقعات النواقص.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function runABCAlgorithm() {
+        const btn = document.getElementById('btnCalcABC');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/InventoryIntelligence/CalculateABC', { method: 'POST' });
+            if (response.ok) {
+                showAlert('success', 'نجاح', await response.text());
+                fetchEOQRecommendations();
+            } else {
+                showAlert('error', 'فشل', await response.text());
+            }
+        } catch (err) { showAlert('error', 'خطأ', 'فشل الاتصال بالخادم.'); }
+        finally { btn.innerHTML = '<i class="fas fa-sync"></i> 1. تحديث خوارزمية ABC'; btn.disabled = false; }
+    }
+
+    let currentPlanId = 0;
+
+    async function fetchEOQRecommendations() {
+        const btn = document.getElementById('btnGetEOQ');
+        const container = document.getElementById('alert-container');
+        container.classList.add('hidden');
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل وصناعة الخطة 🤖...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/InventoryIntelligence/GenerateSmartPlan', { method: 'POST' });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    currentPlanId = data.planId;
+                    showAlert('success', 'نجاح', data.message);
+                    await loadPlanDetails(currentPlanId);
+                } else {
+                    showAlert('error', 'تنبيه', data.message || "حدث خطأ");
+                }
+            } else {
+                showAlert('error', 'تنبيه', await response.text());
+            }
+        } catch (err) { showAlert('error', 'خطأ', 'فشل الاتصال.'); }
+        finally { btn.innerHTML = '<i class="fas fa-magic"></i> 2. توليد خطة الشراء'; btn.disabled = false; }
+    }
+
+    async function loadPlanDetails(planId) {
+        document.getElementById('liquidityContainer').classList.add('hidden');
+        const container = document.querySelector('.overflow-x-auto');
+        container.innerHTML = '<div class="p-10 text-center"><i class="fas fa-spinner fa-spin text-3xl text-[#0284c7]"></i><p class="mt-2 text-slate-500 font-bold">جاري تحميل تفاصيل الخطة المعتمدة...</p></div>';
+        
+        try {
+            const response = await fetch('/InventoryIntelligence/GetPlanDetails?id=' + planId);
+            if (response.ok) {
+                const html = await response.text();
+                container.innerHTML = html;
+            } else {
+                showAlert('error', 'تنبيه', 'فشل تحميل بيانات الخطة.');
+            }
+        } catch (err) {
+             showAlert('error', 'تنبيه', 'خطأ في الشبكة.');
+        }
+    }
+
+    async function updatePlanDetail(detailId, approvedQty) {
+        try {
+            await fetch(`/InventoryIntelligence/UpdatePlanDetail?detailId=${detailId}&approvedQuantity=${approvedQty}`, { method: 'POST' });
+            // تحديث الجدول كاملاً لإعادة احتساب الإجماليات
+            await loadPlanDetails(currentPlanId);
+        } catch(err) {
+            console.error("فشل التحديث", err);
+        }
+    }
+
+    function printSmartPlan() {
+        if(currentPlanId === 0) {
+            showAlert('error', 'تنبيه', 'يرجى توليد الخطة أولاً.');
+            return;
+        }
+        window.open('/InventoryIntelligence/SmartPlanPrint/' + currentPlanId, '_blank');
+    }
+
+    function showAlert(type, title, message) {
+        const container = document.getElementById('alert-container');
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+        const icon = type === 'success' ? 'check_circle' : 'error';
+        container.innerHTML = `
+            <div class="${alertClass}">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">${icon}</span>
+                    <span>${title}: ${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background:transparent; border:none; cursor:pointer;" class="text-slate-400 hover:text-slate-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.classList.remove('hidden');
+    }
+</script>

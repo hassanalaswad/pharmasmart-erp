@@ -1,0 +1,167 @@
+@model IEnumerable<PharmaSmartWeb.Models.Sales>
+
+@{
+    ViewData["Title"] = "سجل المبيعات";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+    .kpi-box { padding: 16px; border-right: 4px solid #063955; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .kpi-value { font-size: 24px; font-weight: 800; color: #063955; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f1f5f9; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; }
+    .badge-cash { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .badge-bank { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+    .btn-action { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: white; border: 1px solid #cbd5e1; color: #475569; border-radius: 2px; transition: 0.2s; }
+    .btn-action:hover { background: #f1f5f9; color: #063955; border-color: #94a3b8; }
+</style>
+
+<div class="flex-1 overflow-y-auto p-6 md:p-5 space-y-4">
+    <!-- Page Header Section -->
+    <div class="enterprise-panel mb-4 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-slate-500 text-[11px] mb-1 font-semibold">
+                <a href="/Home/Index" class="hover:text-[#063955]">الرئيسية</a>
+                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                <a href="/Home/SalesHub" class="hover:text-[#063955]">المبيعات</a>
+                <span class="material-symbols-outlined text-[14px]">chevron_left</span>
+                <span class="text-[#063955]">سجل الفواتير</span>
+            </nav>
+            <h1 class="page-title">سجل فواتير المبيعات</h1>
+            <p class="page-sub">تتبع وإدارة جميع عمليات البيع السابقة</p>
+        </div>
+        <div class="flex gap-2 relative z-10 w-full md:w-auto">
+            <a href="/Home/SalesHub" class="btn-secondary">
+                <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+                لوحة المبيعات
+            </a>
+            <a href="/Sales/CloseShift" class="btn-secondary" style="border-color: #d97706; color: #92400e; background: #fffbeb;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">lock_clock</span>
+                إغلاق الوردية
+            </a>
+            <a href="/Sales/Create" class="btn-primary">
+                <span class="material-symbols-outlined" style="font-size: 16px;">point_of_sale</span>
+                نقطة البيع POS
+            </a>
+        </div>
+    </div>
+
+    <!-- Dashboard Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="kpi-box" style="border-right-color: #063955;">
+            <p class="kpi-title">إجمالي مبيعات اليوم</p>
+            <h3 class="kpi-value">@(((decimal)(ViewBag.TotalSalesToday ?? 0)).ToString("N2")) <span style="font-size: 12px; font-weight: normal; color: #64748b;">@Settings.Currency</span></h3>
+        </div>
+        <div class="kpi-box" style="border-right-color: #059669;">
+            <p class="kpi-title">الفواتير المنفذة اليوم</p>
+            <h3 class="kpi-value" style="color: #059669;">@(ViewBag.TotalInvoicesToday ?? 0)</h3>
+        </div>
+        <div class="kpi-box" style="border-right-color: #d97706;">
+            <p class="kpi-title">متوسط قيمة السلة</p>
+            <h3 class="kpi-value" style="color: #d97706;">@(((decimal)(ViewBag.AverageCartValueToday ?? 0)).ToString("N2")) <span style="font-size: 12px; font-weight: normal; color: #64748b;">@Settings.Currency</span></h3>
+        </div>
+    </div>
+
+    <!-- Sales History Table -->
+    <div class="enterprise-panel">
+        <div class="overflow-x-auto">
+            <table class="enterprise-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">رقم الفاتورة</th>
+                        <th>العميل</th>
+                        <th style="width: 180px;">التاريخ والوقت</th>
+                        <th style="width: 150px;">طريقة الدفع</th>
+                        <th style="width: 140px; text-align: left;">إجمالي الصافي</th>
+                        <th style="width: 80px; text-align: center;">خيارات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="p-10 text-center text-slate-400 font-bold">لا توجد مبيعات مسجلة في هذا الفرع حالياً.</td></tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-bold text-[#063955]">#@item.SaleId.ToString("D4")</td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    @if(item.Customer != null && !string.IsNullOrEmpty(item.Customer.FullName))
+                                    {
+                                        <div class="w-6 h-6 rounded-sm bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">@item.Customer.FullName.Substring(0,1)</div>
+                                        <span class="font-bold">@item.Customer.FullName</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="w-6 h-6 rounded-sm bg-slate-100 text-slate-400 flex items-center justify-center text-[10px]">
+                                            <span class="material-symbols-outlined" style="font-size: 14px;">person</span>
+                                        </div>
+                                        <span class="font-bold text-slate-600">عميل نقدي سريع</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="font-bold text-slate-700">@item.SaleDate.ToString("yyyy/MM/dd")</div>
+                                <div class="text-[10px] text-slate-400">@item.SaleDate.ToString("hh:mm tt")</div>
+                            </td>
+                            <td>
+                                @if (item.SalePayments != null && item.SalePayments.Any())
+                                {
+                                    foreach (var p in item.SalePayments)
+                                    {
+                                        string badgeClass = p.PaymentMethod == "Cash" ? "badge-cash" : (p.PaymentMethod == "Bank" ? "badge-bank" : "badge-cash");
+                                        <span class="badge @badgeClass mb-1 ml-1 block w-fit">
+                                            @p.PaymentMethod : @p.Amount.ToString("N0")
+                                        </span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge badge-cash">نقدي</span>
+                                }
+                            </td>
+                            <td class="text-left font-extrabold text-[#063955] text-[14px]">@item.NetAmount.ToString("N2")</td>
+                            <td class="text-center">
+                                <a href="/Sales/Details/@item.SaleId" class="btn-action" title="عرض التفاصيل">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">visibility</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination Controls -->
+        @if (ViewBag.TotalPages != null && ViewBag.TotalPages > 1)
+        {
+            <div class="px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+                <span class="text-slate-500 text-xs font-bold">
+                    صفحة @ViewBag.CurrentPage من @ViewBag.TotalPages
+                </span>
+                <div class="flex gap-2">
+                    @if (ViewBag.CurrentPage > 1)
+                    {
+                        <a href="?page=@(ViewBag.CurrentPage - 1)" class="btn-secondary">السابق</a>
+                    }
+                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                    {
+                        <a href="?page=@(ViewBag.CurrentPage + 1)" class="btn-primary">التالي</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

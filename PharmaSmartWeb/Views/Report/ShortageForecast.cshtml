@@ -1,0 +1,56 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@model IEnumerable<PharmaSmartWeb.Models.ShortageForecastViewModel>
+
+@{
+    Layout = "_ReportLayout";
+    ViewData["Title"] = "تقرير التنبؤ الذكي بالطلب والنواقص";
+    ViewData["Subtitle"] = "SMART SHORTAGE FORECAST REPORT";
+
+    ViewBag.ReportNumber = "SF-" + DateTime.Now.ToString("yyyyMMdd");
+    ViewBag.ReportPeriod = "30 يوم قادم";
+    ViewBag.ReportNotes = "تستند التوقعات إلى نموذج التنبؤ الذكي بناءً على البيانات التاريخية.";
+}
+
+@section Styles {
+    <style>
+        .badge-high { background: #fef2f2; color: #e11d48; border: 1px solid #fecdd3; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; }
+        .badge-low { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; font-size: 11px; font-weight: bold; border-radius: 2px; }
+    </style>
+}
+
+@section Summary {
+    <div><span>إجمالي الأصناف:</span><span style="font-weight:bold;">@Model.Count()</span></div>
+    <div><span style="color:#e11d48;">عالية الخطورة (High):</span><span style="color:#e11d48; font-weight:bold;">@Model.Count(x => x.RiskLevel == "High")</span></div>
+    <div><span style="color:#059669;">آمنة (Low):</span><span style="color:#059669; font-weight:bold;">@Model.Count(x => x.RiskLevel != "High")</span></div>
+}
+
+<!-- Data Table -->
+<table class="report-table">
+    <thead>
+        <tr>
+            <th style="width:40px;">#</th>
+            <th style="text-align:right;">الدواء / الصنف</th>
+            <th>المخزون الحالي</th>
+            <th>الطلب المتوقع (30 يوم)</th>
+            <th>الكمية المقترح طلبها</th>
+            <th>مستوى الخطر</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{int r = 1;}
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@r</td>
+                <td style="text-align:right; font-weight:bold; color:#1e293b;">@item.DrugName</td>
+                <td style="font-family:monospace; font-weight:bold;">@item.CurrentStock</td>
+                <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.MonthlyForecast</td>
+                <td style="font-family:monospace; font-weight:bold; color:#059669;">@item.SuggestedOrder</td>
+                <td>
+                    <span class="@(item.RiskLevel == "High" ? "badge-high" : "badge-low")">@item.RiskLevel</span>
+                </td>
+            </tr>
+            r++;
+        }
+    </tbody>
+</table>

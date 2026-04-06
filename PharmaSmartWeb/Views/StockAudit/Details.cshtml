@@ -1,0 +1,209 @@
+﻿@model PharmaSmartWeb.Models.Stockaudits
+@using PharmaSmartWeb.Infrastructure
+
+@{
+ ViewData["Title"] = "تفاصيل جرد مخزني";
+}
+
+<div class="px-8 pb-12 max-w-7xl mx-auto mt-8 animate-in fade-in duration-500">
+ <!-- Header Section -->
+ <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 print:hidden">
+ <div class="space-y-1">
+ <div class="flex items-center gap-3">
+ <div class="p-3 bg-secondary-container rounded-sm shadow-sm shadow-primary/10">
+ <span class="material-symbols-outlined text-primary text-3xl" data-icon="fact_check">fact_check</span>
+ </div>
+ <div>
+ <h2 class="text-3xl font-extrabold text-primary tracking-tight">تفاصيل أمر الجرد <span class="text-outline font-mono">#@Model.AuditId</span></h2>
+ <p class="text-outline text-sm">التاريخ المالي: @Model.AuditDate.ToString("yyyy-MM-dd HH:mm")</p>
+ </div>
+ </div>
+ </div>
+ <div class="flex gap-3">
+ <a href="/StockAudit/Index" class="bg-surface-container-highest text-on-surface-variant px-6 py-3 rounded-sm font-bold flex items-center justify-center hover:bg-surface-variant transition-colors">رجوع للقائمة</a>
+ <button onclick="window.print()" class="bg-gradient-to-bl from-primary to-primary-container text-white px-8 py-3 rounded-sm font-bold flex items-center gap-3 shadow-sm border border-slate-200 shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+ <span class="material-symbols-outlined" data-icon="print">print</span>
+ <span>طباعة البيان</span>
+ </button>
+ </div>
+ </div>
+
+ <!-- Overview Section -->
+ <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 print:hidden">
+ <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-surface-container flex items-center gap-4">
+ <div class="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+ <span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+ </div>
+ <div>
+ <p class="text-[11px] text-outline font-bold tracking-widest uppercase mb-1">الفرع الممسوح</p>
+ <p class="font-black text-primary">@ViewBag.ActiveBranchName</p>
+ </div>
+ </div>
+
+ <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-surface-container flex items-center gap-4">
+ <div class="w-12 h-12 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center">
+ <span class="material-symbols-outlined" data-icon="person">person</span>
+ </div>
+ <div>
+ <p class="text-[11px] text-outline font-bold tracking-widest uppercase mb-1">مسؤول الجرد</p>
+ <p class="font-black text-primary">@(Model.User?.Username ?? "غير معروف")</p>
+ </div>
+ </div>
+ 
+ <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-surface-container flex items-center gap-4">
+ <div class="w-12 h-12 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center">
+ <span class="material-symbols-outlined" data-icon="tag">tag</span>
+ </div>
+ <div>
+ <p class="text-[11px] text-outline font-bold tracking-widest uppercase mb-1">عدد الأصناف</p>
+ <p class="font-black text-primary">@Model.Stockauditdetails.Count() صنف</p>
+ </div>
+ </div>
+ 
+ <div class="bg-surface-container-lowest p-6 rounded-sm shadow-sm border border-surface-container flex items-center gap-4">
+ @{
+ var statColor = Model.Status == "مكتمل" ? "text-emerald-600 bg-emerald-100" : "text-amber-600 bg-amber-100";
+ }
+ <div class="w-12 h-12 rounded-full @statColor flex items-center justify-center">
+ <span class="material-symbols-outlined" data-icon="verified">verified</span>
+ </div>
+ <div>
+ <p class="text-[11px] text-outline font-bold tracking-widest uppercase mb-1">حالة الجرد</p>
+ <p class="font-black">@Model.Status</p>
+ </div>
+ </div>
+ </div>
+
+
+ <!-- Audit Details Table -->
+ <div class="bg-surface-container-lowest rounded-sm overflow-hidden shadow-sm shadow-sm group print:shadow-none border border-surface-container mb-8">
+ <div class="px-8 py-5 border-b border-surface-container bg-surface-container-low/50">
+ <h3 class="font-bold text-primary flex items-center gap-2">
+ <span class="material-symbols-outlined" data-icon="view_list">view_list</span>
+ تقرير الأصناف التفصيلي ومخرجات التسوية
+ </h3>
+ </div>
+ <div class="overflow-x-auto no-scrollbar print:overflow-visible">
+ <table class="w-full text-right border-collapse">
+ <thead>
+ <tr class="bg-surface-container-low text-outline text-[11px] font-bold tracking-widest uppercase border-b border-surface-container">
+ <th class="px-8 py-4">#</th>
+ <th class="px-8 py-4">الصنف / المادة</th>
+ <th class="px-8 py-4 text-center">كمية النظام</th>
+ <th class="px-8 py-4 text-center">كمية الرف</th>
+ <th class="px-8 py-4 text-center">الفرق</th>
+ <th class="px-8 py-4 text-left">التكلفة للوحدة</th>
+ <th class="px-8 py-4 text-left">قيمة التسوية</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-surface-container-low">
+ @{
+ decimal totalDeficit = 0;
+ decimal totalSurplus = 0;
+ int index = 1;
+ }
+
+ @foreach (var detail in Model.Stockauditdetails)
+ {
+ var diff = detail.Difference;
+ var isDeficit = diff < 0;
+ var isSurplus = diff > 0;
+ var value = diff * detail.UnitCost;
+
+ if (isDeficit) totalDeficit += value;
+ if (isSurplus) totalSurplus += value;
+
+ <tr class="hover:bg-surface-container-low/50 transition-colors group">
+ <td class="px-8 py-4 text-sm text-outline font-bold">@index</td>
+ <td class="px-8 py-4">
+ <p class="font-bold text-primary text-sm">@detail.Drug.DrugName</p>
+ <p class="text-[10px] text-outline font-mono mt-0.5">@detail.Drug.Barcode</p>
+ </td>
+ <td class="px-8 py-4 text-center">
+ <span class="bg-surface-container-low text-on-surface-variant px-3 py-1 rounded-sm border border-surface-container font-mono font-black text-sm">@detail.SystemQty</span>
+ </td>
+ <td class="px-8 py-4 text-center">
+ <span class="bg-surface-container text-primary px-3 py-1 rounded-sm border border-surface-container-high font-mono font-black text-sm">@detail.PhysicalQty</span>
+ </td>
+ <td class="px-8 py-4 text-center">
+ @if (diff == 0)
+ {
+ <div class="inline-flex items-center gap-1 bg-surface-container text-on-surface-variant px-2 py-1 rounded-sm font-mono font-black text-xs border border-surface-container-high">
+ متطابق
+ </div>
+ }
+ else if (isSurplus)
+ {
+ <div class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded-sm font-mono font-black text-xs border border-emerald-500/30">
+ <span class="material-symbols-outlined text-[14px]" data-icon="arrow_upward">arrow_upward</span>
+ @diff
+ </div>
+ }
+ else
+ {
+ <div class="inline-flex items-center gap-1 bg-error-container text-error px-2 py-1 rounded-sm font-mono font-black text-xs border border-error/50">
+ <span class="material-symbols-outlined text-[14px]" data-icon="arrow_downward">arrow_downward</span>
+ @diff
+ </div>
+ }
+ </td>
+ <td class="px-8 py-4 text-left font-mono font-black text-sm text-outline">
+ @detail.UnitCost.ToString("N2")
+ </td>
+ <td class="px-8 py-4 text-left font-mono font-black text-sm">
+ @if (diff == 0)
+ {
+ <span class="text-outline">0.00</span>
+ }
+ else if (isSurplus)
+ {
+ <span class="text-emerald-600">+@value.ToString("N2")</span>
+ }
+ else
+ {
+ <span class="text-error">@value.ToString("N2")</span>
+ }
+ </td>
+ </tr>
+ index++;
+ }
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Final Notes & Financial Summary -->
+ <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+ <div class="lg:col-span-2 bg-surface-container-lowest rounded-sm p-5 shadow-sm border border-surface-container shadow-sm">
+ <label class="text-[11px] font-bold text-outline uppercase tracking-widest block mb-3">ملاحظات المسئول</label>
+ <p class="text-on-surface font-semibold leading-relaxed p-4 bg-surface-container-low/30 rounded-sm border border-dashed border-surface-container-high min-h-[100px]">
+ @(string.IsNullOrEmpty(Model.Notes) ? "لا توجد ملاحظات مسجلة." : Model.Notes)
+ </p>
+ </div>
+
+ <div class="bg-primary rounded-sm p-5 text-white flex flex-col justify-between relative overflow-hidden shadow-sm border border-slate-200 shadow-primary/30">
+ <div class="absolute -bottom-10 -left-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+ 
+ <div class="relative z-10 space-y-4 font-mono">
+ <div class="flex justify-between items-center text-sm border-b border-primary-fixed/20 pb-2">
+ <span class="text-primary-fixed font-sans font-bold">إجمالي قيمة الفائض</span>
+ <span class="text-emerald-300 font-black">+ @totalSurplus.ToString("N2")</span>
+ </div>
+ <div class="flex justify-between items-center text-sm border-b border-primary-fixed/20 pb-2">
+ <span class="text-primary-fixed font-sans font-bold">إجمالي قيمة العجز</span>
+ <span class="text-error-container font-black">@totalDeficit.ToString("N2")</span>
+ </div>
+ 
+ <div class="pt-4">
+ <p class="text-[11px] font-sans font-bold text-primary-fixed uppercase tracking-widest mb-1">صافي التسوية النهائية</p>
+ @{
+ var netValue = totalSurplus + totalDeficit;
+ var isOverallSurplus = netValue > 0;
+ var netColor = netValue == 0 ? "text-white" : isOverallSurplus ? "text-emerald-400" : "text-error-container";
+ }
+ <h2 class="text-4xl font-black @netColor break-words" dir="ltr">@netValue.ToString("N2")</h2>
+ </div>
+ </div>
+ </div>
+ </div>
+</div>

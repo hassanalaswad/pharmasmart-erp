@@ -1,0 +1,175 @@
+﻿@model PharmaSmartWeb.Models.Sales
+@using PharmaSmartWeb.Infrastructure
+@{
+ ViewData["Title"] = "إجراء مرتجع مبيعات | Cura Insight";
+}
+
+<div class="max-w-6xl mx-auto px-4 lg:px-0 pb-20">
+
+ <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-6 mb-8 mt-4">
+ <div>
+ @{
+ var fromHub = Context.Request.Query["from"] == "hub";
+ var cancelUrl = fromHub ? "/Home/SalesHub" : "/SalesReturn/Index";
+ }
+ <a href="@cancelUrl" class="flex items-center gap-2 text-primary hover:opacity-70 text-sm font-bold mb-3">
+ <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+ إلغاء والعودة
+ </a>
+ <h1 class="text-3xl font-extrabold text-on-surface">إجراء مرتجع مبيعات</h1>
+ <p class="text-on-surface-variant text-sm mt-2 font-medium max-w-xl">عكس الفاتورة وإعادة الأصناف للمخزون آلياً مع تسوية القيود المالية.</p>
+ </div>
+ <div class="flex items-center gap-4 bg-error-container text-on-error-container px-6 py-4 rounded-sm shadow-sm border border-error/10 shrink-0">
+ <span class="text-sm font-bold opacity-80">الصافي المسترد</span>
+ <span class="text-2xl font-black font-mono">@Model.NetAmount.ToString("N2") <span class="text-sm">@Settings.Currency</span></span>
+ </div>
+ </div>
+
+ <form asp-controller="SalesReturn" asp-action="ProcessReturn" method="post" class="space-y-6">
+ @Html.AntiForgeryToken()
+ <input type="hidden" name="SaleId" value="@Model.SaleId" />
+
+ <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+ 
+ <section class="col-span-1 md:col-span-12 bg-surface-container-lowest p-6 rounded-sm border border-surface-container relative overflow-hidden flex flex-col sm:flex-row justify-between gap-6">
+ <div class="absolute right-0 top-0 bottom-0 w-2 bg-[linear-gradient(135deg,#ba1a1a_0%,#93000a_100%)]"></div>
+ <div class="flex flex-wrap gap-8 md:gap-16 pr-4">
+ <div>
+ <span class="block text-xs font-bold text-outline mb-1 uppercase tracking-widest">رقم الفاتورة الأصلية</span>
+ <span class="text-lg font-black font-mono text-primary">#INV-@Model.SaleId.ToString("D5")</span>
+ </div>
+ <div>
+ <span class="block text-xs font-bold text-outline mb-1 uppercase tracking-widest">العميل</span>
+ <span class="text-lg font-black text-primary">@(Model.Customer?.FullName ?? "عميل نقدي سريع")</span>
+ </div>
+ <div>
+ <span class="block text-xs font-bold text-outline mb-1 uppercase tracking-widest">تاريخ الفاتورة</span>
+ <span class="text-lg font-bold font-mono text-primary">@Model.SaleDate.ToString("yyyy-MM-dd") <small class="text-xs text-outline">@Model.SaleDate.ToString("hh:mm tt")</small></span>
+ </div>
+ </div>
+ <div class="flex items-center gap-2 px-4 py-2 h-fit bg-emerald-50 rounded-sm text-emerald-700 border border-emerald-100">
+ <span class="material-symbols-outlined text-[18px]">verified</span>
+ <span class="text-xs font-bold">قابلة للإرجاع</span>
+ </div>
+ </section>
+
+ <section class="col-span-1 md:col-span-12 lg:col-span-8 bg-surface-container-low rounded-sm overflow-hidden border border-surface-container flex flex-col">
+ <div class="p-5 flex justify-between items-center border-b border-surface-container bg-surface-bright">
+ <h3 class="text-base font-black text-primary flex items-center gap-2">
+ <span class="material-symbols-outlined text-rose-500">medication</span>
+ الأصناف المعادة للمخزون
+ </h3>
+ <span class="text-[11px] font-bold text-outline bg-white px-3 py-1 rounded-full shadow-sm border border-surface-container">@Model.Saledetails.Count أصناف</span>
+ </div>
+ <div class="flex-1 overflow-x-auto bg-surface-container-lowest">
+ <table class="w-full text-right border-collapse">
+ <thead>
+ <tr class="bg-surface-bright border-b border-surface-container-highest text-outline text-[11px] font-bold uppercase tracking-widest">
+ <th class="px-6 py-4">الدواء / الصنف</th>
+ <th class="px-6 py-4 text-center">الكمية المستردة</th>
+ <th class="px-6 py-4">سعر الوحدة</th>
+ <th class="px-6 py-4 text-left">الإجمالي المعكوس</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-surface-container">
+ @foreach (var item in Model.Saledetails)
+ {
+ <tr class="hover:bg-surface-bright transition-colors cursor-default">
+ <td class="px-6 py-4">
+ <div class="flex items-center gap-3">
+ <div class="w-10 h-10 rounded-sm bg-surface-container flex items-center justify-center text-primary-container">
+ <span class="material-symbols-outlined">pill</span>
+ </div>
+ <span class="font-black text-sm">@item.Drug.DrugName</span>
+ </div>
+ </td>
+ <td class="px-6 py-4">
+ <div class="mx-auto w-fit px-4 py-1.5 bg-rose-50 text-rose-700 rounded-sm text-center font-black font-mono text-sm border border-rose-100">
+ @item.Quantity
+ </div>
+ </td>
+ <td class="px-6 py-4 font-bold font-mono text-sm text-outline-variant">
+ @item.UnitPrice.ToString("N2")
+ </td>
+ <td class="px-6 py-4 font-black font-mono text-primary text-left bg-primary/5">
+ @((item.Quantity * item.UnitPrice).ToString("N2"))
+ </td>
+ </tr>
+ }
+ </tbody>
+ </table>
+ </div>
+ </section>
+
+ <div class="col-span-1 md:col-span-12 lg:col-span-4 flex flex-col gap-6">
+ <section class="bg-surface-container-lowest p-6 rounded-sm border border-surface-container h-full">
+ <h3 class="text-sm font-black text-primary mb-5 flex items-center gap-2">
+ <span class="material-symbols-outlined text-amber-500">sync_alt</span>
+ آلية رد المبلغ آلياً
+ </h3>
+ 
+ <div class="space-y-3">
+ @if (Model.SalePayments != null && Model.SalePayments.Any())
+ {
+ foreach (var payment in Model.SalePayments)
+ {
+ string label = payment.PaymentMethod == "Cash" ? "عكس الدفع النقدي (صندوق)" : (payment.PaymentMethod == "Bank" ? "عكس الدفع الإلكتروني (بنك)" : "عكس الأجل (رصيد)");
+ string icon = payment.PaymentMethod == "Cash" ? "payments" : (payment.PaymentMethod == "Bank" ? "account_balance" : "history_edu");
+ 
+ <div class="flex items-center justify-between p-4 rounded-sm border border-surface-container bg-surface-bright relative overflow-hidden group">
+ <div class="absolute inset-y-0 right-0 w-1 bg-amber-400"></div>
+ <div class="flex items-center gap-3 pr-2">
+ <span class="material-symbols-outlined text-amber-600">@icon</span>
+ <span class="text-xs font-bold text-on-surface-variant flex-1">@label</span>
+ </div>
+ <span class="font-black font-mono text-sm text-primary">@payment.Amount.ToString("N2")</span>
+ </div>
+ }
+ }
+ </div>
+
+ <div class="mt-6 pt-5 border-t border-surface-container">
+ <span class="text-[10px] font-black text-rose-500 uppercase tracking-widest block mb-2">معالج محاسبي آلي ERP</span>
+ <div class="px-4 py-3 bg-rose-50 rounded-sm text-xs text-rose-800 font-bold leading-relaxed border border-rose-100">
+ سيقوم النظام برد المبالغ وعكس المديونيات بشكل آلي في دليل الحسابات لضمان توازن الصندوق دون تدخل يدوي.
+ </div>
+ </div>
+ </section>
+ </div>
+
+ <section class="col-span-1 md:col-span-12 bg-surface-container-lowest p-6 rounded-sm border border-surface-container">
+ <h3 class="text-sm font-black text-primary mb-3 flex items-center gap-2">
+ <span class="material-symbols-outlined text-rose-500">edit_note</span>
+ سبب الارتجاع والتوضيحات المحاسبية <span class="text-error">*</span>
+ </h3>
+ <textarea name="ReturnNotes" class="w-full bg-surface-container-low border border-surface-container rounded-sm p-4 text-sm focus:ring-2 focus:ring-primary h-28 outline-none resize-none font-medium" placeholder="يرجى توضيح سبب إرجاع الأصناف بالتفصيل لاعتماده في القيود المحاسبية..." required></textarea>
+ </section>
+
+ <section class="col-span-1 md:col-span-12 flex flex-col sm:flex-row items-center justify-between bg-[linear-gradient(135deg,#00314e_0%,#004870_100%)] p-6 md:px-8 rounded-sm shadow-sm border border-slate-200 shadow-primary/20 text-white gap-6">
+ <div class="flex flex-wrap gap-6 sm:gap-12 w-full sm:w-auto">
+ <div class="flex flex-col">
+ <span class="text-[11px] font-bold text-primary-fixed uppercase tracking-widest mb-1">المجموع الأساسي</span>
+ <span class="text-xl font-bold font-mono tracking-tight text-white/90">@Model.TotalAmount.ToString("N2") @Settings.Currency</span>
+ </div>
+ @if (Model.Discount > 0)
+ {
+ <div class="flex flex-col">
+ <span class="text-[11px] font-bold text-error-container uppercase tracking-widest mb-1">خصم مُلغى</span>
+ <span class="text-xl font-bold font-mono tracking-tight">@Model.Discount.ToString("N2") @Settings.Currency</span>
+ </div>
+ }
+ 
+ </div>
+ <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+ <button type="button" onclick="window.location.href='@cancelUrl'" class="px-6 py-4 bg-white/10 text-white rounded-sm font-bold text-sm hover:bg-white/20 transition-colors w-full sm:w-auto text-center active:scale-95">
+ إلغاء
+ </button>
+ <button type="submit" class="px-8 py-4 bg-error text-white border border-error-container/30 rounded-sm font-black text-base flex items-center justify-center gap-3 hover:bg-rose-600 active:scale-95 transition-all shadow-sm border border-slate-200 shadow-error/30 w-full sm:w-auto">
+ <span class="material-symbols-outlined text-[22px]">verified</span>
+ تأكيد وعكس القيود
+ </button>
+ </div>
+ </section>
+ </div>
+ </form>
+</div>

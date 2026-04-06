@@ -1,0 +1,201 @@
+@model PharmaSmartWeb.Models.Journalentries
+
+@{
+    ViewData["Title"] = "تفاصيل السند المالي";
+    bool isReceipt = Model.ReferenceType == "Receipt";
+
+    decimal totalDebit = Model.Journaldetails?.Sum(d => d.Debit) ?? 0;
+    decimal totalCredit = Model.Journaldetails?.Sum(d => d.Credit) ?? 0;
+
+    decimal amount = isReceipt ? totalDebit : totalCredit;
+    var themeColor = isReceipt ? "emerald" : "rose";
+    var typeLabel = isReceipt ? "سند قبض مالي" : "سند صرف مالي";
+}
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        body { background-color: white !important; padding: 0 !important; }
+        main { margin: 0 !important; }
+        .voucher-container { 
+            margin: 0 auto !important; 
+            padding: 0 !important; 
+            width: 100% !important; 
+            max-width: 210mm !important; /* A4 Width */
+            box-shadow: none !important;
+            border: none !important;
+        }
+        .document-sheet {
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+    }
+    .document-sheet {
+        position: relative;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    .amount-badge-green {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .amount-badge-red {
+        background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    }
+    .stamp-placeholder {
+        border: 2px dashed #cbd5e1;
+        background: radial-gradient(circle, #f8fafc 0%, #ffffff 100%);
+    }
+</style>
+
+<div class="px-4 py-8 md:p-12 max-w-5xl mx-auto voucher-container">
+    <!-- Top Actions (Hidden on Print) -->
+    <div class="no-print mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <a href="/Vouchers/Index" class="flex items-center gap-2 text-slate-500 hover:text-[#00314e] font-bold transition-colors bg-white px-5 py-2.5 rounded-sm shadow-sm border border-slate-200">
+            <span class="material-symbols-outlined text-lg">arrow_forward</span> العودة للسجل
+        </a>
+        <div class="flex items-center gap-3">
+            <button onclick="window.print()" class="flex items-center gap-2 bg-white px-6 py-3 rounded-sm text-slate-700 font-bold border border-slate-200 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
+                <span class="material-symbols-outlined text-xl">print</span>
+                طباعة السند
+            </button>
+        </div>
+    </div>
+
+    <!-- Official Document Paper -->
+    <div class="document-sheet bg-white rounded-sm border border-slate-200 shadow-[0_20px_60px_rgba(0,49,78,0.08)] overflow-hidden">
+        <!-- Header Section -->
+        <div class="p-10 flex flex-col md:flex-row justify-between items-start border-b border-slate-100 gap-8">
+            <div class="space-y-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-sm bg-[#00314e] flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-3xl">vaccines</span>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-[#00314e] tracking-tight">PHARMA SMART</h3>
+                        <p class="text-[0.65rem] text-[#10b981] font-bold tracking-[0.3em] uppercase">Premium Care Pharmacy Network</p>
+                    </div>
+                </div>
+                <div class="space-y-1 text-slate-500">
+                    <p class="text-sm font-medium flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">location_on</span>
+                        @(Model.Branch?.BranchName ?? "الفرع الرئيسي")
+                    </p>
+                    <p class="text-sm font-medium flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">info</span>
+                        الرقم الضريبي: 310123456700003
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-col items-center md:items-end gap-3 self-center md:self-start">
+                <div class="p-2 border border-slate-200 rounded-sm bg-slate-50/50">
+                    <img alt="QR Code" class="w-24 h-24 opacity-80" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=@($"Voucher No {Model.JournalId} Amount {amount}")"/>
+                </div>
+                <p class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">Digital Verification</p>
+            </div>
+        </div>
+
+        <!-- Basic Info Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 bg-slate-50/50 border-b border-slate-100">
+            <div class="p-5 border-l border-slate-100">
+                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">رقم السند</label>
+                <p class="text-xl font-black text-[#00314e]">#@Model.JournalId.ToString("D5")</p>
+            </div>
+            <div class="p-5 border-l border-slate-100">
+                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">تاريخ الإصدار</label>
+                <p class="text-lg font-bold text-slate-700">@Model.JournalDate.ToString("dd MMMM yyyy")</p>
+            </div>
+            <div class="p-5">
+                <label class="block text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">نوع السند</label>
+                <span class="inline-flex items-center px-4 py-1.5 bg-@(themeColor)-50 text-@(themeColor)-600 text-xs font-black rounded-sm gap-2 border border-@(themeColor)-200">
+                    <span class="material-symbols-outlined text-sm">@(isReceipt ? "arrow_downward" : "arrow_upward")</span>
+                    @typeLabel
+                </span>
+            </div>
+        </div>
+
+        <!-- Content Body -->
+        <div class="p-10 space-y-12">
+            <!-- Parties -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="space-y-3">
+                    <label class="text-sm font-bold text-slate-400 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">person</span>
+                        @(isReceipt ? "تم الاستلام من السيد/ة:" : "يُصرف للسيد/ة:")
+                    </label>
+                    <div class="border-b-2 border-slate-100 pb-4">
+                        <p class="text-2xl font-extrabold text-[#00314e]">@(string.IsNullOrEmpty(Model.PayeePayerName) ? "---" : Model.PayeePayerName)</p>
+                        <p class="text-xs text-slate-500 mt-1 font-bold">طريقة الدفع: @(string.IsNullOrEmpty(Model.ReferenceNo) ? "نقدي" : "شيك/حوالة") @(string.IsNullOrEmpty(Model.ReferenceNo) ? "" : $"| مرجع: {Model.ReferenceNo}")</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <label class="text-sm font-bold text-slate-400 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg">badge</span>
+                        الموظف المسؤول:
+                    </label>
+                    <div class="border-b-2 border-slate-100 pb-4">
+                        <p class="text-xl font-bold text-slate-700">@(Model.CreatedByNavigation?.Username ?? "System Administrator")</p>
+                        <p class="text-xs text-slate-500 mt-1">الإدارة المالية - الصندوق</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Narrative -->
+            <div class="bg-slate-50 rounded-sm p-5 border border-slate-100">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 italic">وذلك عن المقابل التالي:</label>
+                <p class="text-lg text-slate-700 font-medium leading-loose">
+                    @Model.Description
+                </p>
+            </div>
+
+            <!-- Grand Amount Section -->
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-10 bg-white border border-slate-200 rounded-sm p-2 pr-10 overflow-hidden">
+                <div class="flex-1 py-4">
+                    <p class="text-xs font-bold text-slate-500 mb-2">المبلغ المكتوب رقماً:</p>
+                    <p class="text-2xl font-bold text-[#00314e]/80 italic leading-relaxed font-mono">
+                        @amount.ToString("N2") ريال سعودي
+                    </p>
+                </div>
+                <!-- Amount Badge -->
+                <div class="amount-badge-@(isReceipt ? "green" : "red") text-white px-12 py-10 rounded-sm min-w-[320px] flex flex-col items-center justify-center shadow-sm border border-slate-200 shadow-@(themeColor)-600/20">
+                    <span class="text-xs font-bold uppercase tracking-[0.3em] mb-3 opacity-90">إجمالي المبلغ الصافي</span>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-5xl font-black tabular-nums tracking-tighter">@amount.ToString("N2")</span>
+                        <span class="text-xl font-bold opacity-80 uppercase">SAR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signatures & Official Stamp -->
+        <div class="p-10 bg-slate-50/30 grid grid-cols-1 md:grid-cols-3 gap-12 items-end border-t border-slate-100 mt-4">
+            <div class="flex flex-col items-center gap-6">
+                <div class="w-full h-px bg-slate-200 relative">
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 opacity-20 italic text-slate-400 font-serif text-2xl">Signature</div>
+                </div>
+                <p class="text-sm font-bold text-slate-500">توقيع @(isReceipt ? "الدافع" : "المستلم")</p>
+            </div>
+            <div class="flex flex-col items-center justify-center">
+                <div class="w-32 h-32 rounded-full stamp-placeholder flex items-center justify-center relative overflow-hidden group border-2 border-dashed border-slate-300">
+                    <div class="text-center space-y-1 z-10">
+                        <span class="material-symbols-outlined text-slate-300 text-3xl">verified_user</span>
+                        <p class="text-[0.55rem] font-black text-slate-300 uppercase leading-none">Place Official<br/>Seal Here</p>
+                    </div>
+                </div>
+                <p class="text-[0.65rem] font-bold text-slate-400 mt-4 tracking-widest uppercase">الختم الرسمي للمؤسسة</p>
+            </div>
+            <div class="flex flex-col items-center gap-6">
+                <div class="w-full h-px bg-slate-200 relative">
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 opacity-20 italic text-slate-400 font-serif text-2xl">Manager</div>
+                </div>
+                <p class="text-sm font-bold text-slate-500">المدير المالي / أمين الصندوق</p>
+            </div>
+        </div>
+
+        <!-- Footer Bar -->
+        <div class="bg-[#00314e] py-4 px-10 flex flex-col md:flex-row justify-between items-center text-white/40 gap-2">
+            <p class="text-[0.65rem] font-bold tracking-[0.2em] uppercase">Pharma Smart ERP System - Document ID: SH-@Model.JournalId-@Model.BranchId</p>
+            <p class="text-[0.65rem] font-medium italic">Confidential Document &copy; @DateTime.Now.Year</p>
+        </div>
+    </div>
+</div>

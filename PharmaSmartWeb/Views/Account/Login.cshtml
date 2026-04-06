@@ -1,0 +1,90 @@
+@{
+    Layout = null;
+}
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>تسجيل الدخول - @Settings.CompanyName</title>
+    <!-- Tailwind CSS -->
+    <script src="~/lib/tailwindcss.js"></script>
+    <link href="~/css/cura-styles.css" rel="stylesheet" />
+    
+    <style>
+        body { background-color: #f4f6f8; font-family: tahoma, sans-serif; }
+        .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+        .btn-primary { background: #063955; color: white; border: none; padding: 10px 16px; border-radius: 2px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; text-decoration: none; width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .btn-primary:hover { background: #0a4f72; color: white; }
+        .form-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 10px 12px; font-size: 14px; font-weight: bold; background-color: #f8fafc; outline: none; width: 100%; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #063955; background-color: white; }
+        .form-label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    
+    <div class="enterprise-panel w-full max-w-[420px] shadow-sm border-t-4 border-t-[#063955] relative z-10 m-4">
+        <div class="p-8">
+            <!-- Branding -->
+            <div class="flex flex-col items-center mb-8">
+                <img src="/images/Logo.png" alt="Logo" class="h-32 max-w-[300px] w-auto object-contain mb-6 drop-shadow-md" onerror="this.style.display='none'" />
+                <h1 class="text-[24px] font-black text-[#063955] tracking-tight m-0 text-center">@Settings.CompanyName</h1>
+                <p class="text-[12px] font-bold text-slate-500 mt-1 text-center">Enterprise Management System</p>
+            </div>
+            
+            @if (ViewBag.Error != null)
+            {
+                <div class="mb-6 bg-rose-50 border border-rose-200 border-r-4 border-r-[#e11d48] p-3 rounded-sm flex items-start gap-3">
+                    <span class="material-symbols-outlined text-[#e11d48] text-[20px]">error</span>
+                    <p class="text-rose-800 text-[12px] font-bold mt-0.5">@ViewBag.Error</p>
+                </div>
+            }
+
+            <!-- Form -->
+            <form asp-action="Login" asp-controller="Account" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" class="space-y-5">
+                @Html.AntiForgeryToken()
+
+                <div>
+                    <label class="form-label" for="username">اسم المستخدم</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">person</span>
+                        <input class="form-input pr-10 text-left" id="username" name="username" placeholder="أدخل اسم المستخدم" type="text" required autofocus dir="ltr" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label" for="password">كلمة المرور</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">lock</span>
+                        <input class="form-input pr-10 pl-10 text-left" id="password" name="password" placeholder="••••••••" type="password" required dir="ltr" />
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] cursor-pointer hover:text-[#063955] transition-colors" onclick="const p=document.getElementById('password');if(p.type==='password'){p.type='text';this.innerText='visibility_off'}else{p.type='password';this.innerText='visibility'}">visibility</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-2 pb-4 border-b border-slate-200">
+                    <input class="w-4 h-4 rounded-sm border-slate-300 text-[#063955] focus:ring-[#063955]" id="remember" name="remember" type="checkbox" />
+                    <label class="text-[12px] font-bold text-slate-600 cursor-pointer" for="remember">الاحتفاظ بتسجيل الدخول</label>
+                </div>
+
+                <button class="btn-primary" type="submit">
+                    <span class="material-symbols-outlined text-[18px] rtl:rotate-180">login</span>
+                    تسجيل الدخول للنظام
+                </button>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-slate-50 border-t border-slate-200 p-4 text-center rounded-b-sm">
+            <p class="text-[11px] text-slate-500 font-bold flex items-center justify-center gap-1.5 m-0">
+                <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                نظام مشفر وفق معايير الأمان المعتمدة
+            </p>
+            <p class="text-[10px] text-slate-400 font-bold mt-2 font-mono" dir="ltr">
+                © @DateTime.Now.Year @Settings.CompanyName
+            </p>
+        </div>
+    </div>
+</body>
+</html>

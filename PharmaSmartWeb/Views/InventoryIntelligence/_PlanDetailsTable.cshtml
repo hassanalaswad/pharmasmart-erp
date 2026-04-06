@@ -1,0 +1,68 @@
+@model IEnumerable<PharmaSmartWeb.Models.PurchasePlanDetail>
+
+<table class="enterprise-table">
+    <thead>
+        <tr>
+            <th style="width: 250px;">الصنف (الدواء)</th>
+            <th style="text-align: center;">التصنيف</th>
+            <th style="text-align: center;" title="بناءً على تحليل Prophet">الطلب المتوقع والتنبؤ 🤖</th>
+            <th style="text-align: center;">التكلفة التقديرية</th>
+            <th style="text-align: center; background: #ecfdf5; color: #065f46;">الكمية المقترحة (EOQ)</th>
+            <th style="text-align: center; background: #f0f9ff; color: #0284c7;">الكمية المعتمدة (تعديل)</th>
+            <th style="text-align: left;">حالة الميزانية</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            var badgeClass = "bg-slate-100 text-slate-600 border border-slate-300";
+            if (item.IsLifeSaving) badgeClass = "bg-[#fff1f2] text-[#e11d48] border border-[#fecdd3] font-black";
+            else if (item.ABCCategory == "A") badgeClass = "bg-[#fff1f2] text-[#be123c] border border-[#fda4af]";
+            else if (item.ABCCategory == "B") badgeClass = "bg-[#fffbeb] text-[#b45309] border border-[#fde68a]";
+
+            var statusClass = item.Status == "في حدود الميزانية" ? "text-[#059669] bg-[#ecfdf5] border border-[#a7f3d0]" : "text-[#e11d48] bg-[#fff1f2] border border-[#fecdd3] line-through opacity-70";
+            var statusIcon = item.Status == "في حدود الميزانية" ? "fa-check" : "fa-ban";
+
+            <tr class="hover:bg-slate-50">
+                <td class="font-bold text-[#063955]">@item.Drug.DrugName</td>
+                <td class="text-center">
+                    <span class="px-2 py-0.5 rounded-[2px] text-[10px] font-bold @badgeClass">@item.ABCCategory</span>
+                </td>
+                <td class="text-center">
+                    <span class="text-[#0369a1] font-bold">@item.ForecastedDemand</span>
+                    @if (item.ForecastAccuracy > 0)
+                    {
+                        <span class="text-[9px] text-[#059669] bg-[#d1fae5] px-1 rounded-sm block mt-1" title="دقة نموذج التنبؤ">دقة: @item.ForecastAccuracy%</span>
+                    }
+                </td>
+                <td class="text-center font-mono font-bold text-slate-700">@item.TotalCost.ToString("N0")</td>
+                
+                <td class="text-center bg-[#f0fdf4]">
+                    <span class="text-[14px] font-black font-mono text-[#059669]">@item.ProposedQuantity</span>
+                </td>
+                <td class="text-center bg-[#f0f9ff]">
+                    <input type="number" 
+                           class="w-16 border border-slate-300 rounded px-1 py-1 text-center font-mono font-bold text-[#0284c7] focus:outline-none focus:border-[#0284c7]" 
+                           value="@item.ApprovedQuantity" 
+                           onchange="updatePlanDetail(@item.DetailId, this.value)" />
+                </td>
+                <td class="text-left">
+                    <span class="px-2 py-1 rounded-[2px] text-[11px] font-bold inline-flex items-center gap-1 @statusClass">
+                        <i class="fas @statusIcon text-[10px]"></i> @item.Status
+                    </span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="mt-4 flex justify-between items-center bg-slate-50 p-4 border border-slate-200">
+    <div>
+        <button onclick="printSmartPlan()" class="btn-primary">
+            <i class="fas fa-print"></i> طباعة الخطة الشرائية (النسخة المعتمدة)
+        </button>
+    </div>
+    <div class="text-left">
+        <h4 class="text-[#063955] font-black text-lg">الإجمالي المبدئي المعتمد: <span id="totalApprovedCost" class="text-[#0284c7]">@Model.Sum(x => x.TotalCost).ToString("N2")</span></h4>
+    </div>
+</div>

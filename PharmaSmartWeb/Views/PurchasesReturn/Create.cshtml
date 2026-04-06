@@ -1,0 +1,187 @@
+@model PharmaSmartWeb.Models.Purchases
+@using PharmaSmartWeb.Infrastructure
+@{
+    ViewData["Title"] = "إجراء مرتجع مشتريات";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 2px; }
+    .page-sub { font-size: 12px; color: #64748b; font-weight: bold; }
+    .btn-secondary { background: white; border: 1px solid #d1d5db; color: #475569; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
+    .btn-secondary:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+    .enterprise-table th { background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
+    .enterprise-table td { padding: 10px 16px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .form-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 8px 12px; font-size: 14px; font-weight: 700; background-color: #f8fafc; outline: none; width: 100%; font-family: monospace; }
+    .form-input:focus { border-color: #063955; background-color: white; }
+    .form-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .kpi-box { padding: 16px; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; flex-grow: 1; }
+    .kpi-value { font-size: 20px; font-weight: 800; color: #063955; }
+</style>
+
+<div class="max-w-7xl mx-auto pb-32 pt-6 px-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-6">
+        <div>
+            <h1 class="page-title">إجراء مرتجع مشتريات</h1>
+            <p class="page-sub">إرجاع الفاتورة <span class="font-mono bg-slate-200 px-1 rounded-sm text-[#063955]">#@Model.InvoiceNumber</span> إلى المورد وإلغاء القيود المحاسبية</p>
+        </div>
+        <a asp-controller="Purchases" asp-action="Index" class="btn-secondary">
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            العودة للمشتريات
+        </a>
+    </div>
+
+    <form asp-controller="PurchasesReturn" asp-action="ProcessReturn" method="post" id="returnForm" class="grid grid-cols-12 gap-6">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="PurchaseId" value="@Model.PurchaseId" />
+
+        <!-- Main Content -->
+        <div class="col-span-12 lg:col-span-8 space-y-6">
+            <!-- Summary Strip -->
+            <div class="enterprise-panel border-r-4 border-r-[#063955] p-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide mb-1">المورد</div>
+                        <div class="text-[14px] font-bold text-[#063955]">@(Model.Supplier?.SupplierName ?? "غير محدد")</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide mb-1">تاريخ الفاتورة</div>
+                        <div class="text-[14px] font-bold font-mono text-[#063955]">@Model.PurchaseDate.ToString("yyyy-MM-dd")</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-[#e11d48] font-bold uppercase tracking-wide mb-1">إجمالي الفاتورة الأصلية المستردة</div>
+                        <div class="text-[20px] font-black font-mono text-[#e11d48]">@Model.NetAmount.ToString("N2") <span class="text-[12px]">@Settings.Currency</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="enterprise-panel">
+                <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <h2 class="text-[14px] font-bold text-[#063955] flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                        الأدوية والبضاعة المسترجعة بالكامل
+                    </h2>
+                    <span class="bg-slate-200 text-slate-700 px-3 py-1 rounded-sm text-[11px] font-bold border border-slate-300">
+                        @Model.Purchasedetails.Count عناصر
+                    </span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="enterprise-table">
+                        <thead>
+                            <tr>
+                                <th>الصنف / المنتج</th>
+                                <th style="width: 140px; text-align: center;">رقم الدفعة</th>
+                                <th style="width: 140px; text-align: center;">الكمية المسحوبة</th>
+                                <th style="width: 160px; text-align: left;">التكلفة المعكوسة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Purchasedetails)
+                            {
+                                <tr class="hover:bg-slate-50">
+                                    <td class="font-bold text-[#334155] text-[13px]">@item.Drug.DrugName</td>
+                                    <td class="font-mono text-center text-slate-500 font-bold bg-slate-50/50">
+                                        @(item.BatchNumber ?? "---")
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="inline-block bg-slate-100 text-slate-700 font-black font-mono px-3 py-1 rounded-sm border border-slate-200">
+                                            @item.Quantity
+                                        </span>
+                                    </td>
+                                    <td class="text-left font-bold text-[#e11d48] text-[14px] font-mono bg-rose-50/30">
+                                        @((item.Quantity * item.CostPrice).ToString("N2")) <span class="text-[10px]">@Settings.Currency</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="enterprise-panel p-5 border-t-4 border-t-slate-400">
+                <h2 class="text-[14px] font-bold text-[#063955] mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">edit_note</span>
+                    تفاصيل الإرجاع للسجلات المالية (مطلوب)
+                </h2>
+                <textarea name="ReturnNotes" required class="w-full bg-slate-50 border border-slate-300 rounded-sm p-3 focus:border-[#063955] focus:bg-white text-[12px] font-bold text-slate-700 outline-none resize-none" placeholder="يرجى كتابة أسباب الإرجاع بالتفصيل لغرض المراجعة المحاسبية والتوثيق..." rows="4"></textarea>
+            </div>
+        </div>
+
+        <!-- Side Actions -->
+        <div class="col-span-12 lg:col-span-4 space-y-6">
+            <!-- Refund Section -->
+            <div class="enterprise-panel p-5 border-t-4 border-t-[#059669]">
+                <h2 class="text-[16px] font-black text-[#063955] mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[#059669]">credit_score</span>
+                    المقبوضات المالية للمرتجع
+                </h2>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label class="form-label">الدفعة المستردة نقداً (صندوق الكاشير)</label>
+                        <div class="relative">
+                            <input type="number" name="ReturnedCash" value="0" step="0.01" min="0" required class="form-input text-left" dir="ltr" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">الدفعة المستردة بنكياً (حوالة بنكية)</label>
+                        <div class="relative">
+                            <input type="number" name="ReturnedBank" value="0" step="0.01" min="0" required class="form-input text-left" dir="ltr" placeholder="0.00" />
+                        </div>
+                    </div>
+                    
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-sm flex gap-2 items-start mt-2">
+                        <span class="material-symbols-outlined text-[#059669] text-[16px]">info</span>
+                        <p class="text-[11px] font-bold text-emerald-800 leading-relaxed">
+                            ملاحظة هامة: في حال عدم تسديد كامل قيمة الفاتورة، سيقوم النظام تلقائياً بخصم المتبقي وتخفيض مديونية المورد (الذمم الدائنة).
+                        </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200">
+                        <div class="flex flex-col gap-1 items-center bg-slate-50 p-3 rounded-sm border border-slate-200">
+                            <span class="text-[11px] font-bold text-slate-500">القيمة الإجمالية المرجعة للمخازن</span>
+                            <span class="text-[20px] font-black font-mono text-[#063955]">@Model.NetAmount.ToString("N2") <span class="text-[12px]">@Settings.Currency</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="enterprise-panel p-4 border-l-4 border-l-[#0284c7] bg-sky-50">
+                <div class="flex items-center gap-2 text-[#0284c7] font-black mb-2 text-[12px]">
+                    <span class="material-symbols-outlined text-[16px]">verified_user</span>
+                    تدقيق ومراجعة
+                </div>
+                <p class="text-[11px] font-bold text-sky-800 leading-relaxed">
+                    هذه العملية ستؤثر فوراً على (حساب المخزون) و (حساب المورد). يرجى مراجعة الصيدلي واستلام المنتجات فعلياً.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer Action Bar -->
+        <div class="col-span-12 fixed bottom-0 left-0 w-full bg-[#0f172a] border-t-4 border-[#d97706] text-white z-[90]">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="text-[#38bdf8] bg-slate-800 p-2 rounded-sm border border-slate-700">
+                        <span class="material-symbols-outlined animate-spin" style="animation-duration: 4s;">settings</span>
+                    </div>
+                    <div>
+                        <div class="text-[12px] font-bold text-white">المعالج المحاسبي للـ ERP (جاهز للعمل)</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">ستقوم خوادم النظام بتوليد وتأكيد القيود المحاسبية المعكوسة تلقائياً.</div>
+                    </div>
+                </div>
+                <button type="submit" onclick="this.disabled=true;this.innerHTML='<span class=\'material-symbols-outlined animate-spin text-[16px]\'>refresh</span> جاري التنفيذ...';this.form.submit();" class="w-full md:w-auto px-8 py-3 bg-[#d97706] hover:bg-[#b45309] text-white font-bold text-[13px] rounded-sm transition-colors flex justify-center items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">task_alt</span>
+                    تأكيد واعتماد الإرجاع
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

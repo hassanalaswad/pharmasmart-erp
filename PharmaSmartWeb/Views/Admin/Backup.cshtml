@@ -1,0 +1,186 @@
+@{
+    ViewData["Title"] = "النسخ الاحتياطي والاسترجاع";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 2px; }
+    .page-sub { font-size: 12px; color: #64748b; font-weight: bold; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 10px 16px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; text-decoration: none; width: 100%; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-danger { background: #e11d48; color: white; border: none; padding: 10px 16px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; text-decoration: none; width: 100%; }
+    .btn-danger:hover { background: #be123c; color: white; }
+    .section-title { font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .upload-area { border: 2px dashed #cbd5e1; border-radius: 2px; padding: 32px; text-align: center; background-color: #f8fafc; cursor: pointer; transition: 0.2s; position: relative; }
+    .upload-area:hover { border-color: #063955; background-color: #f0f9ff; }
+</style>
+
+<div class="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12 w-full pt-6 px-6">
+    <!-- Page Header -->
+    <div class="enterprise-panel flex items-center justify-between p-6 gap-6 bg-[#0f172a] border-none text-white">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-slate-800 text-sky-400 border border-slate-700 flex items-center justify-center rounded-sm">
+                <span class="material-symbols-outlined text-[24px]">backup</span>
+            </div>
+            <div>
+                <h2 class="page-title text-white">النسخ الاحتياطي والاسترجاع</h2>
+                <p class="text-[12px] text-slate-400 font-bold mt-1">قم بإدارة أمان بيانات المنشأة من خلال عمليات النسخ الدوري والاستعادة الآمنة.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Notifications -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        @if (TempData["BackupSuccess"] != null || TempData["RestoreSuccess"] != null)
+        {
+            <div class="flex items-center gap-3 p-4 bg-emerald-50 text-emerald-800 rounded-sm border border-emerald-200">
+                <span class="material-symbols-outlined text-[20px] text-[#059669]">check_circle</span>
+                <span class="text-[12px] font-bold">@(TempData["BackupSuccess"] ?? TempData["RestoreSuccess"])</span>
+            </div>
+        }
+        @if (TempData["BackupError"] != null || TempData["RestoreError"] != null)
+        {
+            <div class="flex items-center gap-3 p-4 bg-rose-50 text-rose-800 rounded-sm border border-rose-200">
+                <span class="material-symbols-outlined text-[20px] text-[#e11d48]">warning</span>
+                <span class="text-[12px] font-bold">@(TempData["BackupError"] ?? TempData["RestoreError"])</span>
+            </div>
+        }
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Section 1: Data Export -->
+        <div class="lg:col-span-6 enterprise-panel flex flex-col border-t-4 border-t-[#0284c7]">
+            <div class="p-6 flex-grow">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="section-title mb-0 text-[#063955]">تصدير البيانات</h3>
+                    <div class="w-10 h-10 bg-sky-100 rounded-sm flex items-center justify-center text-[#0284c7] border border-sky-200">
+                        <span class="material-symbols-outlined text-[20px]">cloud_download</span>
+                    </div>
+                </div>
+                
+                <p class="text-slate-600 mb-6 text-[12px] font-bold leading-relaxed pr-2">سيتم تجميع كافة البيانات الحيوية للمنشأة (بدون هيكل الجداول) في ملف واحد <code class="bg-slate-100 border border-slate-200 px-1 py-0.5 rounded-sm text-[#0284c7] font-mono">.sql</code> مشفر وجاهز للتحميل.</p>
+                
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 p-3 rounded-sm border-r-2 border-r-[#059669]">
+                        <span class="material-symbols-outlined text-[#059669] text-[18px]">check_circle</span>
+                        <span class="text-[12px] font-bold text-[#334155]">سجلات المبيعات والفوترة والعملاء</span>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 p-3 rounded-sm border-r-2 border-r-[#059669]">
+                        <span class="material-symbols-outlined text-[#059669] text-[18px]">check_circle</span>
+                        <span class="text-[12px] font-bold text-[#334155]">المشتريات والموردين وحركات المخزون</span>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 p-3 rounded-sm border-r-2 border-r-[#059669]">
+                        <span class="material-symbols-outlined text-[#059669] text-[18px]">check_circle</span>
+                        <span class="text-[12px] font-bold text-[#334155]">القيود المحاسبية والتقارير المالية والدليل</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-200 bg-slate-50 mt-auto">
+                <form asp-action="Backup" asp-controller="Admin" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-primary flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">download</span>
+                        تحميل ملف SQL الخاص بالبيانات
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Section 2: Data Restore -->
+        <div class="lg:col-span-6 enterprise-panel flex flex-col border-t-4 border-t-[#e11d48]">
+            <div class="p-6 flex-grow flex flex-col">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="section-title mb-0 text-[#063955]">استرجاع البيانات</h3>
+                    <div class="w-10 h-10 bg-rose-100 rounded-sm flex items-center justify-center text-[#e11d48] border border-rose-200">
+                        <span class="material-symbols-outlined text-[20px]">restore</span>
+                    </div>
+                </div>
+
+                <!-- Warning Alert -->
+                <div class="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-sm flex gap-3 items-start border-r-4 border-r-[#e11d48]">
+                    <span class="material-symbols-outlined text-[#e11d48] text-[20px]">warning</span>
+                    <div>
+                        <h4 class="font-black text-[#e11d48] text-[12px] mb-1">تحذير أمني هام</h4>
+                        <p class="text-[11px] text-rose-800 font-bold leading-relaxed">عند بدء عملية الاسترجاع، سيتم حذف كافة البيانات الحالية نهائياً واستبدالها بمحتويات الملف المرفوع. تأكد من صحة الملف المُختار. لا يمكن التراجع.</p>
+                    </div>
+                </div>
+
+                <form asp-action="Restore" asp-controller="Admin" method="post" enctype="multipart/form-data" class="flex flex-col flex-1 h-full">
+                    @Html.AntiForgeryToken()
+                    
+                    <!-- File Upload Area -->
+                    <div class="upload-area flex-1 flex flex-col justify-center items-center mb-6 h-full min-h-[160px]">
+                        <input type="file" name="sqlFile" accept=".sql" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <span class="material-symbols-outlined text-[#0284c7] text-[40px] mb-3">upload_file</span>
+                        <p class="font-bold text-[#063955] mb-2 text-[13px]">اضغط هنا לאختيار ملف النسخة الاحتياطية (.sql)</p>
+                        <span class="bg-sky-100 text-[#0284c7] px-2 py-0.5 rounded-sm text-[10px] font-bold border border-sky-200">أقصى حجم: 50MB</span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <button type="submit" onclick="return confirm('هل أنت متأكد من استرجاع البيانات؟ هذه العملية لا يمكن التراجع عنها، وستحذف البيانات الحالية!');" 
+                                class="btn-danger flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+                            بدء عملية الاستعادة الخطرة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: User Guide -->
+    <div class="enterprise-panel mt-6">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
+            <span class="material-symbols-outlined text-[#063955] text-[20px]">menu_book</span>
+            <h3 class="text-[14px] font-black text-[#063955] m-0">دليل استخدام نظام النسخ</h3>
+        </div>
+        
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h4 class="font-black text-[#0284c7] mb-4 flex items-center gap-2 text-[14px]">
+                    <span class="w-6 h-6 flex items-center justify-center rounded-sm bg-sky-100 text-[#0284c7] border border-sky-200 text-[12px] font-mono">1</span>
+                    خطوات تصدير البيانات (Backup)
+                </h4>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-slate-200 text-slate-600 text-[11px] font-bold">1</span>
+                        <span class="text-[12px] font-bold text-[#334155] leading-relaxed">تأكد من عدم وجود عمليات محاسبية نشطة في الوقت الحالي من قبل مستخدمين آخرين.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-slate-200 text-slate-600 text-[11px] font-bold">2</span>
+                        <span class="text-[12px] font-bold text-[#334155] leading-relaxed">اضغط على "تحميل ملف SQL" للبدء وسيبدأ التحميل التلقائي.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-slate-200 text-slate-600 text-[11px] font-bold">3</span>
+                        <span class="text-[12px] font-bold text-[#334155] leading-relaxed">احتفظ بالملف المُحمل (الذي يحمل تاريخ اليوم) في وسيط تخزين خارجي آمن.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="font-black text-[#e11d48] mb-4 flex items-center gap-2 text-[14px]">
+                    <span class="w-6 h-6 flex items-center justify-center rounded-sm bg-rose-100 text-[#e11d48] border border-rose-200 text-[12px] font-mono">2</span>
+                    خطوات استرجاع البيانات (Restore)
+                </h4>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3 p-3 bg-rose-50 border border-rose-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-rose-200 text-rose-700 text-[11px] font-bold">1</span>
+                        <span class="text-[12px] font-bold text-rose-800 leading-relaxed">قم برفع الملف الصحيح بالصيغة المطلوبة فقط (.sql) الذي تم تحميله سابقاً.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-rose-50 border border-rose-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-rose-200 text-rose-700 text-[11px] font-bold">2</span>
+                        <span class="text-[12px] font-bold text-rose-800 leading-relaxed">ستتوقف الخدمة مؤقتاً أثناء المعالجة، وستفقد جميع البيانات التي سُجلت بعد تاريخ النسخة المرفوعة.</span>
+                    </div>
+                    <div class="flex items-start gap-3 p-3 bg-rose-50 border border-rose-200 rounded-sm">
+                        <span class="w-5 h-5 flex items-center justify-center rounded-sm bg-rose-200 text-rose-700 text-[11px] font-bold">3</span>
+                        <span class="text-[12px] font-bold text-rose-800 leading-relaxed">بعد انتهاء العملية، سيقوم النظام بالعودة لحالته بناءً على البيانات المسترجعة.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

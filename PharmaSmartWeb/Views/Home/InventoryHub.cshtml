@@ -1,0 +1,294 @@
+@model PharmaSmartWeb.Models.InventoryHubViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "لوحة تحكم المخزون والمستودعات";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .enterprise-body { padding: 16px; }
+    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; position: relative; }
+    .kpi-title { font-size: 12px; color: #64748b; margin-bottom: 4px; font-weight: 600; display: flex; justify-content: space-between; }
+    .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: baseline; gap: 4px; }
+    .kpi-sub { font-size: 11px; color: #94a3b8; font-weight: normal; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
+    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .status-badge { display: inline-block; padding: 2px 6px; border-radius: 2px; font-size: 10px; font-weight: 700; }
+    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .status-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .status-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .blinking-dot { animation: blink 1.5s infinite; }
+    @@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+</style>
+
+<!-- Header -->
+<div class="enterprise-panel mb-4 p-3 flex justify-between items-center -mx-4 md:mx-0">
+    <div class="flex items-center gap-3">
+        <div>
+            <h1 class="text-base font-bold text-[#063955]">وحدة المخزون والمستودعات</h1>
+            <p class="text-[11px] text-slate-500 font-normal">إدارة المواد، الجرد، الصلاحيات والتحويلات</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-4">
+        <div class="text-left hidden md:block">
+            <p class="text-xs font-bold text-slate-700">@(ViewBag.ActiveBranchName ?? "المستودع الرئيسي")</p>
+            <p class="text-[10px] text-slate-500">@DateTime.Now.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("ar-EG"))</p>
+        </div>
+        @if(Model.ShortagesCount > 0)
+        {
+            <div class="bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1 rounded-sm text-xs font-bold flex items-center gap-1" title="تنبيهات نواقص">
+                <span class="blinking-dot w-2 h-2 rounded-full bg-rose-500"></span>
+                <span>نواقص: @Model.ShortagesCount</span>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="space-y-4 pb-10">
+
+    <!-- 1. Inventory Health KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Drugs & Valuation -->
+        <div class="enterprise-kpi border-t-2 border-t-[#063955]">
+            <div class="kpi-title">إجمالي الأصناف المتاحة</div>
+            <div class="kpi-value">
+                @Model.TotalDrugs.ToString("N0") <span class="kpi-sub">صنف</span>
+            </div>
+            <p class="text-[11px] text-slate-600 font-bold mt-2">التقييم: @Model.TotalInventoryValue.ToString("N0") @Settings.Currency</p>
+        </div>
+
+        <!-- Shortages (Alert) -->
+        <div class="enterprise-kpi border-t-2 border-t-rose-600 bg-rose-50 text-rose-900 border-rose-200">
+            <div class="kpi-title text-rose-800 font-bold">نواقص (تحت الحد الأدنى)</div>
+            <div class="kpi-value text-rose-900">
+                @Model.ShortagesCount <span class="kpi-sub">صنف</span>
+            </div>
+            <a href="/Inventory/Shortages" onclick="window.openSystemReportModal(this.href); return false;" class="text-[11px] text-rose-700 font-normal hover:underline mt-2 inline-block">عرض تقرير النواقص</a>
+        </div>
+
+        <!-- Expiry (Warning) -->
+        <div class="enterprise-kpi border-t-2 border-t-amber-500 bg-amber-50 text-amber-900 border-amber-200">
+            <div class="kpi-title text-amber-800 font-bold">قاربت على الانتهاء</div>
+            <div class="kpi-value text-amber-900">
+                @Model.ExpiringSoonCount <span class="kpi-sub">تشغيلة</span>
+            </div>
+            <a href="/Report/StockExpiry" onclick="window.openSystemReportModal(this.href); return false;" class="text-[11px] text-amber-700 font-normal hover:underline mt-2 inline-block">رقابة الصلاحيات</a>
+        </div>
+
+        <!-- Transfers -->
+        <div class="enterprise-kpi border-t-2 border-t-indigo-600">
+            <div class="kpi-title">تحويلات قيد الانتظار</div>
+            <div class="kpi-value">
+                @Model.PendingTransfersCount <span class="kpi-sub">أوامر</span>
+            </div>
+            <a href="/DrugTransfers/Index" onclick="window.openSystemReportModal(this.href); return false;" class="text-[11px] text-indigo-600 font-normal hover:underline mt-2 inline-block">معالجة التحويلات</a>
+        </div>
+    </div>
+
+    <!-- 2. Charts & Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Main Chart: Inventory Valuation by Group -->
+        <div class="enterprise-panel lg:col-span-2">
+            <div class="enterprise-header">
+                <div>قيمة المخزون حسب المجموعات العلاجية <span class="text-[10px] text-slate-500 font-normal mr-2">توزيع التكلفة (@Settings.Currency)</span></div>
+                <a href="/InventoryIntelligence/Index" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] font-normal text-blue-600 hover:underline">الذكاء المخزني (ABC)</a>
+            </div>
+            <div class="enterprise-body">
+                <div class="h-[300px] w-full">
+                    <canvas id="inventoryGroupsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary Chart: Stock Health Status -->
+        <div class="enterprise-panel flex flex-col">
+            <div class="enterprise-header">
+                <div>حالة صحة المخزون <span class="text-[10px] text-slate-500 font-normal mr-2">نسبة التوفر والسلامة</span></div>
+            </div>
+            <div class="enterprise-body flex-1 flex flex-col">
+                <div class="flex-1 flex items-center justify-center relative min-h-[180px]">
+                    <canvas id="stockHealthDoughnut"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-1">
+                        <span class="text-xl font-black text-[#063955]">@Model.StockHealthyPercentage%</span>
+                    </div>
+                </div>
+                <div class="mt-4 border-t border-slate-100 pt-4 space-y-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-[#10b981]"></span> متوفر وصالح</span>
+                        <span class="font-bold text-slate-800">@Model.StockHealthyPercentage%</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-[#d97706]"></span> قارب على الانتهاء</span>
+                        <span class="font-bold text-slate-800">@Model.StockExpiringPercentage%</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-[#e11d48]"></span> نواقص / منتهي</span>
+                        <span class="font-bold text-slate-800">@Model.StockDangerPercentage%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Operational Tables (Alerts & Movements) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Table 1: Critical Alerts (Shortages & Expiry) -->
+        <div class="enterprise-panel">
+            <div class="enterprise-header !text-rose-700 !bg-rose-50 border-b-rose-200">
+                <span>تنبيهات حرجة (نواقص وصلاحيات)</span>
+                <a href="/Report/StockExpiry" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] font-normal text-rose-600 hover:underline">عرض تقارير الرقابة</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="enterprise-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الدواء / الصنف</th>
+                            <th>التشغيلة (Batch)</th>
+                            <th>نوع التنبيه</th>
+                            <th>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(!Model.CriticalAlerts.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-xs text-slate-500 font-bold py-4">لا توجد تنبيهات حرجة في هذا الفرع.</td></tr>
+                        }
+                        @foreach(var alert in Model.CriticalAlerts)
+                        {
+                            var rowClass = alert.AlertSeverity == "error" ? "hover:bg-rose-50 text-rose-900" : "hover:bg-amber-50 text-amber-900";
+                            var badgeClass = alert.AlertSeverity == "error" ? "status-danger" : "status-warning";
+                            var linkText = alert.AlertType == "نقص حاد" ? "طلب شراء" : "ترويج/إرجاع";
+                            var linkUrl = alert.AlertType == "نقص حاد" ? "/Purchases/Create" : "/DrugTransfers/Index";
+                            
+                            <tr class="@rowClass">
+                                <td class="font-bold">@alert.DrugName</td>
+                                <td class="text-[11px] text-slate-600">@alert.BatchNo</td>
+                                <td>
+                                    <span class="status-badge @badgeClass" title="@alert.AlertMessage">@alert.AlertType</span>
+                                </td>
+                                <td>
+                                    <a href="@linkUrl" onclick="window.openSystemReportModal(this.href); return false;" class="text-[11px] font-bold underline">@linkText</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Table 2: Today's Inventory Movement -->
+        <div class="enterprise-panel">
+            <div class="enterprise-header">
+                <span>حركة المخزون اليوم</span>
+                <a href="/Inventory/Index" onclick="window.openSystemReportModal(this.href); return false;" class="text-[10px] font-normal text-blue-600 hover:underline">سجل الحركات</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="enterprise-table">
+                    <thead>
+                        <tr>
+                            <th>الصنف / الدواء</th>
+                            <th>نوع الحركة</th>
+                            <th>الكمية</th>
+                            <th>الوقت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if(!Model.RecentMovements.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-xs text-slate-500 font-bold py-4">لم تسجل أي حركات مخزنية اليوم.</td></tr>
+                        }
+                        @foreach(var move in Model.RecentMovements)
+                        {
+                            var isPositive = move.Quantity > 0;
+                            var moveTypeBg = isPositive ? "status-success" : "status-danger";
+                            var qtyColor = isPositive ? "text-emerald-700" : "text-rose-700";
+                            var sign = isPositive ? "+" : "";
+
+                            <tr class="hover:bg-slate-50">
+                                <td class="font-bold">@move.DrugName</td>
+                                <td>
+                                    <span class="status-badge @moveTypeBg">@move.MovementType</span>
+                                </td>
+                                <td class="font-bold @qtyColor" dir="ltr">@(sign)@move.Quantity</td>
+                                <td class="text-[10px] text-slate-500">@move.MovementDate.ToString("hh:mm tt")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.defaults.font.family = "'Arial', sans-serif";
+            Chart.defaults.font.size = 12; 
+            Chart.defaults.color = '#334155'; 
+            Chart.defaults.rtl = true;
+
+            // 1. Inventory Valuation by Groups Bar Chart
+            const ctxBar = document.getElementById('inventoryGroupsChart').getContext('2d');
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.ValuationLabels)),
+                    datasets: [
+                        {
+                            label: 'قيمة المخزون',
+                            data: @Html.Raw(Json.Serialize(Model.ValuationData)),
+                            backgroundColor: '#063955', 
+                            borderWidth: 0,
+                            barPercentage: 0.5,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, 
+                        tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13 }, bodyFont: { size: 12 }, rtl: true }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+
+            // 2. Stock Health Doughnut Chart
+            const ctxDoughnut = document.getElementById('stockHealthDoughnut').getContext('2d');
+            new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['مخزون سليم', 'قارب على الانتهاء', 'نواقص / منتهي'],
+                    datasets: [{
+                        data: [@Model.StockHealthyPercentage, @Model.StockExpiringPercentage, @Model.StockDangerPercentage],
+                        backgroundColor: ['#10b981', '#d97706', '#e11d48'],
+                        borderWidth: 1,
+                        borderColor: '#ffffff',
+                        hoverOffset: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%', 
+                    plugins: {
+                        legend: { display: false }, 
+                        tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13 }, bodyFont: { size: 12 }, rtl: true }
+                    }
+                }
+            });
+        });
+    </script>
+}

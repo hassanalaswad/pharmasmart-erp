@@ -1,0 +1,98 @@
+@model PharmaSmartWeb.Models.Currencies
+@{ 
+    Layout = "_ModalLayout";
+    ViewData["Title"] = "إضافة عملة جديدة"; 
+}
+
+<style>
+    .form-label { font-size: 12px; font-weight: 700; color: #063955; margin-bottom: 4px; display: block; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 8px 12px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+    .form-control:focus { border-color: #063955; box-shadow: 0 0 0 2px rgba(6,57,85,0.1); }
+    .form-check { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 2px; cursor: pointer; background: #f8fafc; }
+    .form-check:hover { background: #f1f5f9; }
+    .form-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #063955; }
+    .form-check-label { font-size: 13px; font-weight: 600; color: #334155; cursor: pointer; }
+    .btn-submit { background: #063955; color: white; border: none; padding: 9px 24px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-submit:hover { background: #0a4f72; }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #d1d5db; padding: 9px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .section-title { font-size: 13px; font-weight: 700; color: #063955; padding-bottom: 8px; border-bottom: 2px solid #063955; margin-bottom: 16px; }
+    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 2px; padding: 10px 14px; font-size: 12px; color: #e11d48; margin-bottom: 16px; }
+    .info-note { background: #eff6ff; border-right: 4px solid #3b82f6; border-radius: 2px; padding: 10px 14px; font-size: 11px; color: #1e40af; margin-top: 8px; }
+</style>
+
+<form asp-action="Create" method="post" style="padding: 20px;">
+    @Html.AntiForgeryToken()
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert-error">⚠ @ViewBag.Error</div>
+    }
+
+    <div class="section-title">بيانات العملة</div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+            <label class="form-label" for="CurrencyName">اسم العملة <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px; color:#94a3b8;">payments</span>
+                <input type="text" asp-for="CurrencyName" id="CurrencyName" required autocomplete="off"
+                       placeholder="مثال: ريال يمني" class="form-control" style="flex:1;" />
+            </div>
+            <span asp-validation-for="CurrencyName" style="color:#e11d48; font-size:11px;"></span>
+        </div>
+
+        <div>
+            <label class="form-label" for="CurrencyCode">كود العملة (ISO) <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px; color:#94a3b8;">tag</span>
+                <input type="text" asp-for="CurrencyCode" id="CurrencyCode" required autocomplete="off"
+                       placeholder="مثال: YER / USD / SAR" class="form-control" style="flex:1; font-family:monospace; text-transform:uppercase;" />
+            </div>
+            <span asp-validation-for="CurrencyCode" style="color:#e11d48; font-size:11px;"></span>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+        <label class="form-label" for="ExchangeRate">سعر الصرف مقابل العملة المرجعية <span style="color:#e11d48;">*</span></label>
+        <div style="display:flex; align-items:center; gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:18px; color:#94a3b8;">currency_exchange</span>
+            <input type="number" asp-for="ExchangeRate" id="ExchangeRate" step="0.0001" min="0.0001" required
+                   placeholder="1.0000" class="form-control" style="flex:1; font-family:monospace; font-weight:700; max-width:200px;" />
+        </div>
+        <div class="info-note">سعر الصرف مقابل العملة الرئيسية للنظام. للعملة الأساسية اجعله 1.0000</div>
+        <span asp-validation-for="ExchangeRate" style="color:#e11d48; font-size:11px;"></span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <label class="form-check" for="IsBaseCurrency">
+            <input type="checkbox" asp-for="IsBaseCurrency" id="IsBaseCurrency" class="form-check-input" />
+            <span class="form-check-label">
+                <strong>العملة الأساسية (المرجعية)</strong><br>
+                <span style="font-size:11px; color:#64748b;">تحديد هذه العملة كعملة مرجعية للنظام</span>
+            </span>
+        </label>
+
+        <label class="form-check" for="IsActive">
+            <input type="checkbox" asp-for="IsActive" id="IsActive" class="form-check-input" checked />
+            <span class="form-check-label">
+                <strong>العملة نشطة</strong><br>
+                <span style="font-size:11px; color:#64748b;">تفعيل استخدام هذه العملة في النظام</span>
+            </span>
+        </label>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; padding-top:16px; border-top:1px solid #e2e8f0;">
+        <button type="button" onclick="history.back()" class="btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:15px;">close</span>
+            إلغاء
+        </button>
+        <button type="submit" class="btn-submit">
+            <span class="material-symbols-outlined" style="font-size:15px;">add_circle</span>
+            إضافة العملة
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,391 @@
+@inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>@ViewData["Title"] | @Settings.CompanyName</title>
+
+    <!-- Google Fonts Preconnect -->
+    
+    
+    <!-- Cairo Font (Arabic) -->
+    
+
+    <style>
+        body {
+            font-family: "Cairo", "Segoe UI", Tahoma;
+            background: #eef1f5;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        /* Container */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            background: white;
+            padding: 40px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        @@media print {
+            body { background: white; margin: 0; padding: 0; }
+            .page { margin: 0; box-shadow: none; width: auto; min-height: 0; padding: 20px; }
+            .no-print, .report-filter-bar { display: none !important; }
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand img {
+            max-height: 60px;
+            max-width: 120px;
+            object-fit: contain;
+        }
+
+        .brand .name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #063955;
+        }
+
+        .report-tag {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            padding: 5px 15px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 2px;
+            letter-spacing: 1px;
+        }
+
+        /* Title */
+        .title {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .title h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .title span {
+            font-size: 13px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .info-box {
+            font-size: 12px;
+            line-height: 2;
+            color: #334155;
+        }
+        
+        .info-box strong {
+            color: #063955;
+            display: inline-block;
+            width: 90px;
+        }
+
+        /* Divider */
+        .divider {
+            margin: 25px 0;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        /* Table (Global styles for child tables if they use .report-table class) */
+        table.report-table {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        table.report-table th, table.report-table td {
+            border: 1px solid #cbd5e1;
+            padding: 10px 8px;
+            text-align: right;
+        }
+
+        table.report-table th {
+            background: #f1f5f9;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        /* Summary */
+        .summary-box {
+            margin-top: 25px;
+            width: 250px;
+            margin-right: auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .summary-box div {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #cbd5e1;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .summary-box div:last-child {
+            border-bottom: none;
+            font-weight: 800;
+            font-size: 15px;
+            color: #063955;
+            padding-bottom: 0;
+            padding-top: 10px;
+        }
+
+        /* Notes */
+        .notes {
+            margin-top: 30px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        /* Signatures */
+        .signatures {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signatures div {
+            text-align: center;
+            width: 30%;
+            font-size: 13px;
+            color: #334155;
+            font-weight: bold;
+        }
+
+        .signatures div span {
+            display: block;
+            margin-bottom: 30px;
+            color: #94a3b8;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 11px;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sys-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Print Button Overlay */
+        .print-btn-overlay {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: #063955;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(6, 57, 85, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+        }
+        .print-btn-overlay:hover {
+            background: #094b6f;
+        }
+        /* Filter Bar (outside page, screen only) */
+        .report-filter-bar {
+            width: 210mm;
+            margin: 0 auto 0 auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: 3px solid #063955;
+            padding: 14px 16px;
+            box-sizing: border-box;
+            font-family: "Cairo", "Segoe UI", Tahoma;
+            font-size: 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .report-filter-bar .rf-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 3px; }
+        .report-filter-bar input, .report-filter-bar select { border: 1px solid #cbd5e1; padding: 7px 10px; font-size: 12px; font-weight: 600; background: #f8fafc; outline: none; width: 100%; box-sizing: border-box; font-family: inherit; }
+        .report-filter-bar input:focus, .report-filter-bar select:focus { border-color: #063955; background: white; }
+        .rf-btn-submit { background: #063955; color: white; border: none; padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+        .rf-btn-print { background: white; border: 1px solid #d1d5db; color: #475569; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+        /* Top Bar adjustments */
+        .top-bar .brand img { max-height: 52px; max-width: 100px; object-fit: contain; }
+        .top-bar .brand .name { font-size: 18px; font-weight: 800; color: #063955; line-height: 1.2; }
+    </style>
+    @RenderSection("Styles", required: false)
+    <link rel="stylesheet" href="~/css/local-fonts.css" />
+</head>
+
+<body>
+
+<!-- ===== FILTER BAR (screen only, outside page) ===== -->
+@if (IsSectionDefined("Filter"))
+{
+    @RenderSection("Filter", required: false)
+}
+
+<!-- ===== OFFICIAL REPORT PAGE ===== -->
+<div class="page">
+    
+    <!-- Watermark -->
+    <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);opacity:0.03;pointer-events:none;z-index:0;">
+        <img src="/images/Logo.png" style="width:500px;height:500px;object-fit:contain;">
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar" style="position:relative;z-index:10;padding-bottom:16px;border-bottom:2px solid #f1f5f9;margin-bottom:16px;">
+        <div class="brand">
+            @if (!string.IsNullOrEmpty(Settings.CompanyLogoPath) && Settings.CompanyLogoPath != "/images/Logo.png")
+            {
+                <img src="@Settings.CompanyLogoPath" alt="@Settings.CompanyName">
+                <div class="name" style="font-size:16px;">@Settings.CompanyName</div>
+            }
+            else
+            {
+                <div style="width:44px;height:44px;background:#063955;display:flex;align-items:center;justify-content:center;border-radius:4px;">
+                    <span style="color:white;font-size:20px;">💊</span>
+                </div>
+                <div class="name">@Settings.CompanyName</div>
+            }
+        </div>
+        <div class="report-tag">OFFICIAL REPORT</div>
+    </div>
+
+    <!-- Title -->
+    <div class="title" style="position: relative; z-index: 10;">
+        <h2>@ViewData["Title"]</h2>
+        <span>@ViewData["Subtitle"]</span>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid" style="position:relative;z-index:10;">
+        <div class="info-box">
+            <strong>اسم المؤسسة:</strong> @Settings.CompanyName<br>
+            @if (ViewBag.ReportAccountInfo != null)
+            {
+                <strong>الحساب:</strong> @ViewBag.ReportAccountInfo<br>
+            }
+            else
+            {
+                <strong>الفرع:</strong> @(ViewBag.ReportBranchName ?? "كافة الفروع")<br>
+                <strong>العنوان:</strong> @(ViewBag.ReportBranchAddress ?? "-")<br>
+            }
+            <strong>هاتف:</strong> @(ViewBag.ReportBranchPhone ?? "-")
+        </div>
+        <div class="info-box">
+            <strong>رقم التقرير:</strong> @(ViewBag.ReportNumber ?? "REP-" + DateTime.Now.ToString("yyyyMMdd-HHmm"))<br>
+            <strong>تاريخ الإصدار:</strong> @DateTime.Now.ToString("yyyy/MM/dd HH:mm")<br>
+            <strong>الفترة / التاريخ:</strong> @(ViewBag.ReportPeriod ?? "-")<br>
+            <strong>تم بواسطة:</strong> @(User.Identity?.Name ?? "النظام")
+        </div>
+    </div>
+
+    <div class="divider" style="position: relative; z-index: 10;"></div>
+
+    <!-- Render Custom Report Body here -->
+    <div style="position: relative; z-index: 10;">
+        @RenderBody()
+    </div>
+
+    @if(IsSectionDefined("Summary"))
+    {
+        <div class="summary-box" style="position: relative; z-index: 10;">
+            @RenderSection("Summary", required: false)
+        </div>
+    }
+
+    <!-- Notes -->
+    <div class="notes" style="position: relative; z-index: 10;">
+        ملاحظة: هذا التقرير تم إنشاؤه تلقائيًا من النظام ويعتبر وثيقة رسمية قابلة للمراجعة والتدقيق.
+        @(ViewBag.ReportNotes != null ? " | " + ViewBag.ReportNotes : "")
+    </div>
+
+    <!-- Signatures -->
+    <div class="signatures" style="position: relative; z-index: 10;">
+        <div>
+            <span>___________</span>
+            المدير العام
+        </div>
+
+        <div>
+            <span>___________</span>
+            المحاسب المسؤول
+        </div>
+
+        <div>
+            <span>___________</span>
+            الختم الرسمي
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer" style="position: relative; z-index: 10;">
+        <div>@Settings.CompanyName &copy; @DateTime.Now.Year</div>
+        <div class="sys-logo">
+            <img src="/images/Logo.png" alt="PharmaSmart" style="height: 18px;">
+            نظام فارما سمارت ERP
+        </div>
+    </div>
+
+</div>
+
+<button class="print-btn-overlay no-print" onclick="window.print()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+    طباعة التقرير
+</button>
+
+@RenderSection("Scripts", required: false)
+</body>
+</html>

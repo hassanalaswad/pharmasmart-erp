@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "allowJs": true
+  },
+  "exclude": [
+    "node_modules",
+    "wwwroot/lib",
+    "wwwroot/plugins"
+  ]
+}

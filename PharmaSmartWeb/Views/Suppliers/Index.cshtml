@@ -1,0 +1,183 @@
+@model IEnumerable<PharmaSmartWeb.Models.Suppliers>
+
+@{
+    ViewData["Title"] = "إدارة الموردين والشركات";
+}
+
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
+    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; }
+    .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
+    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
+    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+    .enterprise-table tr:hover td { background: #f8fafc; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
+    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .status-danger  { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-primary:hover { background: #0a4f72; color: white; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 2px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-edit { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .btn-edit:hover { background: #fef3c7; color: #d97706; }
+    .btn-ledger { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .btn-ledger:hover { background: #dbeafe; color: #1d4ed8; }
+    .search-input { border: 1px solid #d1d5db; border-radius: 2px; padding: 6px 10px; font-size: 12px; width: 260px; }
+    .search-input:focus { outline: none; border-color: #063955; }
+    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
+    .page-sub { font-size: 12px; color: #64748b; }
+</style>
+
+<!-- Page Header -->
+<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
+    <div>
+        <h1 class="page-title">إدارة الموردين والشركات</html>
+        <p class="page-sub">قم بإدارة سجلات الموردين، تتبع حساباتهم المالية، وتنظيم عمليات التوريد الطبي</p>
+    </div>
+    @if (User.HasClaim("Permission", "Suppliers.Add"))
+    {
+        <a href="/Suppliers/Create" class="btn-primary">
+            <span class="material-symbols-outlined" style="font-size:16px;">add_business</span>
+            إضافة مورد جديد
+        </a>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3 border-r-4 border-r-[#059669]">
+        <span class="material-symbols-outlined text-[#059669]" style="font-size:18px;">check_circle</span>
+        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+    </div>
+}
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <div class="enterprise-kpi">
+        <div class="kpi-title">إجمالي الموردين</div>
+        <div class="kpi-value">@Model.Count()</div>
+    </div>
+    <div class="enterprise-kpi">
+        <div class="kpi-title">الموردون النشطون</div>
+        <div class="kpi-value" style="color:#059669;">@Model.Count(s => s.IsActive == true)</div>
+    </div>
+    <div class="enterprise-kpi">
+        <div class="kpi-title">موردون موقوفون</div>
+        <div class="kpi-value" style="color:#d97706;">@Model.Count(s => s.IsActive != true)</div>
+    </div>
+    <div class="enterprise-kpi">
+        <div class="kpi-title">مرتبطون بحساب مالي</div>
+        <div class="kpi-value" style="color:#063955;">@Model.Count(s => s.AccountId != null)</div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="enterprise-panel">
+    <div class="enterprise-header flex justify-between items-center">
+        <span>قائمة الموردين المسجلين</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="البحث عن مورد..." onkeyup="filterTable()" />
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="enterprise-table" id="suppliersTable">
+            <thead>
+                <tr>
+                    <th>رقم المورد</th>
+                    <th>اسم المورد / الشركة</th>
+                    <th>المندوب والهاتف</th>
+                    <th>الحساب المالي</th>
+                    <th>الحالة</th>
+                    <th style="text-align:center;">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding:40px; color:#94a3b8;">
+                            <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px;">deployed_code</span>
+                            لا يوجد موردون مسجلون بعد.
+                        </td>
+                    </tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><strong style="color:#063955; font-family:monospace;">#SUP-@item.SupplierId.ToString("D4")</strong></td>
+                        <td>
+                            <div>
+                                <div style="font-weight:700; font-size:13px;">@item.SupplierName</div>
+                                <div style="font-size:11px; color:#64748b;">@(string.IsNullOrEmpty(item.Address) ? "العنوان غير مسجل" : item.Address)</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:12px; font-weight:600;">@(string.IsNullOrEmpty(item.ContactPerson) ? "---" : item.ContactPerson)</div>
+                            <div style="font-size:11px; color:#64748b; direction:ltr;">@(string.IsNullOrEmpty(item.Phone) ? "---" : item.Phone)</div>
+                        </td>
+                        <td>
+                            @if (item.Account != null)
+                            {
+                                <span class="status-badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-family:monospace;">@item.Account.AccountCode</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-danger">غير مربوط</span>
+                            }
+                        </td>
+                        <td>
+                            @if (item.IsActive == true)
+                            {
+                                <span class="status-badge status-success">نشط</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge status-danger">موقوف</span>
+                            }
+                        </td>
+                        <td style="text-align:center;">
+                            <div style="display:flex; justify-content:center; gap:6px;">
+                                @if (User.HasClaim("Permission", "Suppliers.Edit"))
+                                {
+                                    <a href="/Suppliers/Edit/@item.SupplierId" class="btn-sm btn-edit">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">edit</span>
+                                        تعديل
+                                    </a>
+                                }
+                                @if (item.AccountId != null && User.HasClaim("Permission", "Accounting.View"))
+                                {
+                                    <a href="/Accounting/Ledger?accountId=@item.AccountId" class="btn-sm btn-ledger">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span>
+                                        كشف الحساب
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div style="padding:8px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:11px; color:#64748b;">
+        إجمالي: @Model.Count() مورد مسجل في النظام
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function filterTable() {
+        var input = document.getElementById("searchInput").value.toUpperCase();
+        var table = document.getElementById("suppliersTable");
+        var rows = table.getElementsByTagName("tr");
+        for (var i = 1; i < rows.length; i++) {
+            var cells = rows[i].getElementsByTagName("td");
+            var show = false;
+            for (var j = 0; j < cells.length; j++) {
+                if (cells[j].textContent.toUpperCase().indexOf(input) > -1) { show = true; break; }
+            }
+            rows[i].style.display = show ? "" : "none";
+        }
+    }
+</script>
+}
