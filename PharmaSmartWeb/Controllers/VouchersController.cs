@@ -147,12 +147,8 @@ namespace PharmaSmartWeb.Controllers
                             decimal secondCredit = (voucherType == "Receipt") ? amount : 0;
 
                             _context.Journaldetails.Add(new Journaldetails { JournalId = entry.JournalId, AccountId = mainAccountId, Debit = mainDebit, Credit = mainCredit });
-                            var mainAcc = await _context.Accounts.FindAsync(mainAccountId);
-                            if (mainAcc != null) mainAcc.Balance += (mainDebit - mainCredit);
 
                             _context.Journaldetails.Add(new Journaldetails { JournalId = entry.JournalId, AccountId = secondAccountId, Debit = secondDebit, Credit = secondCredit });
-                            var secondAcc = await _context.Accounts.FindAsync(secondAccountId);
-                            if (secondAcc != null) secondAcc.Balance += (secondDebit - secondCredit);
 
                             await _context.SaveChangesAsync();
                             await transaction.CommitAsync();
@@ -168,7 +164,7 @@ namespace PharmaSmartWeb.Controllers
                     }
                 });
 
-                TempData["Success"] = "تم حفظ السند وترحيله وتحديث أرصدة الحسابات بنجاح.";
+                TempData["Success"] = "تم حفظ السند وترحيله بنجاح.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
