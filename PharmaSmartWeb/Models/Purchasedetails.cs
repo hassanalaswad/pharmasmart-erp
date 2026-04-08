@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -25,12 +25,12 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "int(11)")]
         public int Quantity { get; set; }
 
-        // --- ÇáÍŞá ÇáÃÕáí ãä ŞÇÚÏÉ ÈíÇäÇÊß ---
+        // --- â•ŸØ·â•â–Ø· â•ŸØ·â”œâ•’Ø·Ùˆ Ø¹Øº â–â•Ÿâ”Œâ•§â•” â•šÙˆâ•ŸØºâ•Ÿâ•©â–€ ---
         [Column(TypeName = "decimal(18,2)")]
         public decimal CostPrice { get; set; }
         public int RemainingQuantity { get; set; }
 
-        // --- ÇáÍŞæá ÇáÌÏíÏÉ (áÜ ERP) ---
+        // --- â•ŸØ·â•â–ÂµØ· â•ŸØ·â• â•§Ùˆâ•§â•” (Ø·â–„ ERP) ---
         public int BonusQuantity { get; set; } = 0;
 
         [Column(TypeName = "decimal(18,2)")]
@@ -44,7 +44,7 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal SubTotal { get; set; }
 
-        // --- ÇáÚáÇŞÇÊ (Navigation Properties) ---
+        // --- â•ŸØ·â”ŒØ·â•Ÿâ–â•Ÿâ•© (Navigation Properties) ---
         [ForeignKey(nameof(DrugId))]
         [InverseProperty(nameof(Drugs.Purchasedetails))]
         public virtual Drugs Drug { get; set; }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -17,7 +17,7 @@ namespace PharmaSmartWeb.Models
         [Required]
         [StringLength(20)]
         [Column("VoucherType")]
-        public string VoucherType { get; set; } = string.Empty; // Receipt (قبض) or Payment (صرف)
+        public string VoucherType { get; set; } = string.Empty; // Receipt (┘é╪ذ╪╢) or Payment (╪╡╪▒┘)
 
         [Column("VoucherDate")]
         public DateTime VoucherDate { get; set; } = DateTime.Now;
@@ -26,10 +26,10 @@ namespace PharmaSmartWeb.Models
         public decimal Amount { get; set; }
 
         [Column("FromAccountID")]
-        public int FromAccountId { get; set; } // الصندوق أو البنك المصدر
+        public int FromAccountId { get; set; } // ╪د┘╪╡┘╪»┘ê┘é ╪ث┘ê ╪د┘╪ذ┘┘â ╪د┘┘à╪╡╪»╪▒
 
         [Column("ToAccountID")]
-        public int ToAccountId { get; set; } // الحساب المستهدف
+        public int ToAccountId { get; set; } // ╪د┘╪ص╪│╪د╪ذ ╪د┘┘à╪│╪ز┘ç╪»┘
 
         [Column("Description")]
         public string? Description { get; set; }
@@ -38,20 +38,20 @@ namespace PharmaSmartWeb.Models
         public int CreatedBy { get; set; }
 
         // ==========================================
-        // حقول إضافية غير موجودة في قاعدة البيانات حالياً
-        // يتم تجاهلها من EF Core بواسطة [NotMapped]
+        // ╪ص┘é┘ê┘ ╪ح╪╢╪د┘┘è╪ر ╪║┘è╪▒ ┘à┘ê╪ش┘ê╪»╪ر ┘┘è ┘é╪د╪╣╪»╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪ص╪د┘┘è╪د┘ï
+        // ┘è╪ز┘à ╪ز╪ش╪د┘ç┘┘ç╪د ┘à┘ EF Core ╪ذ┘ê╪د╪│╪╖╪ر [NotMapped]
         // ==========================================
         [NotMapped] public string? Notes { get; set; }
         [NotMapped] public string? PayeePayerName { get; set; }
         [NotMapped] public string? PaymentMode { get; set; }
         [NotMapped] public string? ReferenceNo { get; set; }
         [NotMapped] public int? JournalId { get; set; }
-        // الأسماء القديمة للتوافق مع الكود الحالي
+        // ╪د┘╪ث╪│┘à╪د╪ة ╪د┘┘é╪»┘è┘à╪ر ┘┘╪ز┘ê╪د┘┘é ┘à╪╣ ╪د┘┘â┘ê╪» ╪د┘╪ص╪د┘┘è
         [NotMapped] public int MainAccountId => FromAccountId;
         [NotMapped] public int SecondAccountId => ToAccountId;
 
         // ==========================================
-        // العلاقات (Navigation Properties)
+        // ╪د┘╪╣┘╪د┘é╪د╪ز (Navigation Properties)
         // ==========================================
         [ForeignKey(nameof(BranchId))]
         public virtual Branches Branch { get; set; }

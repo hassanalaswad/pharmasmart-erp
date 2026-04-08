@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -10,12 +10,12 @@ namespace PharmaSmartWeb.Models
         [Key]
         [Column("SupplierId")]
         public int SupplierId { get; set; }
-        // 🚀 الإضافة الجوهرية: حقل الفرع لتطبيق العزل المالي والمكاني
+        // ≡اأ ╪د┘╪ح╪╢╪د┘╪ر ╪د┘╪ش┘ê┘ç╪▒┘è╪ر: ╪ص┘é┘ ╪د┘┘╪▒╪╣ ┘╪ز╪╖╪ذ┘è┘é ╪د┘╪╣╪▓┘ ╪د┘┘à╪د┘┘è ┘ê╪د┘┘à┘â╪د┘┘è
         [Column("BranchID", TypeName = "int(11)")]
         public int BranchId { get; set; }
 
         
-        [Required(ErrorMessage = "اسم المورد مطلوب")]
+        [Required(ErrorMessage = "╪د╪│┘à ╪د┘┘à┘ê╪▒╪» ┘à╪╖┘┘ê╪ذ")]
         [StringLength(150)]
         public string SupplierName { get; set; } = string.Empty;
 
@@ -33,7 +33,7 @@ namespace PharmaSmartWeb.Models
 
         public DateTime? CreatedAt { get; set; }
 
-        // AccountId is nullable (int?) → navigation must also be nullable
+        // AccountId is nullable (int?) ظْ navigation must also be nullable
         [ForeignKey("AccountId")]
         public virtual Accounts? Account { get; set; }
     }

@@ -1,40 +1,42 @@
-# ── .NET Build Outputs ───────────────────────────────────────────────
+# .NET Build Outputs
 bin/
 obj/
 *.user
 .vs/
 
-# ── Publish output ───────────────────────────────────────────────────
+# Publish output
 publish/
 /publish
+publish_smarterasp/
+*.zip
 
-# ── User secrets & local configs ─────────────────────────────────────
+# User secrets & local configs
 appsettings.Development.json
 appsettings.Local.json
 *.pfx
 *.p12
 secrets.json
 
-# ── Logs ─────────────────────────────────────────────────────────────
+# Logs
 logs/
 *.log
 
-# ── OS Files ─────────────────────────────────────────────────────────
+# OS Files
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── IDE ──────────────────────────────────────────────────────────────
+# IDE
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln.docstates
 
-# ── Temporary Scripts ─────────────────────────────────────────────────
+# Temporary Scripts
 *.ps1
 ReplaceLinks.cs
 ReplaceLinks.ps1
 
-# ── Node (if any) ─────────────────────────────────────────────────────
+# Node (if any)
 node_modules/

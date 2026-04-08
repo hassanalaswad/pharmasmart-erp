@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace PharmaSmartWeb.Models
 {
     // =========================================================
-    // 🏢 موديلات بيانات البوابات المركزية (Central Hubs)
+    // ≡ات ┘à┘ê╪»┘è┘╪د╪ز ╪ذ┘è╪د┘╪د╪ز ╪د┘╪ذ┘ê╪د╪ذ╪د╪ز ╪د┘┘à╪▒┘â╪▓┘è╪ر (Central Hubs)
     // =========================================================
 
     public class SalesHubViewModel
@@ -77,7 +77,7 @@ namespace PharmaSmartWeb.Models
         public decimal TotalAmount { get; set; }
         public bool IsPaid { get; set; }
         public bool HasBonusItems { get; set; }
-        public string SupplierInitials => string.IsNullOrWhiteSpace(SupplierName) ? "م" : (SupplierName.Length >= 2 ? SupplierName.Substring(0, 2) : SupplierName);
+        public string SupplierInitials => string.IsNullOrWhiteSpace(SupplierName) ? "┘à" : (SupplierName.Length >= 2 ? SupplierName.Substring(0, 2) : SupplierName);
     }
 
     public class SupplierOverviewModel

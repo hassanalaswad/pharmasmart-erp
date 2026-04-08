@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -21,8 +21,8 @@ namespace PharmaSmartWeb.Models
             Stockmovements = new HashSet<Stockmovements>();
             Users = new HashSet<Users>();
             Warehouses = new HashSet<Warehouses>();
-            BranchAccounts = new HashSet<BranchAccounts>(); // 🚀 تهيئة المجموعة الجديدة
-            Accounts = new HashSet<Accounts>(); // 🚀 التصحيح: تهيئة مجموعة الحسابات
+            BranchAccounts = new HashSet<BranchAccounts>(); // ≡اأ ╪ز┘ç┘è╪خ╪ر ╪د┘┘à╪ش┘à┘ê╪╣╪ر ╪د┘╪ش╪»┘è╪»╪ر
+            Accounts = new HashSet<Accounts>(); // ≡اأ ╪د┘╪ز╪╡╪ص┘è╪ص: ╪ز┘ç┘è╪خ╪ر ┘à╪ش┘à┘ê╪╣╪ر ╪د┘╪ص╪│╪د╪ذ╪د╪ز
 
         }
 
@@ -40,7 +40,7 @@ namespace PharmaSmartWeb.Models
         [Required]
         public bool? IsActive { get; set; }
 
-        // 🚀 معايير الـ ERP (التوجيه المحاسبي والعملات)
+        // ≡اأ ┘à╪╣╪د┘è┘è╪▒ ╪د┘┘ ERP (╪د┘╪ز┘ê╪ش┘è┘ç ╪د┘┘à╪ص╪د╪│╪ذ┘è ┘ê╪د┘╪╣┘à┘╪د╪ز)
         public int? DefaultCashAccountId { get; set; }
         public int? DefaultSalesAccountId { get; set; }
         public int? DefaultCOGSAccountId { get; set; }
@@ -92,8 +92,8 @@ namespace PharmaSmartWeb.Models
         [InverseProperty("Branch")]
         public virtual ICollection<BranchAccounts> BranchAccounts { get; set; }
 
-        // ... بقية الـ ICollections السابقة ...
-        // 🚀 التصحيح: إضافة العلاقة العكسية المفقودة التي سببت الخطأ!
+        // ... ╪ذ┘é┘è╪ر ╪د┘┘ ICollections ╪د┘╪│╪د╪ذ┘é╪ر ...
+        // ≡اأ ╪د┘╪ز╪╡╪ص┘è╪ص: ╪ح╪╢╪د┘╪ر ╪د┘╪╣┘╪د┘é╪ر ╪د┘╪╣┘â╪│┘è╪ر ╪د┘┘à┘┘é┘ê╪»╪ر ╪د┘╪ز┘è ╪│╪ذ╪ذ╪ز ╪د┘╪«╪╖╪ث!
         [InverseProperty("Branch")]
         public virtual ICollection<Accounts> Accounts { get; set; }
 

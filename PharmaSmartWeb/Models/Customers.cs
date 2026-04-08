@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -10,7 +10,7 @@ namespace PharmaSmartWeb.Models
     {
         public Customers()
         {
-            // 🚀 هذه الإضافة هي التي ستحل خطأ ملف Sales تماماً
+            // ≡اأ ┘ç╪░┘ç ╪د┘╪ح╪╢╪د┘╪ر ┘ç┘è ╪د┘╪ز┘è ╪│╪ز╪ص┘ ╪«╪╖╪ث ┘à┘┘ Sales ╪ز┘à╪د┘à╪د┘ï
             Sales = new HashSet<Sales>();
         }
 
@@ -18,7 +18,7 @@ namespace PharmaSmartWeb.Models
         [Column("CustomerID", TypeName = "int(11)")]
         public int CustomerId { get; set; }
 
-        [Required(ErrorMessage = "اسم العميل مطلوب")]
+        [Required(ErrorMessage = "╪د╪│┘à ╪د┘╪╣┘à┘è┘ ┘à╪╖┘┘ê╪ذ")]
         [Column("FullName", TypeName = "varchar(150)")]
         public string FullName { get; set; } = string.Empty;
 
@@ -39,16 +39,16 @@ namespace PharmaSmartWeb.Models
         public int BranchId { get; set; }
 
         [ForeignKey(nameof(BranchId))]
-        // BranchId is non-nullable (required FK) → EF Core guarantees initialization → use null!
+        // BranchId is non-nullable (required FK) ظْ EF Core guarantees initialization ظْ use null!
         public virtual Branches Branch { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
 
         [ForeignKey(nameof(AccountId))]
         [InverseProperty(nameof(Accounts.Customers))]
-        // AccountId is non-nullable (required FK) → EF Core guarantees initialization → use null!
+        // AccountId is non-nullable (required FK) ظْ EF Core guarantees initialization ظْ use null!
         public virtual Accounts Account { get; set; } = null!;
 
-        // 🚀 تعريف العلاقة العكسية مع المبيعات
+        // ≡اأ ╪ز╪╣╪▒┘è┘ ╪د┘╪╣┘╪د┘é╪ر ╪د┘╪╣┘â╪│┘è╪ر ┘à╪╣ ╪د┘┘à╪ذ┘è╪╣╪د╪ز
         [InverseProperty("Customer")]
         public virtual ICollection<Sales> Sales { get; set; }
     }

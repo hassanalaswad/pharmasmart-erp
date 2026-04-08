@@ -1,4 +1,4 @@
-namespace PharmaSmartWeb.Models
+﻿namespace PharmaSmartWeb.Models
 {
     /// <summary>
     /// DTO for quick customer creation from POS modal (AJAX)

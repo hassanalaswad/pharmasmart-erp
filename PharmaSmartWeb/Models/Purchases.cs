@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -27,11 +27,11 @@ namespace PharmaSmartWeb.Models
         [Column("UserID", TypeName = "int(11)")]
         public int UserId { get; set; }
 
-        [Required(ErrorMessage = "رقم فاتورة المورد مطلوب")]
+        [Required(ErrorMessage = "╪▒┘é┘à ┘╪د╪ز┘ê╪▒╪ر ╪د┘┘à┘ê╪▒╪» ┘à╪╖┘┘ê╪ذ")]
         [StringLength(50)]
         public string InvoiceNumber { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "يجب اختيار المورد")]
+        [Required(ErrorMessage = "┘è╪ش╪ذ ╪د╪«╪ز┘è╪د╪▒ ╪د┘┘à┘ê╪▒╪»")]
         public int SupplierId { get; set; }
 
         [Column(TypeName = "datetime")]
@@ -49,8 +49,8 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetAmount { get; set; } = 0;
         // =========================================================
-        // 🛡️ حقول معايير الـ ERP (التتبع والحذف المنطقي)
-        // إضافة هذه الحقول ستحل خطأ CS1061 فوراً
+        // ≡اؤةي╕ ╪ص┘é┘ê┘ ┘à╪╣╪د┘è┘è╪▒ ╪د┘┘ ERP (╪د┘╪ز╪ز╪ذ╪╣ ┘ê╪د┘╪ص╪░┘ ╪د┘┘à┘╪╖┘é┘è)
+        // ╪ح╪╢╪د┘╪ر ┘ç╪░┘ç ╪د┘╪ص┘é┘ê┘ ╪│╪ز╪ص┘ ╪«╪╖╪ث CS1061 ┘┘ê╪▒╪د┘ï
         // =========================================================
         [Column(TypeName = "tinyint(1)")]
         public bool? IsDeleted { get; set; }
@@ -58,7 +58,7 @@ namespace PharmaSmartWeb.Models
         //[Column(TypeName = "decimal(18,4)")]
         //public decimal RemainingAmount { get; set; }
 
-        // 🚀 إضافة حقول المرتجع الجديدة
+        // ≡اأ ╪ح╪╢╪د┘╪ر ╪ص┘é┘ê┘ ╪د┘┘à╪▒╪ز╪ش╪╣ ╪د┘╪ش╪»┘è╪»╪ر
         [Column(TypeName = "tinyint(1)")]
         public bool IsReturn { get; set; } = false;
 
@@ -82,26 +82,26 @@ namespace PharmaSmartWeb.Models
         public string? Notes { get; set; }
 
         [StringLength(500)]
-        [Display(Name = "صورة الفاتورة المرفقة")]
+        [Display(Name = "╪╡┘ê╪▒╪ر ╪د┘┘╪د╪ز┘ê╪▒╪ر ╪د┘┘à╪▒┘┘é╪ر")]
         public string? InvoiceImagePath { get; set; }
 
         public decimal AmountPaid { get; set; }
         public decimal RemainingAmount { get; set; }
         public DateTime? CreatedAt { get; set; } = DateTime.Now;
 
-        // --- العلاقات ---
-        // BranchId non-nullable FK → null!
+        // --- ╪د┘╪╣┘╪د┘é╪د╪ز ---
+        // BranchId non-nullable FK ظْ null!
         [ForeignKey(nameof(BranchId))]
         [InverseProperty(nameof(Branches.Purchases))]
         public virtual Branches Branch { get; set; } = null!;
 
         [ForeignKey(nameof(UserId))]
         [InverseProperty(nameof(Users.Purchases))]
-        // UserId non-nullable FK → null!
+        // UserId non-nullable FK ظْ null!
         public virtual Users User { get; set; } = null!;
 
         [ForeignKey(nameof(SupplierId))]
-        // SupplierId non-nullable FK → null!
+        // SupplierId non-nullable FK ظْ null!
         public virtual Suppliers Supplier { get; set; } = null!;
 
         [InverseProperty("Purchase")]

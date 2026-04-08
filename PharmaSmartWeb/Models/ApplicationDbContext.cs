@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ namespace PharmaSmartWeb.Models
             : base(options) { }
 
         // ==========================================================
-        // 🚀 الجداول الأساسية
+        // ≡اأ ╪د┘╪ش╪»╪د┘ê┘ ╪د┘╪ث╪│╪د╪│┘è╪ر
         // ==========================================================
         public virtual DbSet<Stockaudits> Stockaudits { get; set; }
         public virtual DbSet<Stockauditdetails> Stockauditdetails { get; set; }
@@ -49,13 +49,13 @@ namespace PharmaSmartWeb.Models
         public virtual DbSet<CompanySettings> CompanySettings { get; set; }
         
         // ==========================================================
-        // 🛒 خطط المشتريات الذكية
+        // ≡اؤْ ╪«╪╖╪╖ ╪د┘┘à╪┤╪ز╪▒┘è╪د╪ز ╪د┘╪░┘â┘è╪ر
         // ==========================================================
         public virtual DbSet<PurchasePlan> PurchasePlans { get; set; }
         public virtual DbSet<PurchasePlanDetail> PurchasePlanDetails { get; set; }
 
         // ==========================================================
-        // 🆕 الجداول الجديدة (العملات، المستودعات، الباركود، الدفع المتعدد)
+        // ≡اـ ╪د┘╪ش╪»╪د┘ê┘ ╪د┘╪ش╪»┘è╪»╪ر (╪د┘╪╣┘à┘╪د╪ز╪î ╪د┘┘à╪│╪ز┘ê╪»╪╣╪د╪ز╪î ╪د┘╪ذ╪د╪▒┘â┘ê╪»╪î ╪د┘╪»┘╪╣ ╪د┘┘à╪ز╪╣╪»╪»)
         // ==========================================================
         public virtual DbSet<Currencies> Currencies { get; set; }
         public virtual DbSet<Warehouses> Warehouses { get; set; }
@@ -68,7 +68,7 @@ namespace PharmaSmartWeb.Models
         public virtual DbSet<AccountMapping> AccountMappings { get; set; }
 
         // ==========================================================
-        // 🛑 محرك الحذف المنطقي (Soft Delete Engine)
+        // ≡اؤّ ┘à╪ص╪▒┘â ╪د┘╪ص╪░┘ ╪د┘┘à┘╪╖┘é┘è (Soft Delete Engine)
         // ==========================================================
         public override int SaveChanges()
         {
@@ -92,7 +92,7 @@ namespace PharmaSmartWeb.Models
                 var property = entry.Metadata.FindProperty("IsDeleted");
                 if (property != null && property.ClrType == typeof(bool?))
                 {
-                    entry.State = EntityState.Modified; // منع الحذف الفعلي
+                    entry.State = EntityState.Modified; // ┘à┘╪╣ ╪د┘╪ص╪░┘ ╪د┘┘╪╣┘┘è
                     entry.CurrentValues["IsDeleted"] = true;
 
                     var deletedAtProp = entry.Metadata.FindProperty("DeletedAt");
@@ -109,7 +109,7 @@ namespace PharmaSmartWeb.Models
             base.OnModelCreating(modelBuilder);
 
             // ==========================================================
-            // 💰 1. ضبط دقة الأرقام العشرية لجميع الجداول (لتناسب العملات)
+            // ≡اْ░ 1. ╪╢╪ذ╪╖ ╪»┘é╪ر ╪د┘╪ث╪▒┘é╪د┘à ╪د┘╪╣╪┤╪▒┘è╪ر ┘╪ش┘à┘è╪╣ ╪د┘╪ش╪»╪د┘ê┘ (┘╪ز┘╪د╪│╪ذ ╪د┘╪╣┘à┘╪د╪ز)
             // ==========================================================
             foreach (var property in modelBuilder.Model.GetEntityTypes()
                 .SelectMany(t => t.GetProperties())
@@ -119,7 +119,7 @@ namespace PharmaSmartWeb.Models
             }
 
             // ==========================================================
-            // 🛡️ 2. فلاتر إخفاء المحذوفات وتصحيح أنواع Boolean لـ MySQL
+            // ≡اؤةي╕ 2. ┘┘╪د╪ز╪▒ ╪ح╪«┘╪د╪ة ╪د┘┘à╪ص╪░┘ê┘╪د╪ز ┘ê╪ز╪╡╪ص┘è╪ص ╪ث┘┘ê╪د╪╣ Boolean ┘┘ MySQL
             // ==========================================================
             modelBuilder.Entity<Drugs>().Property<bool?>("IsDeleted").HasColumnType("tinyint(1)");
             modelBuilder.Entity<Drugs>().HasQueryFilter(e => EF.Property<bool?>(e, "IsDeleted") != true);
@@ -140,7 +140,7 @@ namespace PharmaSmartWeb.Models
             modelBuilder.Entity<Journalentries>().HasQueryFilter(e => EF.Property<bool?>(e, "IsDeleted") != true);
 
             // ==========================================================
-            // 🛒 3. تأمين العلاقات المعقدة (Fluent API)
+            // ≡اؤْ 3. ╪ز╪ث┘à┘è┘ ╪د┘╪╣┘╪د┘é╪د╪ز ╪د┘┘à╪╣┘é╪»╪ر (Fluent API)
             // ==========================================================
             modelBuilder.Entity<Sales>(entity =>
             {
@@ -150,38 +150,38 @@ namespace PharmaSmartWeb.Models
                 entity.HasOne(d => d.User).WithMany(p => p.Sales).HasForeignKey(d => d.UserId).OnDelete(DeleteBehavior.ClientSetNull);
             });
 
-            // 🚀 التصحيح الجذري لجدول الحسابات
+            // ≡اأ ╪د┘╪ز╪╡╪ص┘è╪ص ╪د┘╪ش╪░╪▒┘è ┘╪ش╪»┘ê┘ ╪د┘╪ص╪│╪د╪ذ╪د╪ز
             modelBuilder.Entity<Accounts>(entity =>
             {
                 entity.HasKey(e => e.AccountId).HasName("PRIMARY");
                 entity.HasIndex(e => e.AccountCode).HasDatabaseName("AccountCode").IsUnique();
 
-                // إجبار المحرك على التعرف عليها كـ Boolean لتفادي قراءتها كـ int
+                // ╪ح╪ش╪ذ╪د╪▒ ╪د┘┘à╪ص╪▒┘â ╪╣┘┘ë ╪د┘╪ز╪╣╪▒┘ ╪╣┘┘è┘ç╪د ┘â┘ Boolean ┘╪ز┘╪د╪»┘è ┘é╪▒╪د╪ة╪ز┘ç╪د ┘â┘ int
                 entity.Property(e => e.IsActive).HasColumnType("tinyint(1)").HasDefaultValue(true);
                 entity.Property(e => e.AccountNature).HasColumnType("tinyint(1)");
 
-                // العلاقة الشجرية
+                // ╪د┘╪╣┘╪د┘é╪ر ╪د┘╪┤╪ش╪▒┘è╪ر
                 entity.HasOne(d => d.ParentAccount)
                       .WithMany(p => p.SubAccounts)
                       .HasForeignKey(d => d.ParentAccountId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // 🚀 تعريف صريح لعلاقة الفرع لمنع خطأ الـ InverseProperty
+                // ≡اأ ╪ز╪╣╪▒┘è┘ ╪╡╪▒┘è╪ص ┘╪╣┘╪د┘é╪ر ╪د┘┘╪▒╪╣ ┘┘à┘╪╣ ╪«╪╖╪ث ╪د┘┘ InverseProperty
                 entity.HasOne(d => d.Branch)
                       .WithMany(p => p.Accounts)
                       .HasForeignKey(d => d.BranchId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // 🚀 التصحيح الجذري لجدول الفروع
+            // ≡اأ ╪د┘╪ز╪╡╪ص┘è╪ص ╪د┘╪ش╪░╪▒┘è ┘╪ش╪»┘ê┘ ╪د┘┘╪▒┘ê╪╣
             modelBuilder.Entity<Branches>(entity =>
             {
                 entity.HasKey(e => e.BranchId).HasName("PRIMARY");
                 entity.HasIndex(e => e.BranchCode).HasDatabaseName("BranchCode").IsUnique();
                 entity.Property(e => e.IsActive).HasColumnType("tinyint(1)").HasDefaultValue(true);
 
-                // فصل حسابات التوجيه المالي لمنع الغموض (Ambiguity)
-                // 🚀 تم إضافة أسماء الخصائص (CashBranches, SalesBranches..) صراحةً لمنع خطأ InvalidOperationException
+                // ┘╪╡┘ ╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز┘ê╪ش┘è┘ç ╪د┘┘à╪د┘┘è ┘┘à┘╪╣ ╪د┘╪║┘à┘ê╪╢ (Ambiguity)
+                // ≡اأ ╪ز┘à ╪ح╪╢╪د┘╪ر ╪ث╪│┘à╪د╪ة ╪د┘╪«╪╡╪د╪خ╪╡ (CashBranches, SalesBranches..) ╪╡╪▒╪د╪ص╪ر┘ï ┘┘à┘╪╣ ╪«╪╖╪ث InvalidOperationException
                 entity.HasOne(d => d.DefaultCashAccount).WithMany("CashBranches").HasForeignKey(d => d.DefaultCashAccountId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(d => d.DefaultSalesAccount).WithMany("SalesBranches").HasForeignKey(d => d.DefaultSalesAccountId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(d => d.DefaultCOGSAccount).WithMany("CogsBranches").HasForeignKey(d => d.DefaultCOGSAccountId).OnDelete(DeleteBehavior.Restrict);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -23,7 +23,7 @@ namespace PharmaSmartWeb.Models
         [Column("DrugID", TypeName = "int(11)")]
         public int DrugId { get; set; }
 
-        [Required(ErrorMessage = "اسم الدواء مطلوب")]
+        [Required(ErrorMessage = "╪د╪│┘à ╪د┘╪»┘ê╪د╪ة ┘à╪╖┘┘ê╪ذ")]
         [Column(TypeName = "varchar(150)")]
         public string DrugName { get; set; } = string.Empty;
 
@@ -35,7 +35,7 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "varchar(50)")]
         public string? Barcode { get; set; }
 
-        // 🚀 تم حذف CostPrice و SellPrice لتطبيق معايير الـ ERP
+        // ≡اأ ╪ز┘à ╪ص╪░┘ CostPrice ┘ê SellPrice ┘╪ز╪╖╪ذ┘è┘é ┘à╪╣╪د┘è┘è╪▒ ╪د┘┘ ERP
 
         public bool IsActive { get; set; } = true;
 
@@ -53,14 +53,14 @@ namespace PharmaSmartWeb.Models
 
         [Required]
         [Column(TypeName = "varchar(50)")]
-        public string MainUnit { get; set; } = "علبة";
+        public string MainUnit { get; set; } = "╪╣┘╪ذ╪ر";
 
         [Column(TypeName = "int(11)")]
         public int? UnitId { get; set; }
 
         [Required]
         [Column(TypeName = "varchar(50)")]
-        public string SubUnit { get; set; } = "حبة";
+        public string SubUnit { get; set; } = "╪ص╪ذ╪ر";
 
         public int ConversionFactor { get; set; } = 1;
 
@@ -74,14 +74,14 @@ namespace PharmaSmartWeb.Models
       
       
 
-        // ربط الدواء بطابور الباركود
+        // ╪▒╪ذ╪╖ ╪د┘╪»┘ê╪د╪ة ╪ذ╪╖╪د╪ذ┘ê╪▒ ╪د┘╪ذ╪د╪▒┘â┘ê╪»
         [InverseProperty(nameof(Models.BarcodeGenerator.Drug))]
         public virtual ICollection<BarcodeGenerator> BarcodeQueue { get; set; } = new HashSet<BarcodeGenerator>();
 
-        // العلاقات
+        // ╪د┘╪╣┘╪د┘é╪د╪ز
         [InverseProperty("Drug")]
         public virtual ICollection<Branchinventory> Branchinventory { get; set; }
-        // GroupId is nullable (optional FK) → properly nullable navigation
+        // GroupId is nullable (optional FK) ظْ properly nullable navigation
         [ForeignKey(nameof(GroupId))]
         [InverseProperty(nameof(ItemGroups.Drugs))]
         public virtual ItemGroups? ItemGroup { get; set; }

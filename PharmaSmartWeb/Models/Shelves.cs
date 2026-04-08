@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+ï»¿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PharmaSmartWeb.Models
@@ -13,11 +13,11 @@ namespace PharmaSmartWeb.Models
         [Column("WarehouseId", TypeName = "int(11)")]
         public int WarehouseId { get; set; }
 
-        // ?? ÇáÍŞá ÇáÌÏíÏ: ÑÈØ ÇáÑİ ÈÇáãÌãæÚÉ ÇáÚáÇÌíÉ
+        // ?? â•ŸØ·â•â–Ø· â•ŸØ·â• â•§Ùˆâ•§: â•¤â•šâ•ª â•ŸØ·â•¤â–Œ â•šâ•ŸØ·Ø¹â• Ø¹Âµâ”Œâ•” â•ŸØ·â”ŒØ·â•Ÿâ• Ùˆâ•”
         [Column("GroupId", TypeName = "int(11)")]
         public int? GroupId { get; set; }
 
-        [Required(ErrorMessage = "ÇÓã Ãæ ÑŞã ÇáÑİ ãØáæÈ")]
+        [Required(ErrorMessage = "â•Ÿâ•™Ø¹ â”œÂµ â•¤â–Ø¹ â•ŸØ·â•¤â–Œ Ø¹â•ªØ·Âµâ•š")]
         [StringLength(100)]
         [Column("ShelfName", TypeName = "varchar(100)")]
         public string ShelfName { get; set; } = string.Empty;
@@ -33,7 +33,7 @@ namespace PharmaSmartWeb.Models
         [InverseProperty(nameof(Models.Warehouses.Shelves))]
         public virtual Warehouses Warehouse { get; set; }
 
-        // ?? ÚáÇŞÉ ÇáÑÈØ ãÚ ÌÏæá ÇáãÌãæÚÇÊ ÇáÏæÇÆíÉ
+        // ?? â”ŒØ·â•Ÿâ–â•” â•ŸØ·â•¤â•šâ•ª Ø¹â”Œ â• â•§ÂµØ· â•ŸØ·Ø¹â• Ø¹Âµâ”Œâ•Ÿâ•© â•ŸØ·â•§Âµâ•Ÿâ•Ùˆâ•”
         [ForeignKey(nameof(GroupId))]
         public virtual ItemGroups ItemGroup { get; set; }
 

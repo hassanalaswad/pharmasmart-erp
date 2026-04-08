@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -21,7 +21,7 @@ namespace PharmaSmartWeb.Models
         [Column("GroupCode", TypeName = "varchar(50)")]
         public string? GroupCode { get; set; }
 
-        [Required(ErrorMessage = "اسم المجموعة مطلوب")]
+        [Required(ErrorMessage = "╪د╪│┘à ╪د┘┘à╪ش┘à┘ê╪╣╪ر ┘à╪╖┘┘ê╪ذ")]
         [StringLength(100)]
         [Column("GroupName", TypeName = "varchar(100)")]
         public string GroupName { get; set; } = string.Empty;

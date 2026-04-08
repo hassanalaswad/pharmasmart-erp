@@ -1,4 +1,4 @@
-//using System;
+ï»¿//using System;
 //using System.Collections.Generic;
 //using System.ComponentModel.DataAnnotations;
 //using System.ComponentModel.DataAnnotations.Schema;
@@ -41,14 +41,14 @@
 //        [Column("EmployeeID", TypeName = "int(11)")]
 //        public int? EmployeeId { get; set; }
 
-//        // ?? ÇáÅÕáÇÍ ÇáÌĞÑí: ÊÍæíá ÇáäæÚ áÜ int? æÊËÈíÊ ÇáÇÓã ÇáÈÑãÌí
+//        // ?? â•ŸØ·â”¼â•’Ø·â•Ÿâ• â•ŸØ·â• â•¨â•¤Ùˆ: â•©â•ÂµÙˆØ· â•ŸØ·ØºÂµâ”Œ Ø·â–„ int? Âµâ•©â•¦â•šÙˆâ•© â•ŸØ·â•Ÿâ•™Ø¹ â•ŸØ·â•šâ•¤Ø¹â• Ùˆ
 //        [Column("DefaultBranchID", TypeName = "int(11)")]
 //        public int? DefaultBranchId { get; set; }
 
 //        [Required]
 //        public bool? IsActive { get; set; }
 
-//        // ?? ÅÌÈÇÑ ÇáäÙÇã Úáì ÇÓÊÎÏÇã ÇáÚãæÏ ÇáãÍÏÏ ÕÑÇÍÉğ
+//        // ?? â”¼â• â•šâ•Ÿâ•¤ â•ŸØ·Øºâ”˜â•ŸØ¹ â”ŒØ·Ù‡ â•Ÿâ•™â•©â•¬â•§â•ŸØ¹ â•ŸØ·â”ŒØ¹Âµâ•§ â•ŸØ·Ø¹â•â•§â•§ â•’â•¤â•Ÿâ•â•”â‰¡
 //        [ForeignKey(nameof(DefaultBranchId))]
 //        [InverseProperty(nameof(Branches.Users))]
 //        public virtual Branches DefaultBranch { get; set; }
@@ -62,7 +62,7 @@
 //        public virtual Userroles Role { get; set; }
 
 //        // ==============================================================
-//        // ?? ÇáÚáÇŞÇÊ ÇáãæÌøåÉ ÕÑÇÍÉğ (Explicit Inverse Properties)
+//        // ?? â•ŸØ·â”ŒØ·â•Ÿâ–â•Ÿâ•© â•ŸØ·Ø¹Âµâ• Â°Ùâ•” â•’â•¤â•Ÿâ•â•”â‰¡ (Explicit Inverse Properties)
 //        // ==============================================================
 
 //        [InverseProperty("CreatedByNavigation")]
@@ -142,7 +142,7 @@ namespace PharmaSmartWeb.Models
         [Required]
         public bool? IsActive { get; set; }
 
-        // ?? ÇáÚáÇŞÇÊ
+        // ?? â•ŸØ·â”ŒØ·â•Ÿâ–â•Ÿâ•©
         [ForeignKey(nameof(DefaultBranchId))]
         [InverseProperty(nameof(Branches.Users))]
         public virtual Branches DefaultBranch { get; set; }
@@ -155,7 +155,7 @@ namespace PharmaSmartWeb.Models
         [InverseProperty(nameof(Userroles.Users))]
         public virtual Userroles Role { get; set; }
 
-        // ?? ÇáãÌãæÚÇÊ ÇáãÑÊÈØÉ ÈÇáãÓÊÎÏã
+        // ?? â•ŸØ·Ø¹â• Ø¹Âµâ”Œâ•Ÿâ•© â•ŸØ·Ø¹â•¤â•©â•šâ•ªâ•” â•šâ•ŸØ·Ø¹â•™â•©â•¬â•§Ø¹
         [InverseProperty("CreatedByNavigation")]
         public virtual ICollection<Drugtransfers> Drugtransfers { get; set; }
 

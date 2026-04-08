@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -35,13 +35,13 @@ namespace PharmaSmartWeb.Models
 
         [ForeignKey(nameof(BranchId))]
         [InverseProperty(nameof(Branches.Stockmovements))]
-        public virtual Branches Branch { get; set; } = null!;
+        public virtual Branches Branch { get; set; }
         [ForeignKey(nameof(DrugId))]
         [InverseProperty(nameof(Drugs.Stockmovements))]
-        public virtual Drugs Drug { get; set; } = null!;
+        public virtual Drugs Drug { get; set; }
         [ForeignKey(nameof(UserId))]
         [InverseProperty(nameof(Users.Stockmovements))]
-        public virtual Users User { get; set; } = null!;
+        public virtual Users User { get; set; }
     }
 }
 

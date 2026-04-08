@@ -10,8 +10,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using PharmaSmartWeb.Services;
-using PharmaSmartWeb.Services;
-using PharmaSmartWeb.Models;
+
 namespace PharmaSmartWeb.Controllers
 {
     [Authorize]
@@ -19,10 +18,9 @@ namespace PharmaSmartWeb.Controllers
     {
         private readonly IAccountingEngine _accountingEngine;
 
-        public PurchasesController(_context.Purchases.Remove context, IAccountingEngine accountingEngine) : base(context)
+        public PurchasesController(ApplicationDbContext context, IAccountingEngine accountingEngine) : base(context)
         {
-      
-            _accountingEngine = new AccountingEngine(_context);
+            _accountingEngine = accountingEngine;
         }
 
         private async Task<int> GetValidUserIdAsync()

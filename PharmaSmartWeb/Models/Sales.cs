@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -11,7 +11,7 @@ namespace PharmaSmartWeb.Models
         public Sales()
         {
             Saledetails = new HashSet<Saledetails>();
-            SalePayments = new HashSet<SalePayments>(); // 🚀 تفعيل علاقة الدفع المتعدد
+            SalePayments = new HashSet<SalePayments>(); // ≡اأ ╪ز┘╪╣┘è┘ ╪╣┘╪د┘é╪ر ╪د┘╪»┘╪╣ ╪د┘┘à╪ز╪╣╪»╪»
         }
 
         [Key]
@@ -48,7 +48,7 @@ namespace PharmaSmartWeb.Models
 
         public int? ParentSaleId { get; set; }
 
-        // --- 🛡️ حقول معايير الـ ERP (التتبع والحذف المنطقي) ---
+        // --- ≡اؤةي╕ ╪ص┘é┘ê┘ ┘à╪╣╪د┘è┘è╪▒ ╪د┘┘ ERP (╪د┘╪ز╪ز╪ذ╪╣ ┘ê╪د┘╪ص╪░┘ ╪د┘┘à┘╪╖┘é┘è) ---
         public bool? IsDeleted { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedBy { get; set; }
@@ -56,7 +56,7 @@ namespace PharmaSmartWeb.Models
         public int? DeletedBy { get; set; }
 
 
-        // --- العلاقات (Navigation Properties) ---
+        // --- ╪د┘╪╣┘╪د┘é╪د╪ز (Navigation Properties) ---
 
         [ForeignKey(nameof(BranchId))]
         [InverseProperty(nameof(Branches.Sales))]
@@ -73,7 +73,7 @@ namespace PharmaSmartWeb.Models
         [InverseProperty("Sale")]
         public virtual ICollection<Saledetails> Saledetails { get; set; }
 
-        // 🚀 العلاقة الجديدة مع جدول المدفوعات المستقل
+        // ≡اأ ╪د┘╪╣┘╪د┘é╪ر ╪د┘╪ش╪»┘è╪»╪ر ┘à╪╣ ╪ش╪»┘ê┘ ╪د┘┘à╪»┘┘ê╪╣╪د╪ز ╪د┘┘à╪│╪ز┘é┘
         [InverseProperty("Sale")]
         public virtual ICollection<SalePayments> SalePayments { get; set; }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -31,22 +31,22 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "int(11)")]
         public int CreatedBy { get; set; }
 
-        // BranchId non-nullable FK → null!
+        // BranchId non-nullable FK ظْ null!
         [ForeignKey(nameof(BranchId))]
         [InverseProperty(nameof(Branches.Journalentries))]
         public virtual Branches Branch { get; set; } = null!;
         [ForeignKey(nameof(CreatedBy))]
         [InverseProperty(nameof(Users.Journalentries))]
-        // CreatedBy non-nullable FK → null!
+        // CreatedBy non-nullable FK ظْ null!
         public virtual Users CreatedByNavigation { get; set; } = null!;
         [InverseProperty("Journal")]
         
         [StringLength(100)]
-        public string? ReferenceNo { get; set; } // رقم الشيك أو الحوالة
+        public string? ReferenceNo { get; set; } // ╪▒┘é┘à ╪د┘╪┤┘è┘â ╪ث┘ê ╪د┘╪ص┘ê╪د┘╪ر
 
         [NotMapped]
         [StringLength(200)]
-        public string? PayeePayerName { get; set; } // اسم الشخص المستلم أو المسلم
+        public string? PayeePayerName { get; set; } // ╪د╪│┘à ╪د┘╪┤╪«╪╡ ╪د┘┘à╪│╪ز┘┘à ╪ث┘ê ╪د┘┘à╪│┘┘à
         public virtual ICollection<Journaldetails> Journaldetails { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -26,7 +26,7 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "datetime")]
         public DateTime TransferDate { get; set; }
 
-        // ?? ÇáÍŞá ÇáÌÏíÏ: ÊÇÑíÎ ÇáÇÓÊáÇã
+        // ?? â•ŸØ·â•â–Ø· â•ŸØ·â• â•§Ùˆâ•§: â•©â•Ÿâ•¤Ùˆâ•¬ â•ŸØ·â•Ÿâ•™â•©Ø·â•ŸØ¹
         [Column(TypeName = "datetime")]
         public DateTime? ReceiveDate { get; set; }
 
@@ -37,14 +37,14 @@ namespace PharmaSmartWeb.Models
         [Column(TypeName = "int(11)")]
         public int CreatedBy { get; set; }
 
-        // ?? ÇáÍŞá ÇáÌÏíÏ: ÇáãÓÊÎÏã ÇáãÓÊáã
+        // ?? â•ŸØ·â•â–Ø· â•ŸØ·â• â•§Ùˆâ•§: â•ŸØ·Ø¹â•™â•©â•¬â•§Ø¹ â•ŸØ·Ø¹â•™â•©Ø·Ø¹
         [Column(TypeName = "int(11)")]
         public int? ReceivedBy { get; set; }
 
         [Column(TypeName = "varchar(250)")]
         public string? Notes { get; set; }
 
-        // ?? ÇáŞíæÏ ÇáãÍÇÓÈíÉ ááÊÍæíá ÇáãÒÏæÌ
+        // ?? â•ŸØ·â–ÙˆÂµâ•§ â•ŸØ·Ø¹â•â•Ÿâ•™â•šÙˆâ•” Ø·Ø·â•©â•ÂµÙˆØ· â•ŸØ·Ø¹â•¥â•§Âµâ• 
         [Column(TypeName = "int(11)")]
         public int? JournalId { get; set; }
 

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -19,7 +19,7 @@ namespace PharmaSmartWeb.Models
         [Column("BranchId", TypeName = "int(11)")]
         public int BranchId { get; set; }
 
-        [Required(ErrorMessage = "ÇÓã ÇáãÓÊæÏÚ ãØáæÈ")]
+        [Required(ErrorMessage = "â•Ÿâ•™Ø¹ â•ŸØ·Ø¹â•™â•©Âµâ•§â”Œ Ø¹â•ªØ·Âµâ•š")]
         [StringLength(150)]
         [Column("WarehouseName", TypeName = "varchar(150)")]
         public string WarehouseName { get; set; } = string.Empty;

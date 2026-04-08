@@ -1,8 +1,8 @@
-namespace PharmaSmartWeb.Models
+﻿namespace PharmaSmartWeb.Models
 {
     /// <summary>
-    /// المرجع المركزي (Single Source of Truth) لكافة الثوابت في النظام.
-    /// تم استبدال الأرقام الصامتة (Magic Numbers) بهذا الـ Enum لضمان نظافة الكود والتوافقية المعمارية.
+    /// ╪د┘┘à╪▒╪ش╪╣ ╪د┘┘à╪▒┘â╪▓┘è (Single Source of Truth) ┘┘â╪د┘╪ر ╪د┘╪س┘ê╪د╪ذ╪ز ┘┘è ╪د┘┘╪╕╪د┘à.
+    /// ╪ز┘à ╪د╪│╪ز╪ذ╪»╪د┘ ╪د┘╪ث╪▒┘é╪د┘à ╪د┘╪╡╪د┘à╪ز╪ر (Magic Numbers) ╪ذ┘ç╪░╪د ╪د┘┘ Enum ┘╪╢┘à╪د┘ ┘╪╕╪د┘╪ر ╪د┘┘â┘ê╪» ┘ê╪د┘╪ز┘ê╪د┘┘é┘è╪ر ╪د┘┘à╪╣┘à╪د╪▒┘è╪ر.
     /// </summary>
     public enum SystemRoles
     {

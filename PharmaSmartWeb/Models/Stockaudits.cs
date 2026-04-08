@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -27,12 +27,12 @@ namespace PharmaSmartWeb.Models
         [StringLength(20)]
         public string? Status { get; set; }
 
-        // BranchId non-nullable FK → null!
+        // BranchId non-nullable FK ظْ null!
         [ForeignKey("BranchId")]
         public virtual Branches Branch { get; set; } = null!;
 
         [ForeignKey("UserId")]
-        // UserId non-nullable FK → null!
+        // UserId non-nullable FK ظْ null!
         public virtual Users User { get; set; } = null!;
 
         public virtual ICollection<Stockauditdetails> Stockauditdetails { get; set; }
