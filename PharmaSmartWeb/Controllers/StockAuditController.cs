@@ -153,25 +153,31 @@ namespace PharmaSmartWeb.Controllers
                                 _context.Journalentries.Add(journal);
                                 await _context.SaveChangesAsync();
 
-                                // حساب المخزون (10)
-                                var inventoryAcc = await _context.Accounts.FindAsync(10);
-                                // حساب تسوية المخزون (الحساب الجديد 515)
-                                var adjustmentAcc = await _context.Accounts.FirstOrDefaultAsync(a => a.AccountCode == "515");
+                                // ✅ الإصلاح: جلب حساب المخزون بالاسم/الكود بدلاً من ID مُرمَّز
+                                var inventoryAcc = await _context.Accounts.FirstOrDefaultAsync(a =>
+                                    a.AccountCode == "113" || a.AccountName.Contains("مخزون بضاعة"));
+                                // ✅ جلب حساب تسوية المخزون
+                                var adjustmentAcc = await _context.Accounts.FirstOrDefaultAsync(a =>
+                                    a.AccountCode == "515" || a.AccountName.Contains("تسوية مخزون"));
 
-                                if (netAdjustment > 0) // فائض (زيادة في الأصول)
+                                if (inventoryAcc == null || adjustmentAcc == null)
                                 {
-                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = 10, Debit = netAdjustment, Credit = 0 });
-                                    if (adjustmentAcc != null) _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = adjustmentAcc.AccountId, Credit = netAdjustment, Debit = 0 });
-                                    if (inventoryAcc != null) inventoryAcc.Balance += netAdjustment;
-                                    if (adjustmentAcc != null) adjustmentAcc.Balance -= netAdjustment; // دائن في المصروفات يقلل التكلفة
+                                    // تسجيل تحذير في السجل بدلاً من قيد غير متزن
+                                    await RecordLog("Warning", "Inventory",
+                                        $"تحذير: لم يتم إنشاء القيد المحاسبي لمستند الجرد #{auditMaster.AuditId} لأن حساب المخزون (113) أو حساب التسوية (515) غير موجود.");
+                                }
+                                else if (netAdjustment > 0) // فائض (زيادة في الأصول)
+                                {
+                                    // ✅ بدون تعديل Balance يدوياً — الرصيد يُحسب من Journaldetails فقط
+                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = inventoryAcc.AccountId, Debit = netAdjustment, Credit = 0 });
+                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = adjustmentAcc.AccountId, Credit = netAdjustment, Debit = 0 });
                                 }
                                 else // عجز (خسارة)
                                 {
                                     decimal absNet = Math.Abs(netAdjustment);
-                                    if (adjustmentAcc != null) _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = adjustmentAcc.AccountId, Debit = absNet, Credit = 0 });
-                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = 10, Credit = absNet, Debit = 0 });
-                                    if (inventoryAcc != null) inventoryAcc.Balance -= absNet;
-                                    if (adjustmentAcc != null) adjustmentAcc.Balance += absNet;
+                                    // ✅ بدون تعديل Balance يدوياً — الرصيد يُحسب من Journaldetails فقط
+                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = adjustmentAcc.AccountId, Debit = absNet, Credit = 0 });
+                                    _context.Journaldetails.Add(new Journaldetails { JournalId = journal.JournalId, AccountId = inventoryAcc.AccountId, Credit = absNet, Debit = 0 });
                                 }
                             }
 
