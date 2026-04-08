@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using PharmaSmartWeb.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using PharmaSmartWeb.Models;
 
 namespace PharmaSmartWeb
 {
@@ -24,6 +26,7 @@ namespace PharmaSmartWeb
         {
             services.AddControllersWithViews();
             services.AddMemoryCache();
+            services.AddScoped<IPasswordHasher<Users>, PasswordHasher<Users>>();
 
             services.AddTransient<IClaimsTransformation, PharmaSmartWeb.Security.ClaimsTransformer>();
             services.AddScoped<PharmaSmartWeb.Services.IAccountingEngine, PharmaSmartWeb.Services.AccountingEngine>();
