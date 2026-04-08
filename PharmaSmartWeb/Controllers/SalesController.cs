@@ -312,113 +312,206 @@ namespace PharmaSmartWeb.Controllers
             return RedirectToAction("SalesHub", "Home");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [HasPermission("Sales", "Add")]
-        public async Task<IActionResult> SyncOfflineSale([FromForm] string saleJson)
-        {
-            if (string.IsNullOrEmpty(saleJson))
-                return BadRequest(new { success = false, message = "بيانات الفاتورة فارغة." });
+      [HttpPost]
+[ValidateAntiForgeryToken]
+[HasPermission("Sales", "Add")]
+public async Task<IActionResult> SyncOfflineSale([FromForm] string saleJson)
+{
+    if (string.IsNullOrEmpty(saleJson))
+        return BadRequest(new { success = false, message = "بيانات الفاتورة فارغة." });
 
+    try
+    {
+        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var offlineData = System.Text.Json.JsonSerializer.Deserialize<OfflineSaleDto>(saleJson, options);
+        if (offlineData == null)
+            return BadRequest(new { success = false, message = "فاتورة غير صالحة." });
+
+        var strategy = _context.Database.CreateExecutionStrategy();
+        int newSaleId = 0;
+
+        // ✅ قائمة لتتبع الأصناف التي تم تخطيها بسبب نقص المخزون
+        var skippedItems = new List<object>();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var offlineData = System.Text.Json.JsonSerializer.Deserialize<OfflineSaleDto>(saleJson, options);
-                if (offlineData == null) return BadRequest(new { success = false, message = "فاتورة غير صالحة." });
+                var userId = await GetValidUserIdAsync();
 
-                var strategy = _context.Database.CreateExecutionStrategy();
-                int newSaleId = 0;
-
-                await strategy.ExecuteAsync(async () =>
+                var sale = new Sales
                 {
-                    using var transaction = await _context.Database.BeginTransactionAsync();
-                    try
+                    UserId = userId,
+                    BranchId = ActiveBranchId,
+                    SaleDate = DateTime.Now,
+                    IsReturn = false,
+                    CustomerId = offlineData.CustomerId > 0 ? offlineData.CustomerId : null,
+                    Discount = offlineData.Discount,
+                    TaxAmount = offlineData.TaxAmount,
+                };
+
+                decimal grossTotal = 0, totalCogs = 0;
+                sale.Saledetails = new List<Saledetails>();
+
+                foreach (var item in offlineData.Items)
+                {
+                    int itemQty = (int)Math.Round(item.Quantity);
+
+                    var inventory = await _context.Branchinventory
+                        .Include(b => b.Drug)
+                        .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
+
+                    // ✅ الإصلاح الجوهري:
+                    // الصنف لا يُضاف للفاتورة إلا إذا تحقق الشرطان معاً:
+                    // 1. المخزون موجود في الفرع
+                    // 2. الكمية المتاحة كافية للبيع
+                    if (inventory != null && inventory.StockQuantity >= itemQty)
                     {
-                        var userId = await GetValidUserIdAsync();
+                        // ✅ إضافة قيمة الصنف للإجمالي فقط بعد التحقق من توفر المخزون
+                        grossTotal += item.Quantity * item.UnitPrice;
 
-                        var sale = new Sales
+                        decimal costPerUnit = (inventory.AverageCost ?? 0)
+                            / (inventory.Drug?.ConversionFactor > 0 ? inventory.Drug.ConversionFactor : 1);
+                        totalCogs += item.Quantity * costPerUnit;
+
+                        // ✅ خصم المخزون فعلياً قبل إضافة الصنف للفاتورة
+                        inventory.StockQuantity -= itemQty;
+                        _context.Branchinventory.Update(inventory);
+
+                        _context.Stockmovements.Add(new Stockmovements
                         {
-                            UserId = userId,
                             BranchId = ActiveBranchId,
-                            SaleDate = DateTime.Now,
-                            IsReturn = false,
-                            CustomerId = offlineData.CustomerId > 0 ? offlineData.CustomerId : null,
-                            Discount = offlineData.Discount,
-                            TaxAmount = offlineData.TaxAmount,
-                        };
-
-                        decimal grossTotal = 0, totalCogs = 0;
-
-                        foreach (var item in offlineData.Items)
-                        {
-                            int itemQty = (int)Math.Round(item.Quantity);
-                            grossTotal += item.Quantity * item.UnitPrice;
-                            var inventory = await _context.Branchinventory.Include(b => b.Drug)
-                                .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
-                            if (inventory != null && inventory.StockQuantity >= itemQty)
-                            {
-                                decimal costPerUnit = (inventory.AverageCost ?? 0) / (inventory.Drug?.ConversionFactor > 0 ? inventory.Drug.ConversionFactor : 1);
-                                totalCogs += item.Quantity * costPerUnit;
-                                inventory.StockQuantity -= itemQty;
-                                _context.Branchinventory.Update(inventory);
-                                _context.Stockmovements.Add(new Stockmovements { BranchId = ActiveBranchId, DrugId = item.DrugId, MovementDate = DateTime.Now, MovementType = "Sale Out (Offline Sync)", Quantity = -itemQty, UserId = userId, Notes = "فاتورة مزامنة أوفلاين" });
-                            }
-                            sale.Saledetails ??= new List<Saledetails>();
-                            sale.Saledetails.Add(new Saledetails { DrugId = item.DrugId, Quantity = itemQty, UnitPrice = item.UnitPrice });
-                        }
-
-                        sale.TotalAmount = grossTotal;
-                        sale.NetAmount = grossTotal - sale.Discount + sale.TaxAmount;
-
-                        _context.Sales.Add(sale);
-                        await _context.SaveChangesAsync();
-                        newSaleId = sale.SaleId;
-
-                        decimal cashAmt = offlineData.CashAmount;
-                        decimal bankAmt = offlineData.BankAmount;
-                        decimal credit = sale.NetAmount - cashAmt - bankAmt;
-                        if (credit < 0) credit = 0;
-
-                        if (cashAmt > 0 && offlineData.CashAccountId > 0)
-                            _context.SalePayments.Add(new SalePayments { SaleId = sale.SaleId, PaymentMethod = "Cash", AccountId = offlineData.CashAccountId, Amount = cashAmt });
-                        if (bankAmt > 0 && offlineData.BankAccountId > 0)
-                            _context.SalePayments.Add(new SalePayments { SaleId = sale.SaleId, PaymentMethod = "Bank", AccountId = offlineData.BankAccountId, Amount = bankAmt });
-                        if (credit > 0)
-                            _context.SalePayments.Add(new SalePayments { SaleId = sale.SaleId, PaymentMethod = "Credit", Amount = credit });
-
-                        await _context.SaveChangesAsync();
-
-                        var payload = new AccountingPayload
-                        {
-                            TransactionType = TransactionType.SalesInvoice,
-                            BranchId = ActiveBranchId,
+                            DrugId = item.DrugId,
+                            MovementDate = DateTime.Now,
+                            MovementType = "Sale Out (Offline Sync)",
+                            Quantity = -itemQty,
                             UserId = userId,
-                            ReferenceNo = sale.SaleId.ToString(),
-                            Description = $"مبيعات POS (أوفلاين مزامنة) فاتورة #{sale.SaleId}",
-                            CustomerId = sale.CustomerId,
-                            SpecificCashAccountId = offlineData.CashAccountId > 0 ? offlineData.CashAccountId : null,
-                            SpecificBankAccountId = offlineData.BankAccountId > 0 ? offlineData.BankAccountId : null
-                        };
-                        payload.Amounts.Add(AmountSource.NetTotalAmount, sale.NetAmount);
-                        payload.Amounts.Add(AmountSource.PaidCashAmount, cashAmt);
-                        payload.Amounts.Add(AmountSource.PaidBankAmount, bankAmt);
-                        payload.Amounts.Add(AmountSource.CreditAmount, credit);
-                        payload.Amounts.Add(AmountSource.COGSAmount, totalCogs);
-                        await _accountingEngine.ProcessTransactionAsync(payload);
+                            Notes = "فاتورة مزامنة أوفلاين"
+                        });
 
-                        await transaction.CommitAsync();
+                        // ✅ الصنف يُضاف للفاتورة فقط هنا — داخل الشرط، بعد نجاح الخصم
+                        sale.Saledetails.Add(new Saledetails
+                        {
+                            DrugId = item.DrugId,
+                            Quantity = itemQty,
+                            UnitPrice = item.UnitPrice
+                        });
                     }
-                    catch (Exception) { await transaction.RollbackAsync(); throw; }
-                });
+                    else
+                    {
+                        // ✅ تسجيل الأصناف التي تم تخطيها بسبب نقص المخزون
+                        // لا نرمي Exception — نكمل الفاتورة بالأصناف المتاحة فقط
+                        string drugName = inventory?.Drug?.DrugName ?? $"DrugId={item.DrugId}";
+                        int availableQty = inventory?.StockQuantity ?? 0;
+                        skippedItems.Add(new
+                        {
+                            drugId = item.DrugId,
+                            drugName = drugName,
+                            requestedQty = itemQty,
+                            availableQty = availableQty,
+                            reason = availableQty == 0 ? "الصنف نفد من المخزون" : "الكمية المطلوبة أكبر من المتاح"
+                        });
+                    }
+                }
 
-                await RecordLog("OfflineSync", "Sales", $"مزامنة فاتورة أوفلاين #{newSaleId}");
-                return Ok(new { success = true, saleId = newSaleId });
+                // ✅ حماية من حفظ فاتورة فارغة تماماً (جميع الأصناف نفدت)
+                if (!sale.Saledetails.Any())
+                {
+                    await transaction.RollbackAsync();
+                    // لا نرمي exception بل نُعيد استجابة واضحة للـ PWA
+                    return; // سيُعالَج أدناه
+                }
+
+                sale.TotalAmount = grossTotal;
+                sale.NetAmount = grossTotal - sale.Discount + sale.TaxAmount;
+
+                _context.Sales.Add(sale);
+                await _context.SaveChangesAsync();
+                newSaleId = sale.SaleId;
+
+                decimal cashAmt = offlineData.CashAmount;
+                decimal bankAmt = offlineData.BankAmount;
+                decimal credit = sale.NetAmount - cashAmt - bankAmt;
+                if (credit < 0) credit = 0;
+
+                if (cashAmt > 0 && offlineData.CashAccountId > 0)
+                    _context.SalePayments.Add(new SalePayments
+                    {
+                        SaleId = sale.SaleId,
+                        PaymentMethod = "Cash",
+                        AccountId = offlineData.CashAccountId,
+                        Amount = cashAmt
+                    });
+                if (bankAmt > 0 && offlineData.BankAccountId > 0)
+                    _context.SalePayments.Add(new SalePayments
+                    {
+                        SaleId = sale.SaleId,
+                        PaymentMethod = "Bank",
+                        AccountId = offlineData.BankAccountId,
+                        Amount = bankAmt
+                    });
+                if (credit > 0)
+                    _context.SalePayments.Add(new SalePayments
+                    {
+                        SaleId = sale.SaleId,
+                        PaymentMethod = "Credit",
+                        Amount = credit
+                    });
+
+                await _context.SaveChangesAsync();
+
+                var payload = new AccountingPayload
+                {
+                    TransactionType = TransactionType.SalesInvoice,
+                    BranchId = ActiveBranchId,
+                    UserId = userId,
+                    ReferenceNo = sale.SaleId.ToString(),
+                    Description = $"مبيعات POS (أوفلاين مزامنة) فاتورة #{sale.SaleId}",
+                    CustomerId = sale.CustomerId,
+                    SpecificCashAccountId = offlineData.CashAccountId > 0 ? offlineData.CashAccountId : null,
+                    SpecificBankAccountId = offlineData.BankAccountId > 0 ? offlineData.BankAccountId : null
+                };
+                payload.Amounts.Add(AmountSource.NetTotalAmount, sale.NetAmount);
+                payload.Amounts.Add(AmountSource.PaidCashAmount, cashAmt);
+                payload.Amounts.Add(AmountSource.PaidBankAmount, bankAmt);
+                payload.Amounts.Add(AmountSource.CreditAmount, credit);
+                payload.Amounts.Add(AmountSource.COGSAmount, totalCogs);
+
+                await _accountingEngine.ProcessTransactionAsync(payload);
+                await transaction.CommitAsync();
             }
-            catch (Exception ex)
+            catch (Exception) { await transaction.RollbackAsync(); throw; }
+        });
+
+        // ✅ حالة: جميع الأصناف نفدت — لم تُحفظ أي فاتورة
+        if (newSaleId == 0)
+        {
+            return Ok(new
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
-            }
+                success = false,
+                saleId = 0,
+                message = "لم تُحفظ الفاتورة: جميع الأصناف نفدت من المخزون.",
+                skippedItems = skippedItems
+            });
         }
+
+        await RecordLog("OfflineSync", "Sales", $"مزامنة فاتورة أوفلاين #{newSaleId}، أصناف متخطاة: {skippedItems.Count}");
+
+        return Ok(new
+        {
+            success = true,
+            saleId = newSaleId,
+            // ✅ إعلام الـ PWA بالأصناف التي لم تُحسب في الفاتورة
+            skippedItems = skippedItems,
+            hasSkippedItems = skippedItems.Any()
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { success = false, message = ex.Message });
+    }
+}
 
         // DTO لاستقبال بيانات الفاتورة الأوفلاين
         private class OfflineSaleDto
