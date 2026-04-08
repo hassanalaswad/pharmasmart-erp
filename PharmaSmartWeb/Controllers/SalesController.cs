@@ -700,8 +700,21 @@ namespace PharmaSmartWeb.Controllers
         [HasPermission("Sales", "Add")]
         public async Task<IActionResult> ConfirmCloseShift(decimal actualCash)
         {
-            await RecordLog("CloseShift", "Sales", $"تم إغلاق وردية الكاشير بصندوق فعلي: {actualCash}");
-            TempData["Success"] = "تم إغلاق الوردية ومطابقة الصندوق بنجاح.";
+            // ✅ حساب المبيعات النقدية المتوقعة لوردية اليوم
+            var todayStart = DateTime.Today;
+            decimal expectedCash = await _context.SalePayments
+                .Where(p => p.Sale.BranchId == ActiveBranchId
+                         && p.Sale.SaleDate >= todayStart
+                         && p.Sale.IsReturn == false
+                         && p.PaymentMethod == "Cash")
+                .SumAsync(p => (decimal?)p.Amount) ?? 0;
+
+            decimal difference = actualCash - expectedCash;
+            string diffLabel = difference >= 0 ? "فائض" : "عجز";
+
+            await RecordLog("CloseShift", "Sales",
+                $"إغلاق وردية: صندوق فعلي={actualCash:N2}، متوقع={expectedCash:N2}، {diffLabel}={Math.Abs(difference):N2}");
+            TempData["Success"] = $"تم إغلاق الوردية. النقد المتوقع: {expectedCash:N2} | الفعلي: {actualCash:N2} | الفرق ({diffLabel}): {Math.Abs(difference):N2}";
             return RedirectToAction("SalesHub", "Home");
         }
 
@@ -721,6 +734,18 @@ namespace PharmaSmartWeb.Controllers
 
                 var strategy = _context.Database.CreateExecutionStrategy();
                 int newSaleId = 0;
+                var skippedItems = new List<object>();
+
+                // ✅ فحص الـ Idempotency: منع إنشاء فاتورة مكررة إذا أُرسل الطلب مرتين
+                if (!string.IsNullOrEmpty(offlineData.OfflineLocalId))
+                {
+                    bool alreadySynced = await _context.Sales
+                        .AnyAsync(s => s.OfflineLocalId == offlineData.OfflineLocalId
+                                    && s.BranchId == ActiveBranchId);
+                    if (alreadySynced)
+                        return Ok(new { success = true, duplicate = true,
+                            message = "تم تجاهل الفاتورة — تمت مزامنتها مسبقاً." });
+                }
 
                 await strategy.ExecuteAsync(async () =>
                 {
@@ -733,7 +758,13 @@ namespace PharmaSmartWeb.Controllers
                         {
                             UserId = userId,
                             BranchId = ActiveBranchId,
-                            SaleDate = DateTime.Now,
+                            // ✅ استخدام وقت البيع الفعلي من الجهاز (الأوفلاين) بدلاً من وقت المزامنة
+                            SaleDate = offlineData.SaleLocalDate.HasValue
+                                       && offlineData.SaleLocalDate.Value > DateTime.Now.AddDays(-30)
+                                       && offlineData.SaleLocalDate.Value <= DateTime.Now.AddMinutes(5)
+                                       ? offlineData.SaleLocalDate.Value
+                                       : DateTime.Now,
+                            OfflineLocalId = offlineData.OfflineLocalId,
                             IsReturn = false,
                             CustomerId = offlineData.CustomerId > 0 ? offlineData.CustomerId : null,
                             Discount = offlineData.Discount,
@@ -742,22 +773,44 @@ namespace PharmaSmartWeb.Controllers
 
                         decimal grossTotal = 0, totalCogs = 0;
 
+                        sale.Saledetails = new List<Saledetails>();
                         foreach (var item in offlineData.Items)
                         {
                             int itemQty = (int)Math.Round(item.Quantity);
-                            grossTotal += item.Quantity * item.UnitPrice;
                             var inventory = await _context.Branchinventory.Include(b => b.Drug)
                                 .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
+
+                            // ✅ الإصلاح الجوهري: الصنف لا يُضاف للفاتورة إلا بعد التحقق من توفر المخزون وخصمه فعلياً
                             if (inventory != null && inventory.StockQuantity >= itemQty)
                             {
+                                grossTotal += item.Quantity * item.UnitPrice;
                                 decimal costPerUnit = (inventory.AverageCost ?? 0) / (inventory.Drug?.ConversionFactor > 0 ? inventory.Drug.ConversionFactor : 1);
                                 totalCogs += item.Quantity * costPerUnit;
                                 inventory.StockQuantity -= itemQty;
                                 _context.Branchinventory.Update(inventory);
                                 _context.Stockmovements.Add(new Stockmovements { BranchId = ActiveBranchId, DrugId = item.DrugId, MovementDate = DateTime.Now, MovementType = "Sale Out (Offline Sync)", Quantity = -itemQty, UserId = userId, Notes = "فاتورة مزامنة أوفلاين" });
+                                sale.Saledetails.Add(new Saledetails { DrugId = item.DrugId, Quantity = itemQty, UnitPrice = item.UnitPrice });
                             }
-                            sale.Saledetails ??= new List<Saledetails>();
-                            sale.Saledetails.Add(new Saledetails { DrugId = item.DrugId, Quantity = itemQty, UnitPrice = item.UnitPrice });
+                            else
+                            {
+                                // ✅ تسجيل الأصناف التي نفد مخزونها لإعلام الـ PWA
+                                string drugName = inventory?.Drug?.DrugName ?? $"DrugId={item.DrugId}";
+                                skippedItems.Add(new
+                                {
+                                    drugId = item.DrugId,
+                                    drugName,
+                                    requestedQty = itemQty,
+                                    availableQty = inventory?.StockQuantity ?? 0,
+                                    reason = (inventory?.StockQuantity ?? 0) == 0 ? "الصنف نفد من المخزون" : "الكمية المطلوبة أكبر من المتاح"
+                                });
+                            }
+                        }
+
+                        // ✅ حماية من حفظ فاتورة فارغة (جميع الأصناف نفدت)
+                        if (!sale.Saledetails.Any())
+                        {
+                            await transaction.RollbackAsync();
+                            return;
                         }
 
                         sale.TotalAmount = grossTotal;
@@ -804,8 +857,16 @@ namespace PharmaSmartWeb.Controllers
                     catch (Exception) { await transaction.RollbackAsync(); throw; }
                 });
 
-                await RecordLog("OfflineSync", "Sales", $"مزامنة فاتورة أوفلاين #{newSaleId}");
-                return Ok(new { success = true, saleId = newSaleId });
+                // ✅ إعلام الـ PWA بأي أصناف تم تخطيها بسبب نقص المخزون
+                if (newSaleId == 0)
+                    return Ok(new { success = false, saleId = 0,
+                        message = "لم تُحفظ الفاتورة: جميع الأصناف نفدت من المخزون.",
+                        skippedItems });
+
+                await RecordLog("OfflineSync", "Sales",
+                    $"مزامنة فاتورة أوفلاين #{newSaleId}، أصناف متخطاة: {skippedItems.Count}");
+                return Ok(new { success = true, saleId = newSaleId,
+                    skippedItems, hasSkippedItems = skippedItems.Any() });
             }
             catch (Exception ex)
             {
@@ -823,6 +884,10 @@ namespace PharmaSmartWeb.Controllers
             public int CashAccountId { get; set; }
             public decimal BankAmount { get; set; }
             public int BankAccountId { get; set; }
+            // ✅ وقت البيع الفعلي على الجهاز (لمنع تسجيل الفاتورة بوقت المزامنة)
+            public DateTime? SaleLocalDate { get; set; }
+            // ✅ معرّف فريد لمنع تكرار الفاتورة عند إعادة الإرسال (Idempotency Key)
+            public string OfflineLocalId { get; set; }
             public List<OfflineSaleItemDto> Items { get; set; } = new();
         }
         private class OfflineSaleItemDto
