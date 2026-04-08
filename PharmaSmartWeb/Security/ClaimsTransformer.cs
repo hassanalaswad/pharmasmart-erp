@@ -72,7 +72,9 @@ namespace PharmaSmartWeb.Security
 
                         if (rolePermissions != null && rolePermissions.Count > 0)
                         {
-                            _cache.Set(cacheKey, rolePermissions, TimeSpan.FromHours(12));
+                            // ✅ الإصلاح: تقليل مدة كاش الصلاحيات من 12 ساعة إلى 30 دقيقة
+                        // حتى لا يستمر المستخدم في استخدام صلاحيات بعد تعديلها
+                        _cache.Set(cacheKey, rolePermissions, TimeSpan.FromMinutes(30));
                         }
                     }
                     catch (Exception)

@@ -52,28 +52,49 @@ namespace PharmaSmartWeb.Controllers
 
             if (User.Identity.IsAuthenticated)
             {
-                var allScreens = _context.Systemscreens.AsNoTracking().ToList();
-                bool HasPerm(string screenName) => IsSuperAdmin || User.HasClaim(c => c.Type == "Permission" && c.Value == $"{screenName}.View");
-
-                foreach (var screen in allScreens)
+                // ✅ الإصلاح: تغليف استعلامات DB في try-catch لمنع انهيار كل الطلبات عند فشل الاتصال
+                try
                 {
-                    string cleanKey = screen.ScreenName.Replace(".", "");
-                    ViewData[$"CanView{cleanKey}"] = HasPerm(screen.ScreenName);
+                    var allScreens = _context.Systemscreens.AsNoTracking().ToList();
+                    bool HasPerm(string screenName) => IsSuperAdmin || User.HasClaim(c => c.Type == "Permission" && c.Value == $"{screenName}.View");
+
+                    foreach (var screen in allScreens)
+                    {
+                        string cleanKey = screen.ScreenName.Replace(".", "");
+                        ViewData[$"CanView{cleanKey}"] = HasPerm(screen.ScreenName);
+                    }
+
+                    ViewBag.SystemScreens = allScreens;
+
+                    if (IsSuperAdmin)
+                    {
+                        // ✅ التحقق من صحة ActiveBranchId: يجب أن يكون فرعاً موجوداً فعلاً في النظام
+                        var allBranches = _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+                        ViewBag.Branches = allBranches;
+
+                        // إذا كان كوكيز الفرع يشير لفرع غير موجود — يتم تجاهله وإعادة الفرع الافتراضي
+                        if (Request.Cookies.TryGetValue("ActiveBranchId", out string? bId)
+                            && int.TryParse(bId, out int cookieBranchId)
+                            && cookieBranchId > 0
+                            && !allBranches.Any(b => b.BranchId == cookieBranchId))
+                        {
+                            Response.Cookies.Delete("ActiveBranchId");
+                        }
+                    }
+
+                    if (IsSuperAdmin && ReportScopeId == 0)
+                        ViewBag.ActiveBranchName = "المؤسسة (رؤية شاملة)";
+                    else
+                    {
+                        var branch = _context.Branches.AsNoTracking().FirstOrDefault(b => b.BranchId == ActiveBranchId);
+                        ViewBag.ActiveBranchName = branch?.BranchName ?? "فرع غير محدد";
+                    }
                 }
-
-                ViewBag.SystemScreens = allScreens;
-
-                if (IsSuperAdmin)
+                catch
                 {
-                    ViewBag.Branches = _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
-                }
-
-                if (IsSuperAdmin && ReportScopeId == 0)
-                    ViewBag.ActiveBranchName = "المؤسسة (رؤية شاملة)";
-                else
-                {
-                    var branch = _context.Branches.AsNoTracking().FirstOrDefault(b => b.BranchId == ActiveBranchId);
-                    ViewBag.ActiveBranchName = branch?.BranchName ?? "فرع غير محدد";
+                    // الفشل الصامت عند استعلامات التنقل لا يجب أن يوقف الطلب
+                    ViewBag.SystemScreens = new List<PharmaSmartWeb.Models.Systemscreens>();
+                    ViewBag.ActiveBranchName = "—";
                 }
             }
         }
