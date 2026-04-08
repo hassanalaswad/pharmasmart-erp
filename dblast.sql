@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: 06 أبريل 2026 الساعة 22:27
+-- Generation Time: 08 أبريل 2026 الساعة 14:22
 -- إصدار الخادم: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -259,8 +259,8 @@ CREATE TABLE `branchinventory` (
 --
 
 INSERT INTO `branchinventory` (`BranchID`, `DrugID`, `ShelfId`, `StockQuantity`, `MinimumStockLevel`, `ABCCategory`, `AverageCost`, `CurrentSellingPrice`) VALUES
-(1, 1, NULL, 390, 10, 'C', 170.0000, -0.0100),
-(1, 3, NULL, 64, 10, 'C', 225.0000, 1400.0000),
+(1, 1, NULL, 390, 10, 'B', 170.0000, -0.0100),
+(1, 3, NULL, 60, 10, 'C', 225.0000, 1400.0000),
 (1, 4, NULL, 75, 10, 'B', 40.0000, 1400.0000),
 (1, 7, NULL, 40, 10, 'C', 79.5833, 300.0000),
 (1, 8, NULL, 100, 20, 'C', 500.0000, 600.0000),
@@ -636,7 +636,11 @@ INSERT INTO `journaldetails` (`DetailID`, `JournalID`, `AccountID`, `Debit`, `Cr
 (58, 111, 27, 0.00, 14400.00),
 (59, 111, 20, 14400.00, 0.00),
 (60, 112, 21, 0.00, 2000.00),
-(61, 112, 25, 2000.00, 0.00);
+(61, 112, 25, 2000.00, 0.00),
+(62, 113, 27, 1400.00, 0.00),
+(63, 113, 15, 225.00, 0.00),
+(64, 113, 12, 0.00, 1400.00),
+(65, 113, 20, 0.00, 225.00);
 
 -- --------------------------------------------------------
 
@@ -685,7 +689,8 @@ INSERT INTO `journalentries` (`JournalID`, `BranchID`, `JournalDate`, `Descripti
 (109, 1, '2026-04-03 00:00:00', 'قبض من: احمد محمد  - من ', 'Receipt', 1, 1, NULL, 'احمد محمد ', NULL, NULL, NULL, NULL, NULL),
 (110, 1, '2026-04-05 00:07:19', 'مبيعات POS فاتورة #105', 'SalesInvoice', 1, 1, '105', NULL, NULL, NULL, NULL, NULL, NULL),
 (111, 1, '2026-04-05 00:31:59', 'فاتورة مشتريات #Inty-oiy5 - المورد: الشرق الاوسط', 'PurchaseInvoice', 1, 1, 'Inty-oiy5', NULL, NULL, NULL, NULL, NULL, NULL),
-(112, 1, '2026-04-05 00:00:00', 'صرف لـ: احمد محمد  - كهرباء', 'Payment', 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(112, 1, '2026-04-05 00:00:00', 'صرف لـ: احمد محمد  - كهرباء', 'Payment', 1, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(113, 1, '2026-04-08 00:56:43', 'مبيعات POS فاتورة #106', 'SalesInvoice', 1, 1, '106', NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -871,7 +876,8 @@ INSERT INTO `saledetails` (`SaleDetailID`, `SaleID`, `DrugID`, `Quantity`, `Unit
 (6, 102, 1, 10, 120.00),
 (7, 103, 1, 10, 0.00),
 (8, 104, 4, 25, 56.00),
-(9, 105, 4, 25, 56.00);
+(9, 105, 4, 25, 56.00),
+(10, 106, 3, 4, 350.00);
 
 -- --------------------------------------------------------
 
@@ -910,7 +916,8 @@ INSERT INTO `sales` (`SaleID`, `BranchID`, `SaleDate`, `UserID`, `CustomerID`, `
 (102, 1, '2026-03-31 03:52:03', 1, NULL, 1200.00, 0.00, 0.00, 1200.00, 0, NULL, NULL, NULL, NULL, NULL, NULL),
 (103, 1, '2026-03-31 21:40:05', 1, 100, -0.01, 0.00, 0.00, -0.01, 0, NULL, NULL, NULL, NULL, NULL, NULL),
 (104, 1, '2026-04-01 07:12:11', 1, NULL, 1400.00, 0.00, 0.00, 1400.00, 0, NULL, NULL, NULL, NULL, NULL, NULL),
-(105, 1, '2026-04-05 00:07:19', 1, NULL, 1400.00, 0.00, 0.00, 1400.00, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+(105, 1, '2026-04-05 00:07:19', 1, NULL, 1400.00, 0.00, 0.00, 1400.00, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(106, 1, '2026-04-08 00:56:43', 1, NULL, 1400.00, 0.00, 0.00, 1400.00, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -937,7 +944,8 @@ INSERT INTO `sale_payments` (`PaymentId`, `SaleId`, `PaymentMethod`, `AccountId`
 (5, 101, 'Cash', 27, -3000.0000),
 (6, 102, 'Cash', 27, 1200.0000),
 (7, 104, 'Cash', 27, 1400.0000),
-(8, 105, 'Cash', 27, 1400.0000);
+(8, 105, 'Cash', 27, 1400.0000),
+(9, 106, 'Cash', 27, 1400.0000);
 
 -- --------------------------------------------------------
 
@@ -1176,7 +1184,8 @@ INSERT INTO `stockmovements` (`MovementID`, `BranchID`, `DrugID`, `MovementDate`
 (18, 1, 4, '2026-04-01 07:12:11', 'Sale Out', -25, NULL, 1, 'مبيعات POS'),
 (19, 1, 3, '2026-04-01 08:17:13', 'Purchase In', 24, 103, 1, 'توريد - فاتورة 1234454'),
 (20, 1, 4, '2026-04-05 00:07:19', 'Sale Out', -25, NULL, 1, 'مبيعات POS'),
-(21, 1, 3, '2026-04-05 00:31:59', 'Purchase In', 48, 104, 1, 'توريد - فاتورة Inty-oiy5');
+(21, 1, 3, '2026-04-05 00:31:59', 'Purchase In', 48, 104, 1, 'توريد - فاتورة Inty-oiy5'),
+(22, 1, 3, '2026-04-08 00:56:43', 'Sale Out', -4, NULL, 1, 'مبيعات POS');
 
 -- --------------------------------------------------------
 
@@ -1310,7 +1319,9 @@ INSERT INTO `systemlogs` (`LogId`, `UserId`, `Action`, `ScreenName`, `Details`, 
 (140, 1, 'Update', 'Settings', '[فرع 1] - تحديث خريطة التوجيه المحاسبي الديناميكي للفرع: الفرع الرئيسي', '2026-04-05 10:54:44', '::1'),
 (143, 1, 'Logout', 'Account', '[فرع 1] - قام المستخدم بتسجيل الخروج بنجاح.', '2026-04-06 05:49:22', '::1'),
 (145, 1, 'UpdateSettings', 'Admin', '[فرع 1] - تم تحديث إعدادات المؤسسة: تالين فارما', '2026-04-06 13:16:07', '::1'),
-(146, 1, 'Logout', 'Account', '[فرع 1] - قام المستخدم بتسجيل الخروج بنجاح.', '2026-04-06 13:33:20', '::1');
+(146, 1, 'Logout', 'Account', '[فرع 1] - قام المستخدم بتسجيل الخروج بنجاح.', '2026-04-06 13:33:20', '::1'),
+(149, 1, 'Logout', 'Account', '[فرع 1] - قام المستخدم بتسجيل الخروج بنجاح.', '2026-04-08 00:54:36', '::1'),
+(151, 1, 'Add', 'Sales', '[فرع 1] - إصدار فاتورة مبيعات POS رقم 106', '2026-04-08 00:56:43', '::1');
 
 -- --------------------------------------------------------
 
@@ -1989,13 +2000,13 @@ ALTER TABLE `itemgroups`
 -- AUTO_INCREMENT for table `journaldetails`
 --
 ALTER TABLE `journaldetails`
-  MODIFY `DetailID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `DetailID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `journalentries`
 --
 ALTER TABLE `journalentries`
-  MODIFY `JournalID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=113;
+  MODIFY `JournalID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=114;
 
 --
 -- AUTO_INCREMENT for table `legacy_shelves_backup`
@@ -2037,19 +2048,19 @@ ALTER TABLE `purchases`
 -- AUTO_INCREMENT for table `saledetails`
 --
 ALTER TABLE `saledetails`
-  MODIFY `SaleDetailID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `SaleDetailID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `SaleID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
+  MODIFY `SaleID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
 -- AUTO_INCREMENT for table `sale_payments`
 --
 ALTER TABLE `sale_payments`
-  MODIFY `PaymentId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `PaymentId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `screenpermissions`
@@ -2085,7 +2096,7 @@ ALTER TABLE `stockaudits`
 -- AUTO_INCREMENT for table `stockmovements`
 --
 ALTER TABLE `stockmovements`
-  MODIFY `MovementID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `MovementID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -2097,7 +2108,7 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `systemlogs`
 --
 ALTER TABLE `systemlogs`
-  MODIFY `LogId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
+  MODIFY `LogId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
 
 --
 -- AUTO_INCREMENT for table `systemscreens`

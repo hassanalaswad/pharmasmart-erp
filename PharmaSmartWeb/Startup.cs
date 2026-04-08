@@ -29,16 +29,29 @@ namespace PharmaSmartWeb
             services.AddScoped<PharmaSmartWeb.Services.IAccountingEngine, PharmaSmartWeb.Services.AccountingEngine>();
 
             // ── قاعدة البيانات ─────────────────────────────────────────────
-            // على Render.com: ضع رابط MySQL في متغير بيئي باسم DATABASE_URL
-            // محلياً: يُستخدم الرابط الاحتياطي
-            string connectionString = 
-                Environment.GetEnvironmentVariable("DATABASE_URL") 
+            string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
                 ?? "server=localhost;database=dblast;uid=root;pwd=;";
             
+            // دعم روابط Cloud (مثل Aiven) التي تبدأ بـ mysql://
+            if (connectionString.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase))
+            {
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo.Split(':');
+                string user = userInfo[0];
+                string pass = userInfo.Length > 1 ? userInfo[1] : "";
+                string dbName = uri.AbsolutePath.TrimStart('/');
+                connectionString = $"Server={uri.Host};Port={uri.Port};Database={dbName};Uid={user};Pwd={pass};SslMode=Required;";
+            }
+            
+            // تحديد إصدار MySQL مسبقاً بدلاً من AutoDetect لمنع تعليق (Crash) التطبيق عند الإقلاع البطيء
+            var serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
+
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySql(connectionString,
-                    ServerVersion.AutoDetect(connectionString),
-                    mysqlOptions => mysqlOptions.EnableRetryOnFailure()));
+                options.UseMySql(connectionString, serverVersion,
+                    mysqlOptions => mysqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null)));
 
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
