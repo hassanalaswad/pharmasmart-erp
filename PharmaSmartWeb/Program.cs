@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +13,6 @@ namespace PharmaSmartWeb
     {
         public static void Main(string[] args)
         {
-            // ÊÓÌíá ãÍÑß ÇáÊæÌíå ÇáãÍÇÓÈí Ýí äÙÇã ÇáÍÞä
             CreateHostBuilder(args).Build().Run();
         }
 
@@ -21,6 +20,8 @@ namespace PharmaSmartWeb
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+                    webBuilder.UseUrls("http://+:" + port);
                     webBuilder.UseStartup<Startup>();
                 });
 
