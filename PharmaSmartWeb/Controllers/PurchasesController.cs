@@ -996,21 +996,79 @@ namespace PharmaSmartWeb.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             int currentBranchId = ActiveBranchId;
-            var purchase = await _context.Purchases.FirstOrDefaultAsync(p => p.PurchaseId == id && p.BranchId == currentBranchId);
-            
-            // 🛡️ الحاجز الأمني (Anti-Tamper Logic)
-            if (purchase != null && purchase.PurchaseDate < DateTime.Now.AddDays(-7))
+
+            // ✅ جلب الفاتورة مع تفاصيلها لعكس المخزون
+            var purchase = await _context.Purchases
+                .Include(p => p.Purchasedetails)
+                .FirstOrDefaultAsync(p => p.PurchaseId == id && p.BranchId == currentBranchId);
+
+            if (purchase == null)
+                return RedirectToAction(nameof(Index));
+
+            // 🛡️ الحاجز الزمني (Anti-Tamper Logic)
+            if (purchase.PurchaseDate < DateTime.Now.AddDays(-7))
             {
-                TempData["Error"] = "حماية النظام (Anti-Tamper): لا يمكن حذف فاتورة مرت عليها فترة السماح (7 أيام). يرجى إجراء دورة عكسية أو تسوية بنكية بدلاً من الحذف.";
+                TempData["Error"] = "حماية النظام: لا يمكن حذف فاتورة مرت عليها أكثر من 7 أيام. يرجى إجراء دورة عكسية بدلاً من الحذف.";
                 return RedirectToAction(nameof(Index));
             }
 
-            if (purchase != null)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            try
             {
-                _context.Purchases.Remove(purchase);
-                await _context.SaveChangesAsync();
-                await RecordLog("Delete", "Purchases", $"إلغاء فاتورة مشتريات #{purchase.InvoiceNumber}");
-                TempData["Success"] = "تم إلغاء الفاتورة بنجاح.";
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        int userId = int.Parse(User.FindFirst("UserID")?.Value ?? "1");
+
+                        // ✅ الإصلاح الجوهري: عكس المخزون لكل صنف في الفاتورة قبل الحذف
+                        if (purchase.Purchasedetails != null)
+                        {
+                            foreach (var detail in purchase.Purchasedetails)
+                            {
+                                int totalQty = detail.Quantity + (detail.BonusQuantity ?? 0);
+                                if (totalQty <= 0) continue;
+
+                                var inventory = await _context.Branchinventory
+                                    .FirstOrDefaultAsync(b => b.DrugId == detail.DrugId && b.BranchId == currentBranchId);
+
+                                if (inventory != null)
+                                {
+                                    // خصم الكمية التي أُضيفت بواسطة هذه الفاتورة
+                                    inventory.StockQuantity = Math.Max(0, inventory.StockQuantity - totalQty);
+                                    _context.Branchinventory.Update(inventory);
+                                }
+
+                                // تسجيل حركة مخزنية عكسية
+                                _context.Stockmovements.Add(new Stockmovements
+                                {
+                                    BranchId = currentBranchId,
+                                    DrugId = detail.DrugId,
+                                    MovementDate = DateTime.Now,
+                                    MovementType = "Purchase Reversal",
+                                    Quantity = -totalQty,
+                                    UserId = userId,
+                                    Notes = $"إلغاء فاتورة مشتريات #{purchase.InvoiceNumber}"
+                                });
+                            }
+                        }
+
+                        // ✅ حذف الفاتورة بعد عكس المخزون
+                        _context.Purchases.Remove(purchase);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                    }
+                    catch (Exception) { await transaction.RollbackAsync(); throw; }
+                });
+
+                await RecordLog("Delete", "Purchases",
+                    $"إلغاء فاتورة مشتريات #{purchase.InvoiceNumber} — تم عكس {purchase.Purchasedetails?.Count ?? 0} أصناف من المخزون");
+                TempData["Success"] = "تم إلغاء الفاتورة وعكس المخزون بنجاح.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "حدث خطأ أثناء إلغاء الفاتورة: " + ex.Message;
             }
             return RedirectToAction(nameof(Index));
         }
