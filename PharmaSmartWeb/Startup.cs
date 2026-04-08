@@ -27,6 +27,7 @@ namespace PharmaSmartWeb
 
             services.AddTransient<IClaimsTransformation, PharmaSmartWeb.Security.ClaimsTransformer>();
             services.AddScoped<PharmaSmartWeb.Services.IAccountingEngine, PharmaSmartWeb.Services.AccountingEngine>();
+            services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<PharmaSmartWeb.Models.Users>, Microsoft.AspNetCore.Identity.PasswordHasher<PharmaSmartWeb.Models.Users>>();
 
             // ── قاعدة البيانات ─────────────────────────────────────────────
             string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
