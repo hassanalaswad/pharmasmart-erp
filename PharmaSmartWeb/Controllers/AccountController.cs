@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Linq;
 using System;
-
 namespace PharmaSmartWeb.Controllers
 {
     // 🚀 يرث من BaseController للوصول لمحرك العزل وخدمة RecordLog
