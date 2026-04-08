@@ -36,7 +36,9 @@ namespace PharmaSmartWeb.Controllers
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 return RedirectToAction("Login", new { returnUrl });
             }
+
             Response.Cookies.Delete("ActiveBranchId");
+
             if (returnUrl != null && returnUrl.Contains("HandleError")) returnUrl = null;
             ViewData["ReturnUrl"] = returnUrl;
             return View();
@@ -57,7 +59,7 @@ namespace PharmaSmartWeb.Controllers
 
             string cleanUsername = username.Trim();
 
-            // ✅ جلب المستخدم بالاسم فقط — لا تُرسَل كلمة المرور لقاعدة البيانات
+            // ✅ الخطوة 1: جلب المستخدم بالاسم فقط — لا تُقارَن كلمة المرور في الاستعلام
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == cleanUsername);
 
@@ -67,7 +69,7 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
-            // ✅ التحقق من كلمة المرور بالهاش الآمن
+            // ✅ الخطوة 2: التحقق من كلمة المرور بأمان
             bool passwordValid = false;
             var verifyResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash ?? "", password);
 
@@ -75,7 +77,7 @@ namespace PharmaSmartWeb.Controllers
                 verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
             {
                 passwordValid = true;
-                // إعادة هاشنة إذا لزم الأمر
+                // إذا احتاج الهاش لتحديث (Rehash)، يتم تلقائياً
                 if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
                 {
                     user.PasswordHash = _passwordHasher.HashPassword(user, password);
@@ -85,7 +87,8 @@ namespace PharmaSmartWeb.Controllers
             }
             else
             {
-                // ✅ مسار الهجرة: الحسابات القديمة (نص صريح) تُشفَّر تلقائياً عند أول دخول ناجح
+                // ✅ مسار الهجرة: إذا كانت كلمة المرور لا تزال نصاً صريحاً (الحسابات القديمة)،
+                // نتحقق منها مرة واحدة فقط ثم نُشفِّرها فوراً للمستقبل.
                 if (!string.IsNullOrEmpty(user.PasswordHash) && user.PasswordHash == password)
                 {
                     user.PasswordHash = _passwordHasher.HashPassword(user, password);
@@ -101,6 +104,7 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
+            // جلب اسم الدور
             string roleName = "User";
             if (user.RoleId > 0)
             {
@@ -109,6 +113,7 @@ namespace PharmaSmartWeb.Controllers
                 roleName = role?.RoleArabicName ?? role?.RoleName ?? "User";
             }
 
+            // جلب اسم الفرع
             string branchName = "فرع غير محدد";
             if (user.DefaultBranchId > 0)
             {
@@ -117,6 +122,7 @@ namespace PharmaSmartWeb.Controllers
                 branchName = branch?.BranchName ?? "فرع غير محدد";
             }
 
+            // بناء Claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Username),
@@ -129,6 +135,7 @@ namespace PharmaSmartWeb.Controllers
 
             if (user.RoleId == 1)
                 claims.Add(new Claim(ClaimTypes.Role, "SuperAdmin"));
+            }
 
             var claimsIdentity = new ClaimsIdentity(
                 claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -150,13 +157,14 @@ namespace PharmaSmartWeb.Controllers
             if (!string.IsNullOrEmpty(returnUrl) &&
                 Url.IsLocalUrl(returnUrl) &&
                 !returnUrl.Contains("HandleError"))
+            {
                 return Redirect(returnUrl);
 
             return RedirectToAction("Index", "Home");
         }
 
         // ==========================================
-        // 3. تسجيل الخروج
+        // 3. دالة تسجيل الخروج
         // ==========================================
         [HttpGet]
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
@@ -192,23 +200,26 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
-            // ✅ التحقق من كلمة المرور الحالية بالهاش
-            bool currentValid = false;
+            // ✅ التحقق من كلمة المرور الحالية باستخدام الهاش
+            bool currentPasswordValid = false;
             var verifyResult = _passwordHasher.VerifyHashedPassword(
                 user, user.PasswordHash ?? "", currentPassword);
 
             if (verifyResult == PasswordVerificationResult.Success ||
                 verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
             {
-                currentValid = true;
+                currentPasswordValid = true;
             }
-            else if (!string.IsNullOrEmpty(user.PasswordHash) && user.PasswordHash == currentPassword)
+            else
             {
-                // مسار الهجرة للحسابات القديمة
-                currentValid = true;
+                // مسار الهجرة للحسابات القديمة التي لم تسجّل دخولاً بعد
+                if (!string.IsNullOrEmpty(user.PasswordHash) && user.PasswordHash == currentPassword)
+                {
+                    currentPasswordValid = true;
+                }
             }
 
-            if (!currentValid)
+            if (!currentPasswordValid)
             {
                 ViewBag.Error = "كلمة المرور الحالية غير صحيحة!";
                 return View();
@@ -220,7 +231,7 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
-            // ✅ حفظ كلمة المرور مُشفَّرة (PBKDF2-SHA256)
+            // ✅ حفظ كلمة المرور الجديدة مُشفَّرة (Hashed)
             user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
             _context.Update(user);
             await _context.SaveChangesAsync();
