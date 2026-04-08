@@ -107,7 +107,9 @@ namespace PharmaSmartWeb.Controllers
                         // 2. معالجة الأصناف وخصمها من الفرع المُرسل
                         foreach (var item in Details)
                         {
-                            var inventory = await _context.Branchinventory.FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
+                            var inventory = await _context.Branchinventory
+                                .Include(b => b.Drug)
+                                .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
                             if (inventory == null || inventory.StockQuantity < item.Quantity)
                                 throw new Exception($"الكمية غير متوفرة للصنف المختار في مخزنك.");
 
@@ -185,7 +187,9 @@ namespace PharmaSmartWeb.Controllers
                         {
                             totalReceivedCost += (item.Quantity * item.UnitCost);
 
-                            var inventory = await _context.Branchinventory.FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
+                            var inventory = await _context.Branchinventory
+                                .Include(b => b.Drug)
+                                .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
                             if (inventory != null)
                             {
                                 decimal currentQty = inventory.StockQuantity > 0 ? inventory.StockQuantity : 0;
