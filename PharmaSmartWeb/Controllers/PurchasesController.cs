@@ -20,7 +20,7 @@ namespace PharmaSmartWeb.Controllers
 
         public PurchasesController(ApplicationDbContext context, IAccountingEngine accountingEngine) : base(context)
         {
-_accountingEngine = new AccountingEngine(_context)        }
+            _accountingEngine = new AccountingEngine(_context);       }
 
         private async Task<int> GetValidUserIdAsync()
         {
@@ -354,7 +354,7 @@ _accountingEngine = new AccountingEngine(_context)        }
 
             if (ModelState.IsValid)
             {
-                decimal calculatedNet = purchase.Purchasedetails.Sum(i => i.Quantity * i.CostPrice) - purchase.Discount + purchase.TaxAmount;
+                decimal calculatedNet = (purchase.Purchasedetails?.Sum(i => i.Quantity * i.CostPrice) ?? 0m) - purchase.Discount + purchase.TaxAmount;
 
                 if (purchase.PaymentStatus == "Paid") purchase.AmountPaid = calculatedNet;
                 else purchase.AmountPaid = 0;
