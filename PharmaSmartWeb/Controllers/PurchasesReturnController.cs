@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmaSmartWeb.Models;
@@ -27,9 +27,7 @@ namespace PharmaSmartWeb.Controllers
             {
                 if (await _context.Users.AnyAsync(u => u.UserId == parsedId)) return parsedId;
             }
-            var fallbackUser = await _context.Users.FirstOrDefaultAsync();
-            if (fallbackUser == null) throw new Exception("لا يوجد مستخدم مسجل.");
-            return fallbackUser.UserId;
+            throw new Exception("انتهت صلاحية الجلسة أو تعذر التحقق من هوية المستخدم. يرجى تسجيل الدخول مجدداً.");
         }
 
         [HttpGet]

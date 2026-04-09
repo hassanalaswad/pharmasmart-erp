@@ -22,7 +22,12 @@ namespace PharmaSmartWeb
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews();
+            services.AddControllersWithViews(options =>
+            {
+                // 🔒 الحماية الشاملة: كل صفحة تتطلب مصادقة بشكل افتراضي
+                // لا يمكن الوصول لأي صفحة إلا بعد تسجيل الدخول
+                options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
+            });
             services.AddMemoryCache();
 
             services.AddTransient<IClaimsTransformation, PharmaSmartWeb.Security.ClaimsTransformer>();

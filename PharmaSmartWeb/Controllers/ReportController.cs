@@ -53,7 +53,7 @@ namespace PharmaSmartWeb.Controllers
             var expQ = _context.Journaldetails
                 .Include(j => j.Journal)
                 .Include(j => j.Account)
-                .Where(j => j.Journal.JournalDate >= startOfMonth && j.Journal.IsPosted == true && j.Account.AccountType == "Expense");
+                .Where(j => j.Journal.JournalDate >= startOfMonth && j.Journal.IsPosted == true && j.Account.AccountType != null && j.Account.AccountType.StartsWith("Expense"));
             if (!isGlobalScope) expQ = expQ.Where(j => j.Journal.BranchId == branchId);
 
             model.MonthlyExpenses = await expQ.SumAsync(j => (decimal?)j.Debit - (decimal?)j.Credit) ?? 0m;
@@ -203,7 +203,7 @@ namespace PharmaSmartWeb.Controllers
                 .Where(d => d.Journal.JournalDate >= start &&
                             d.Journal.JournalDate <= end &&
                             d.Journal.IsPosted == true &&
-                            (d.Account.AccountType == "Revenue" || d.Account.AccountType == "Expenses"))
+                            (d.Account.AccountType == "Revenue" || (d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"))))
                 .AsQueryable();
 
             if (branchId != 0) query = query.Where(d => d.Journal.BranchId == branchId);
@@ -221,7 +221,7 @@ namespace PharmaSmartWeb.Controllers
                 }).ToList();
 
             var expenseAccounts = pnlData
-                .Where(d => d.Account.AccountType == "Expenses")
+                .Where(d => d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"))
                 .GroupBy(d => new { d.Account.AccountCode, d.Account.AccountName })
                 .Select(g => new PnlAccountViewModel
                 {

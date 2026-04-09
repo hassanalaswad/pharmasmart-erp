@@ -138,7 +138,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'فشل حفظ الفاتورة',
-                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px;">@Html.Raw(ViewBag.Error)</div>`,
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px;">${@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Error))}</div>`,
                     confirmButtonText: 'حسناً — سأراجع الفاتورة',
                     confirmButtonColor: '#dc2626'
                 });

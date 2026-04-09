@@ -25,9 +25,7 @@ namespace PharmaSmartWeb.Controllers
             {
                 if (await _context.Users.AnyAsync(u => u.UserId == parsedId)) return parsedId;
             }
-            var fallbackUser = await _context.Users.FirstOrDefaultAsync();
-            if (fallbackUser == null) throw new Exception("لا يوجد مستخدم مسجل لربط العملية به!");
-            return fallbackUser.UserId;
+            throw new Exception("انتهت صلاحية الجلسة أو تعذر التحقق من هوية المستخدم. يرجى تسجيل الدخول مجدداً.");
         }
 
         // ==========================================

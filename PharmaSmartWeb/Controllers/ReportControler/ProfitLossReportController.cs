@@ -32,7 +32,7 @@ namespace PharmaSmartWeb.Controllers
                 .Where(d => d.Journal.JournalDate >= start &&
                             d.Journal.JournalDate <= end &&
                             d.Journal.IsPosted == true &&
-                            (d.Account.AccountType == "Revenue" || d.Account.AccountType == "Expenses"))
+                            (d.Account.AccountType == "Revenue" || (d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"))))
                 .AsQueryable();
 
             if (branchId != 0) query = query.Where(d => d.Journal.BranchId == branchId);
@@ -50,7 +50,7 @@ namespace PharmaSmartWeb.Controllers
                 }).ToList();
 
             var expenseAccounts = pnlData
-                .Where(d => d.Account.AccountType == "Expenses")
+                .Where(d => d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"))
                 .GroupBy(d => new { d.Account.AccountCode, d.Account.AccountName })
                 .Select(g => new PnlAccountViewModel
                 {

@@ -399,13 +399,18 @@ namespace PharmaSmartWeb.Controllers
                 
                 using (var process = Process.Start(psi))
                 {
+                    if (process == null) return "{\"forecast\": 0, \"accuracy\": 0}";
                     using (var sw = process.StandardInput)
                     {
                         if (sw.BaseStream.CanWrite) sw.Write(jsonPayload);
                     }
-                    string result = process.StandardOutput.ReadToEnd();
-                    process.WaitForExit();
-                    return result;
+                    var readTask = process.StandardOutput.ReadToEndAsync();
+                    if (!process.WaitForExit(10000))
+                    {
+                        try { process.Kill(); } catch { }
+                        return "{\"forecast\": 0, \"accuracy\": 0}";
+                    }
+                    return readTask.GetAwaiter().GetResult();
                 }
             }
             catch

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PharmaSmartWeb.Models;
 using System;
 using System.Linq;
@@ -51,11 +52,19 @@ namespace PharmaSmartWeb.Controllers
             base.OnActionExecuting(context);
 
             if (User.Identity.IsAuthenticated)
-            {
-                // ✅ الإصلاح: تغليف استعلامات DB في try-catch لمنع انهيار كل الطلبات عند فشل الاتصال
+                {
+                // ✅ الإصلاح: تغليف استعلامات DB في try-catch لمنع انهيار كل الطلبات عند فشل الاتصال، واستخدام الكاش
                 try
                 {
-                    var allScreens = _context.Systemscreens.AsNoTracking().ToList();
+                    var cache = context.HttpContext.RequestServices.GetService(typeof(IMemoryCache)) as IMemoryCache;
+                    
+                    var allScreens = (cache != null
+                        ? cache.GetOrCreate("Global_SystemScreens", entry => {
+                            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
+                            return _context.Systemscreens.AsNoTracking().ToList();
+                          })
+                        : null) ?? _context.Systemscreens.AsNoTracking().ToList();
+
                     bool HasPerm(string screenName) => IsSuperAdmin || User.HasClaim(c => c.Type == "Permission" && c.Value == $"{screenName}.View");
 
                     foreach (var screen in allScreens)
@@ -66,10 +75,15 @@ namespace PharmaSmartWeb.Controllers
 
                     ViewBag.SystemScreens = allScreens;
 
+                    var allBranches = (cache != null
+                        ? cache.GetOrCreate("Global_ActiveBranches", entry => {
+                            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+                            return _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+                          })
+                        : null) ?? _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+
                     if (IsSuperAdmin)
                     {
-                        // ✅ التحقق من صحة ActiveBranchId: يجب أن يكون فرعاً موجوداً فعلاً في النظام
-                        var allBranches = _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
                         ViewBag.Branches = allBranches;
 
                         // إذا كان كوكيز الفرع يشير لفرع غير موجود — يتم تجاهله وإعادة الفرع الافتراضي
@@ -86,7 +100,7 @@ namespace PharmaSmartWeb.Controllers
                         ViewBag.ActiveBranchName = "المؤسسة (رؤية شاملة)";
                     else
                     {
-                        var branch = _context.Branches.AsNoTracking().FirstOrDefault(b => b.BranchId == ActiveBranchId);
+                        var branch = allBranches.FirstOrDefault(b => b.BranchId == ActiveBranchId);
                         ViewBag.ActiveBranchName = branch?.BranchName ?? "فرع غير محدد";
                     }
                 }

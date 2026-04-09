@@ -29,9 +29,7 @@ namespace PharmaSmartWeb.Controllers
             {
                 if (await _context.Users.AnyAsync(u => u.UserId == parsedId)) return parsedId;
             }
-            var fallbackUser = await _context.Users.FirstOrDefaultAsync();
-            if (fallbackUser == null) throw new Exception("لا يوجد مستخدم مسجل لربط العملية به!");
-            return fallbackUser.UserId;
+            throw new Exception("انتهت صلاحية الجلسة أو تعذر التحقق من هوية المستخدم. يرجى تسجيل الدخول مجدداً.");
         }
 
         [HttpGet]
@@ -166,7 +164,7 @@ namespace PharmaSmartWeb.Controllers
                     using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
-                        decimal calculatedTotal = purchase.Purchasedetails.Sum(i => i.Quantity * i.CostPrice);
+                        decimal calculatedTotal = (purchase.Purchasedetails ?? Enumerable.Empty<Purchasedetails>()).Sum(i => i.Quantity * i.CostPrice);
                         decimal calculatedNet = calculatedTotal - purchase.Discount + purchase.TaxAmount;
 
                         purchase.AmountPaid = CashAmount + BankAmount;
@@ -195,22 +193,43 @@ namespace PharmaSmartWeb.Controllers
                         _context.Purchases.Add(purchase);
                         await _context.SaveChangesAsync();
 
+                        var drugIds = purchase.Purchasedetails.Select(x => x.DrugId).Distinct().ToList();
+                        
+                        var drugsDict = await _context.Drugs
+                            .Where(d => drugIds.Contains(d.DrugId))
+                            .ToDictionaryAsync(d => d.DrugId);
+                            
+                        // Use a simple string key "DrugId-BatchNumber" to avoid anonymous type nullability issues
+                        var batchesRaw = await _context.DrugBatches
+                            .Where(b => drugIds.Contains(b.DrugId))
+                            .ToListAsync();
+                        var batchesDict = batchesRaw
+                            .GroupBy(b => new { b.DrugId, BatchNumber = b.BatchNumber ?? "" })
+                            .ToDictionary(g => $"{g.Key.DrugId}_{g.Key.BatchNumber}", g => g.First());
+                            
+                        var inventoriesDict = await _context.Branchinventory
+                            .Where(b => b.BranchId == currentBranchId && drugIds.Contains(b.DrugId))
+                            .ToDictionaryAsync(b => b.DrugId);
+
                         foreach (var item in purchase.Purchasedetails)
                         {
-                            var drug = await _context.Drugs.FindAsync(item.DrugId);
-                            if (drug != null)
+                            if (drugsDict.TryGetValue(item.DrugId, out var drug))
                             {
                                 int totalUnitsToAdd = (item.Quantity + item.BonusQuantity) * drug.ConversionFactor;
                                 decimal totalCostPaid = item.Quantity * item.CostPrice;
 
                                 if (item.BatchNumber != "N/A")
                                 {
-                                    var existingBatch = await _context.DrugBatches.FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BatchNumber == item.BatchNumber);
-                                    if (existingBatch == null) _context.DrugBatches.Add(new DrugBatches { DrugId = item.DrugId, BatchNumber = item.BatchNumber, ExpiryDate = item.ExpiryDate });
+                                    string batchNum = item.BatchNumber ?? "N/A";
+                                    string batchKey = $"{item.DrugId}_{batchNum}";
+                                    if (!batchesDict.ContainsKey(batchKey)) {
+                                        var newBatch = new DrugBatches { DrugId = item.DrugId, BatchNumber = batchNum, ExpiryDate = item.ExpiryDate };
+                                        _context.DrugBatches.Add(newBatch);
+                                        batchesDict[batchKey] = newBatch;
+                                    }
                                 }
 
-                                var inventory = await _context.Branchinventory.FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == currentBranchId);
-                                if (inventory != null)
+                                if (inventoriesDict.TryGetValue(item.DrugId, out var inventory))
                                 {
                                     decimal currentQty = inventory.StockQuantity > 0 ? inventory.StockQuantity : 0;
                                     decimal currentCost = inventory.AverageCost ?? 0m;
@@ -227,6 +246,7 @@ namespace PharmaSmartWeb.Controllers
                                     decimal newUnitCost = totalUnitsToAdd > 0 ? (totalCostPaid / totalUnitsToAdd) : 0;
                                     inventory = new Branchinventory { DrugId = item.DrugId, BranchId = currentBranchId, StockQuantity = totalUnitsToAdd, MinimumStockLevel = 10, AverageCost = newUnitCost, CurrentSellingPrice = item.SellingPrice };
                                     _context.Branchinventory.Add(inventory);
+                                    inventoriesDict[item.DrugId] = inventory;
                                 }
 
                                 _context.Stockmovements.Add(new Stockmovements { DrugId = item.DrugId, BranchId = currentBranchId, MovementType = "Purchase In", Quantity = totalUnitsToAdd, MovementDate = DateTime.Now, ReferenceId = purchase.PurchaseId, UserId = purchase.UserId, Notes = $"توريد - فاتورة {purchase.InvoiceNumber}" });

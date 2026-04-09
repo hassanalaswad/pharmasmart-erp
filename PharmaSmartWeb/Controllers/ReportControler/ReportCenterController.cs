@@ -37,7 +37,7 @@ namespace PharmaSmartWeb.Controllers
             var expQ = _context.Journaldetails
                 .Include(j => j.Journal)
                 .Include(j => j.Account)
-                .Where(j => j.Journal.JournalDate >= startOfMonth && j.Journal.IsPosted == true && j.Account.AccountType == "Expense");
+                .Where(j => j.Journal.JournalDate >= startOfMonth && j.Journal.IsPosted == true && j.Account.AccountType != null && j.Account.AccountType.StartsWith("Expense"));
             if (!isGlobalScope) expQ = expQ.Where(j => j.Journal.BranchId == branchId);
 
             model.MonthlyExpenses = await expQ.SumAsync(j => (decimal?)j.Debit - (decimal?)j.Credit) ?? 0m;

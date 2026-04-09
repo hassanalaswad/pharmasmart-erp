@@ -30,9 +30,7 @@ namespace PharmaSmartWeb.Controllers
             {
                 if (await _context.Users.AnyAsync(u => u.UserId == parsedId)) return parsedId;
             }
-            var fallbackUser = await _context.Users.FirstOrDefaultAsync();
-            if (fallbackUser == null) throw new Exception("لا يوجد مستخدم مسجل لربط العملية به!");
-            return fallbackUser.UserId;
+            throw new Exception("انتهت صلاحية الجلسة أو تعذر التحقق من هوية المستخدم. يرجى تسجيل الدخول مجدداً.");
         }
 
         [HttpGet]
@@ -178,12 +176,19 @@ namespace PharmaSmartWeb.Controllers
                             decimal grossTotal = 0;
                             decimal totalCogs = 0;
 
+                            var drugIds = sale.Saledetails.Select(x => x.DrugId).Distinct().ToList();
+                            var inventoriesList = await _context.Branchinventory
+                                .Include(b => b.Drug)
+                                .Where(b => b.BranchId == ActiveBranchId && drugIds.Contains(b.DrugId))
+                                .ToListAsync();
+                            
+                            var inventoriesDict = inventoriesList.ToDictionary(b => b.DrugId);
+
                             foreach (var item in sale.Saledetails)
                             {
                                 grossTotal += (item.Quantity * item.UnitPrice);
 
-                                var inventory = await _context.Branchinventory.Include(b => b.Drug).FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
-                                if (inventory == null)
+                                if (!inventoriesDict.TryGetValue(item.DrugId, out var inventory))
                                     throw new Exception($"الصنف (DrugId: {item.DrugId}) غير موجود في مخزون الفرع الحالي ({ActiveBranchId}).");
 
                                 if (inventory.StockQuantity < item.Quantity)

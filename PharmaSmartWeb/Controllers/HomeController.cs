@@ -57,13 +57,13 @@ namespace PharmaSmartWeb.Controllers
                 
                 var rawProfitsList = await _context.Journaldetails.Include(d => d.Journal).Include(d => d.Account)
                     .Where(d => d.Journal.IsPosted == true && d.Journal.JournalDate.Month == today.Month && d.Journal.JournalDate.Year == today.Year)
-                    .Where(d => d.Account.AccountType == "Revenue" || d.Account.AccountType == "Expense")
+                    .Where(d => d.Account.AccountType == "Revenue" || (d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense")))
                     .ToListAsync();
 
                 var rawProfits = rawProfitsList.GroupBy(d => d.Journal.BranchId)
                     .Select(g => new {
                         bId = g.Key,
-                        profit = g.Where(x => x.Account.AccountType == "Revenue").Sum(x => x.Credit - x.Debit) - g.Where(x => x.Account.AccountType == "Expense").Sum(x => x.Debit - x.Credit)
+                        profit = g.Where(x => x.Account.AccountType == "Revenue").Sum(x => x.Credit - x.Debit) - g.Where(x => x.Account.AccountType != null && x.Account.AccountType.StartsWith("Expense")).Sum(x => x.Debit - x.Credit)
                     }).ToList();
 
                 var activeBranchesForChart = ViewBag.BranchesList as List<Branches>;
@@ -93,16 +93,16 @@ namespace PharmaSmartWeb.Controllers
                 model.TodaySales = await salesQ.Where(s => s.SaleDate.Date == today).SumAsync(s => (decimal?)s.NetAmount) ?? 0m;
 
                 var pnlToday = await journalQ.Where(d => d.Journal.JournalDate.Date == today
-                                && (d.Account.AccountType == "Revenue" || d.Account.AccountType == "Expense")).ToListAsync();
+                                && (d.Account.AccountType == "Revenue" || (d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense")))).ToListAsync();
 
                 model.TotalRevenues = pnlToday.Where(d => d.Account.AccountType == "Revenue").Sum(d => d.Credit - d.Debit);
-                model.TotalExpenses = pnlToday.Where(d => d.Account.AccountType == "Expense").Sum(d => d.Debit - d.Credit);
+                model.TotalExpenses = pnlToday.Where(d => d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense")).Sum(d => d.Debit - d.Credit);
                 model.NetProfit = model.TotalRevenues - model.TotalExpenses;
 
                 model.RecentJournals = await journalQ.OrderByDescending(j => j.JournalId).Take(4).Select(d => new JournalDetailOverview {
                     TrxNumber = "#TRX-" + d.JournalId,
                     AccountName = d.Account.AccountName,
-                    Type = d.Account.AccountType == "Revenue" ? "إيرادات" : (d.Account.AccountType == "Expense" ? "خصوم" : "أصول"),
+                    Type = d.Account.AccountType == "Revenue" ? "إيرادات" : ((d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense")) ? "خصوم" : "أصول"),
                     Debit = d.Debit,
                     Credit = d.Credit
                 }).ToListAsync();
@@ -535,7 +535,7 @@ namespace PharmaSmartWeb.Controllers
 
             // A) KPIs calculation
             var revenuesThisPeriodQ = journalsQ.Where(d => d.Journal.JournalDate.Date >= model.StartDate.Date && d.Account.AccountType == "Revenue");
-            var expensesThisPeriodQ = journalsQ.Where(d => d.Journal.JournalDate.Date >= model.StartDate.Date && d.Account.AccountType == "Expense");
+            var expensesThisPeriodQ = journalsQ.Where(d => d.Journal.JournalDate.Date >= model.StartDate.Date && d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"));
 
             var totalRevenues = await revenuesThisPeriodQ.SumAsync(d => d.Credit - d.Debit);
             var totalExpenses = await expensesThisPeriodQ.SumAsync(d => d.Debit - d.Credit);
@@ -557,7 +557,7 @@ namespace PharmaSmartWeb.Controllers
 
             // B) P&L Trend (Monthly)
             var pnlQuery = await journalsQ
-                .Where(d => d.Journal.JournalDate.Date >= model.StartDate.Date && (d.Account.AccountType == "Revenue" || d.Account.AccountType == "Expense"))
+                .Where(d => d.Journal.JournalDate.Date >= model.StartDate.Date && (d.Account.AccountType == "Revenue" || (d.Account.AccountType != null && d.Account.AccountType.StartsWith("Expense"))))
                 .GroupBy(d => new { d.Journal.JournalDate.Year, d.Journal.JournalDate.Month, d.Account.AccountType })
                 .Select(g => new { 
                     g.Key.Year, 
@@ -574,7 +574,7 @@ namespace PharmaSmartWeb.Controllers
             {
                 model.PnlLabels.Add(currentMonthPnl.ToString("MMMM yyyy", arCulture));
                 model.PnlRevenues.Add(pnlQuery.Where(p => p.Year == currentMonthPnl.Year && p.Month == currentMonthPnl.Month && p.AccountType == "Revenue").Sum(p => p.Credits - p.Debits));
-                model.PnlExpenses.Add(pnlQuery.Where(p => p.Year == currentMonthPnl.Year && p.Month == currentMonthPnl.Month && p.AccountType == "Expense").Sum(p => p.Debits - p.Credits));
+                model.PnlExpenses.Add(pnlQuery.Where(p => p.Year == currentMonthPnl.Year && p.Month == currentMonthPnl.Month && p.AccountType != null && p.AccountType.StartsWith("Expense")).Sum(p => p.Debits - p.Credits));
                 currentMonthPnl = currentMonthPnl.AddMonths(1);
             }
 

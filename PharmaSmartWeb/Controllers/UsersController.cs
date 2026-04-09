@@ -83,6 +83,9 @@ namespace PharmaSmartWeb.Controllers
                     return View(newUser);
                 }
 
+                var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
+                newUser.PasswordHash = hasher.HashPassword(newUser, newUser.PasswordHash);
+                
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
 
@@ -159,6 +162,14 @@ namespace PharmaSmartWeb.Controllers
                     ViewBag.Error = "اسم المستخدم هذا مستخدم بالفعل لحساب آخر.";
                     LoadIsolatedViewData(updatedUser);
                     return View(updatedUser);
+                }
+
+                // Only hash password if it was changed (not matching the original hash in the DB)
+                var existingUserHashCheck = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == updatedUser.UserId);
+                if (existingUserHashCheck != null && existingUserHashCheck.PasswordHash != updatedUser.PasswordHash && !string.IsNullOrWhiteSpace(updatedUser.PasswordHash))
+                {
+                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
+                    updatedUser.PasswordHash = hasher.HashPassword(updatedUser, updatedUser.PasswordHash);
                 }
 
                 _context.Update(updatedUser);

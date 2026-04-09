@@ -250,14 +250,33 @@ namespace PharmaSmartWeb.Controllers
             // 🚀 الإجراء الوقائي: مسح المسافات الفارغة (Trim) لحل مشاكل الإدخال
             string cleanUsername = username.Trim();
 
-            // 1. التحقق من المستخدم في قاعدة البيانات
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == cleanUsername && u.PasswordHash == password);
+                .FirstOrDefaultAsync(u => u.Username == cleanUsername);
 
             if (user == null || user.IsActive == false)
             {
                 ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب محظور.";
                 return View();
+            }
+
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
+            
+            // 🚀 Migration Logic: Check if it's plaintext, hash it, and save.
+            if (user.PasswordHash == password)
+            {
+                user.PasswordHash = hasher.HashPassword(user, password);
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Verify using hash
+                var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+                if (result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Success)
+                {
+                    ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب محظور.";
+                    return View();
+                }
             }
 
             // 2. جلب اسم الدور واسم الفرع بشكل آمن ومنفصل لضمان استقرار الربط

@@ -277,11 +277,27 @@ namespace PharmaSmartWeb.Controllers
                     .Split(new[] { ";\n", ";\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
                 int executed = 0;
+                string[] dangerousKeywords = new[] { "DROP", "ALTER", "TRUNCATE", "DELETE FROM", "GRANT", "REVOKE", "XP_CMDSHELL" };
+
                 foreach (var stmt in statements)
                 {
                     var trimmed = stmt.Trim();
                     if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("--"))
                         continue;
+
+                    // 🚨 حماية من الحقن المدمر: تخطي أي أوامر خطيرة
+                    bool isDangerous = false;
+                    string upperStmt = trimmed.ToUpperInvariant();
+                    foreach (var kw in dangerousKeywords)
+                    {
+                        if (upperStmt.Contains(kw))
+                        {
+                            isDangerous = true;
+                            break;
+                        }
+                    }
+
+                    if (isDangerous) continue;
 
                     try
                     {
