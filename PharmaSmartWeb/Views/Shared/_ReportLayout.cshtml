@@ -263,12 +263,65 @@
         /* Top Bar adjustments */
         .top-bar .brand img { max-height: 52px; max-width: 100px; object-fit: contain; }
         .top-bar .brand .name { font-size: 18px; font-weight: 800; color: #063955; line-height: 1.2; }
+        /* Global Preloader for Reports */
+        #preloader {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #00314e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.6s ease;
+        }
+        .preloader-spinner {
+            width: 60px; height: 60px;
+            border: 5px solid rgba(255,255,255,0.1);
+            border-top: 5px solid #38bdf8;
+            border-radius: 50%;
+            animation: preloader-spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        .preloader-text {
+            color: #7dd3fc;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: preloader-pulse 1.5s ease-in-out infinite;
+        }
+        @@keyframes preloader-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @@keyframes preloader-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        @@media print {
+            #preloader { display: none !important; }
+        }
     </style>
     @RenderSection("Styles", required: false)
     <link rel="stylesheet" href="~/css/local-fonts.css" />
 </head>
 
 <body>
+    <!-- Global Preloader -->
+    <div id="preloader">
+        <div class="preloader-spinner"></div>
+        <div class="preloader-text">جاري إعداد التقرير...</div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            var preloader = document.getElementById('preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                setTimeout(function() {
+                    preloader.style.visibility = 'hidden';
+                    preloader.style.display = 'none';
+                }, 600);
+            }
+        });
+    </script>
 
 <!-- ===== FILTER BAR (screen only, outside page) ===== -->
 @if (IsSectionDefined("Filter"))

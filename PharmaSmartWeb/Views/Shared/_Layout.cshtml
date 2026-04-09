@@ -14,6 +14,36 @@
  <link rel="stylesheet" href="~/css/local-fonts.css" />
 </head>
 <body class="text-on-surface flex rtl">
+ <!-- Global Preloader -->
+ <div id="preloader" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#00314e] transition-opacity duration-700">
+  <div class="flex flex-col items-center gap-6">
+  <div class="relative">
+   <!-- Outer Ring -->
+   <div class="w-20 h-20 border-4 border-slate-700/30 border-t-sky-400 rounded-full animate-spin"></div>
+   <!-- Inner Logo/Icon Pulse -->
+   <div class="absolute inset-0 flex items-center justify-center">
+   <span class="material-symbols-outlined text-sky-400 text-3xl animate-pulse">medication</span>
+   </div>
+  </div>
+  <div class="text-center">
+   <h2 class="text-white text-lg font-black tracking-widest mb-1">PHARMA SMART</h2>
+   <p class="text-sky-300/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">جاري تحسين تجربتك...</p>
+  </div>
+  </div>
+ </div>
+
+ <script>
+  window.addEventListener('load', function() {
+  const preloader = document.getElementById('preloader');
+  if (preloader) {
+   preloader.style.opacity = '0';
+   setTimeout(() => {
+   preloader.style.visibility = 'hidden';
+   preloader.style.display = 'none';
+   }, 700);
+  }
+  });
+ </script>
 @{
  var currentController = Context.Request.RouteValues["controller"]?.ToString();
  var currentAction = Context.Request.RouteValues["action"]?.ToString();
