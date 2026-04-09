@@ -147,38 +147,28 @@ namespace PharmaSmartWeb.Services
             }
             else if (activeUnit == "Reports")
             {
-                var group1 = new MenuGroup { Title = "لوحة التحكم", Icon = "donut_large", Items = new List<MenuItem>() };
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
-                {
-                    group1.Items.Add(new MenuItem { Title = "التقارير والتحليلات", Url = "/Home/ReportsHub", Icon = "dashboard" });
-                }
-                if (group1.Items.Any()) allowedGroups.Add(group1);
+                var group = new MenuGroup { Title = "التقارير والتحليلات", Icon = "donut_large", Items = new List<MenuItem>() };
 
-                var groupFinancial = new MenuGroup { Title = "التقارير المالية والختامية", Icon = "account_balance_wallet", Items = new List<MenuItem>() };
                 if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
                 {
-                    groupFinancial.Items.Add(new MenuItem { Title = "قائمة الدخل العالمية", Url = "/Report/IncomeStatement", Icon = "point_of_sale" });
-                    groupFinancial.Items.Add(new MenuItem { Title = "ميزان المراجعة", Url = "/Report/TrialBalance", Icon = "balance" });
-                    groupFinancial.Items.Add(new MenuItem { Title = "كشف حساب تفصيلي", Url = "/Report/Ledger", Icon = "menu_book" });
-                    groupFinancial.Items.Add(new MenuItem { Title = "مركز الدخل والسيولة", Url = "/Report/DailyCashFlow", Icon = "payments" });
-                }
-                if (groupFinancial.Items.Any()) allowedGroups.Add(groupFinancial);
+                    group.Items.Add(new MenuItem { Title = "مركز التقارير (اللوحة الرئيسية)", Url = "/Home/ReportsHub", Icon = "dashboard" });
+                    
+                    // المالية
+                    group.Items.Add(new MenuItem { Title = "قائمة الدخل والأرباح", Url = "/Report/IncomeStatement", Icon = "point_of_sale" });
+                    group.Items.Add(new MenuItem { Title = "ميزان المراجعة المالي", Url = "/Report/TrialBalance", Icon = "balance" });
+                    group.Items.Add(new MenuItem { Title = "كشف حساب تفصيلي", Url = "/Report/Ledger", Icon = "menu_book" });
+                    group.Items.Add(new MenuItem { Title = "حركة الدخل والسيولة النقدية", Url = "/Report/DailyCashFlow", Icon = "payments" });
 
-                var groupInventory = new MenuGroup { Title = "المخزون الاستراتيجي (AI)", Icon = "inventory_2", Items = new List<MenuItem>() };
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
-                {
-                    groupInventory.Items.Add(new MenuItem { Title = "غرفة خطة المشتريات (ذكاء اصطناعي)", Url = "/InventoryIntelligence/Index", Icon = "online_prediction" });
-                    groupInventory.Items.Add(new MenuItem { Title = "نواقص المخزون الفعلي (تشغيلي)", Url = "/Inventory/Shortages", Icon = "warning" });
-                    groupInventory.Items.Add(new MenuItem { Title = "مراقبة الصلاحية والاستهلاك", Url = "/Report/StockExpiry", Icon = "event_busy" });
-                }
-                if (groupInventory.Items.Any()) allowedGroups.Add(groupInventory);
+                    // المخزون
+                    group.Items.Add(new MenuItem { Title = "التنبؤ بخطة المشتريات (AI)", Url = "/InventoryIntelligence/Index", Icon = "online_prediction" });
+                    group.Items.Add(new MenuItem { Title = "نواقص المخزون التشغيلية", Url = "/Inventory/Shortages", Icon = "warning" });
+                    group.Items.Add(new MenuItem { Title = "مراقبة الصلاحية والاستهلاك", Url = "/Report/StockExpiry", Icon = "event_busy" });
 
-                var groupOps = new MenuGroup { Title = "العمليات والأداء", Icon = "trending_up", Items = new List<MenuItem>() };
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
-                {
-                    groupOps.Items.Add(new MenuItem { Title = "إنتاجية وعمولات الصيادلة", Url = "/Report/PharmacistSales", Icon = "local_pharmacy" });
+                    // الأداء والعمليات
+                    group.Items.Add(new MenuItem { Title = "إنتاجية وعمولات الموظفين", Url = "/Report/PharmacistSales", Icon = "local_pharmacy" });
                 }
-                if (groupOps.Items.Any()) allowedGroups.Add(groupOps);
+
+                if (group.Items.Any()) allowedGroups.Add(group);
             }
             else if (activeUnit == "SystemSettings")
             {

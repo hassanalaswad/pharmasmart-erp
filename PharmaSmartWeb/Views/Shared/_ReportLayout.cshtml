@@ -289,7 +289,7 @@
         <div class="brand">
             @if (!string.IsNullOrEmpty(Settings.CompanyLogoPath) && Settings.CompanyLogoPath != "/images/Logo.png")
             {
-                <img src="@Settings.CompanyLogoPath" alt="@Settings.CompanyName">
+                <img src="@Settings.CompanyLogoPath" alt="@Settings.CompanyName" onerror="this.style.display='none'; this.nextElementSibling.style.fontSize='20px'">
                 <div class="name" style="font-size:16px;">@Settings.CompanyName</div>
             }
             else

@@ -16,6 +16,27 @@
     <div class="report-filter-bar no-print" style="justify-content: flex-start;">
         <form method="get" style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; width:100%;">
             <div style="flex:1; min-width:120px;">
+                <label class="rf-label">الفرع</label>
+                <select name="branchId" class="rf-input">
+                    <!-- الخيار الأول يظهر فقط إذا كان المستخدم يملك صلاحية رؤية كافة الفروع (حيث يمرر ReportScopeId = 0) -->
+                    @if (ViewBag.BranchesList != null)
+                    {
+                        @if (User.IsInRole("SuperAdmin"))
+                        {
+                            <option value="0" selected="@((ViewBag.SelectedBranchId ?? 0) == 0)">-- كافة الفروع --</option>
+                        }
+                        var branches = ViewBag.BranchesList as IEnumerable<PharmaSmartWeb.Models.Branches>;
+                        if(branches != null)
+                        {
+                            foreach (var b in branches)
+                            {
+                                <option value="@b.BranchId" selected="@(b.BranchId == ViewBag.SelectedBranchId)">@b.BranchName</option>
+                            }
+                        }
+                    }
+                </select>
+            </div>
+            <div style="flex:1; min-width:120px;">
                 <label class="rf-label">من تاريخ</label>
                 <input type="date" name="fromDate" value="@ViewBag.FromDate" class="rf-input" dir="ltr">
             </div>
@@ -34,89 +55,154 @@
     <div><span>صافي الأرباح:</span><span style="font-weight:bold; color:#059669;">@ViewBag.TotalProfits?.ToString("N2")</span></div>
 }
 
-<div class="no-print" style="margin-bottom: 30px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <canvas id="productivityChart" height="100"></canvas>
-</div>
+@{
+    bool isGlobal = ViewBag.IsGlobalScope ?? false;
+}
 
-<table class="report-table">
-    <thead>
-        <tr>
-            <th style="width:40px;">#</th>
-            <th style="width:200px; text-align:right;">اسم الفرع</th>
-            <th>عدد الفواتير</th>
-            <th>المبيعات</th>
-            <th>المصروفات</th>
-            <th>تكلفة البضاعة</th>
-            <th>صافي الربح</th>
-            <th>نسبة المساهمة</th>
-        </tr>
-    </thead>
-    <tbody>
-        @{int rowNum = 1;}
-        @foreach (var item in Model)
-        {
+@if (isGlobal)
+{
+    <!-- المقارنة الشاملة لكافة الفروع -->
+    <div class="no-print" style="margin-bottom: 30px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <canvas id="productivityChart" height="100"></canvas>
+    </div>
+
+    <table class="report-table">
+        <thead>
             <tr>
-                <td>@rowNum</td>
-                <td style="text-align:right; font-weight:bold; color:#063955;">@item.BranchName</td>
-                <td style="font-family:monospace; font-weight:bold;">@item.InvoiceCount</td>
-                <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.TotalSales.ToString("N2")</td>
-                <td style="font-family:monospace; font-weight:bold; color:#dc2626;">@item.TotalExpenses.ToString("N2")</td>
-                <td style="font-family:monospace;">@item.COGS.ToString("N2")</td>
-                <td style="font-family:monospace; font-weight:bold; color:#059669; background:#ecfdf5;">@item.NetProfit.ToString("N2")</td>
-                <td style="color:#059669; font-weight:bold;">@item.ContributionPercentage.ToString("N1")%</td>
+                <th style="width:40px;">#</th>
+                <th style="width:200px; text-align:right;">اسم الفرع</th>
+                <th>عدد الفواتير</th>
+                <th>المبيعات</th>
+                <th>المصروفات</th>
+                <th>تكلفة البضاعة</th>
+                <th>صافي الربح</th>
+                <th>نسبة المساهمة</th>
             </tr>
-            rowNum++;
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @{int rowNum = 1;}
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@rowNum</td>
+                    <td style="text-align:right; font-weight:bold; color:#063955;">@item.BranchName</td>
+                    <td style="font-family:monospace; font-weight:bold;">@item.InvoiceCount</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.TotalSales.ToString("N2")</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#dc2626;">@item.TotalExpenses.ToString("N2")</td>
+                    <td style="font-family:monospace;">@item.COGS.ToString("N2")</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#059669; background:#ecfdf5;">@item.NetProfit.ToString("N2")</td>
+                    <td style="color:#059669; font-weight:bold;">@item.ContributionPercentage.ToString("N1")%</td>
+                </tr>
+                rowNum++;
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <!-- لوحة الأداء الخاصة بفرع محدد -->
+    var branch = Model.FirstOrDefault();
+    if (branch != null)
+    {
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:20px; text-align:center; margin-bottom:20px;">
+            <h2 style="color:#0f172a; margin:0; font-size:24px;">أداء الفرع: <span style="color:#2563eb;">@branch.BranchName</span></h2>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:30px;">
+            <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #0284c7; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">إجمالي المبيعات</h4>
+                <div style="font-size:26px; font-weight:bold; color:#0284c7;">@branch.TotalSales.ToString("N2")</div>
+                <div style="font-size:12px; margin-top:5px; color:#94a3b8; font-family:monospace;">عدد الفواتير: @branch.InvoiceCount</div>
+            </div>
+            
+            <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #dc2626; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">إجمالي المصروفات</h4>
+                <div style="font-size:26px; font-weight:bold; color:#dc2626;">@branch.TotalExpenses.ToString("N2")</div>
+            </div>
+
+            <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #d97706; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">تكلفة البضاعة المباعة (COGS)</h4>
+                <div style="font-size:26px; font-weight:bold; color:#d97706;">@branch.COGS.ToString("N2")</div>
+            </div>
+
+            <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #059669; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">صافي الأرباح</h4>
+                <div style="font-size:26px; font-weight:bold; color:#059669;">@branch.NetProfit.ToString("N2")</div>
+            </div>
+        </div>
+
+        <div class="no-print" style="margin-bottom: 30px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <canvas id="singleBranchChart" height="100"></canvas>
+        </div>
+    }
+}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        var ctx = document.getElementById('productivityChart');
-        if(!ctx) return;
-        ctx = ctx.getContext('2d');
-        var labels = @Html.Raw(ViewBag.ChartLabels ?? "[]");
-        var salesData = @Html.Raw(ViewBag.ChartSales ?? "[]");
-        var expensesData = @Html.Raw(ViewBag.ChartExpenses ?? "[]");
-        var profitsData = @Html.Raw(ViewBag.ChartProfits ?? "[]");
+        @if (isGlobal)
+        {
+            <text>
+            var ctx = document.getElementById('productivityChart');
+            if(ctx) {
+                var labels = @Html.Raw(ViewBag.ChartLabels ?? "[]");
+                var salesData = @Html.Raw(ViewBag.ChartSales ?? "[]");
+                var expensesData = @Html.Raw(ViewBag.ChartExpenses ?? "[]");
+                var profitsData = @Html.Raw(ViewBag.ChartProfits ?? "[]");
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'المبيعات',
-                        backgroundColor: '#0284c7',
-                        data: salesData
+                new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'المبيعات', backgroundColor: '#0284c7', data: salesData },
+                            { label: 'المصروفات', backgroundColor: '#dc2626', data: expensesData },
+                            { label: 'صافي الأرباح', backgroundColor: '#059669', data: profitsData }
+                        ]
                     },
-                    {
-                        label: 'المصروفات',
-                        backgroundColor: '#dc2626',
-                        data: expensesData
-                    },
-                    {
-                        label: 'صافي الأرباح',
-                        backgroundColor: '#059669',
-                        data: profitsData
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { family: 'Tajawal, sans-serif' } } },
+                            title: { display: true, text: 'مقارنة إنتاجية الفروع (المبيعات مقابل الأرباح والمصروفات)', font: { family: 'Tajawal, sans-serif', size: 16 } }
+                        },
+                        scales: { y: { beginAtZero: true } }
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    title: {
-                        display: true,
-                        text: 'مقارنة إنتاجية الفروع (المبيعات مقابل الأرباح والمصروفات)',
-                        font: { family: 'Tajawal, sans-serif', size: 16 }
-                    }
-                },
-                scales: {
-                    y: { beginAtZero: true }
-                }
+                });
             }
-        });
+            </text>
+        }
+        else
+        {
+            <text>
+            var ctxSingle = document.getElementById('singleBranchChart');
+            if(ctxSingle) {
+                var modelSales = @Html.Raw(Model.FirstOrDefault()?.TotalSales ?? 0);
+                var modelExpenses = @Html.Raw(Model.FirstOrDefault()?.TotalExpenses ?? 0);
+                var modelCOGS = @Html.Raw(Model.FirstOrDefault()?.COGS ?? 0);
+                var modelProfit = @Html.Raw(Model.FirstOrDefault()?.NetProfit ?? 0);
+
+                new Chart(ctxSingle.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['صافي الربح', 'المصروفات التشغيلية', 'تكلفة البضاعة المباعة'],
+                        datasets: [{
+                            data: [modelProfit, modelExpenses, modelCOGS],
+                            backgroundColor: ['#059669', '#dc2626', '#d97706'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right', labels: { font: { family: 'Tajawal, sans-serif', size: 14 } } },
+                            title: { display: true, text: 'تحليل مكونات المبيعات للفرع', font: { family: 'Tajawal, sans-serif', size: 16 } }
+                        }
+                    }
+                });
+            }
+            </text>
+        }
     });
 </script>

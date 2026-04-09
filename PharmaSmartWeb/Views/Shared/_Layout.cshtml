@@ -70,23 +70,23 @@
  bool hasActiveChild = group.Items.Any(item => !string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
 
  <div class="mt-2 mb-1">
- <button type="button" onclick="document.getElementById('menu-group-@groupIndex').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" class="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-100 rounded-sm transition-colors group cursor-pointer focus:outline-none">
- <div class="flex items-center gap-2">
- <span class="material-symbols-outlined text-[18px] @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
- <span class="text-[12px] font-black uppercase @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
+ <button type="button" onclick="document.getElementById('menu-group-@groupIndex').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" class="w-full flex items-start justify-between px-3 py-2 hover:bg-slate-100 rounded-sm transition-colors group cursor-pointer focus:outline-none text-right">
+ <div class="flex items-start gap-2">
+ <span class="material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0 @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
+ <span class="text-[12px] font-black uppercase leading-tight @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
  </div>
- <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-300 chevron @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
+ <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5 flex-shrink-0 transition-transform duration-300 chevron @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
  </button>
  
- <div id="menu-group-@groupIndex" class="mt-1 space-y-1 @((hasActiveChild || isReportsModule) ? "" : "hidden") border-r-[3px] border-slate-100 mr-6 pr-3 overflow-hidden transition-all duration-300">
+ <div id="menu-group-@groupIndex" class="mt-1 space-y-1 @((hasActiveChild || isReportsModule) ? "" : "hidden") border-r-[3px] border-slate-100 mr-5 pr-2 overflow-hidden transition-all duration-300">
  @foreach (var item in group.Items)
  {
  var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
  var bgClass = isActive ? "bg-primary/10 text-primary font-bold rounded-sm shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-primary font-medium rounded-sm";
 
- <a class="flex items-center gap-3 px-3 py-2 transition-all duration-200 @bgClass" href="@item.Url" onclick="closeSidebarOnMobile()">
- <span class="material-symbols-outlined text-[16px] @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
- <span class="text-[12px]">@item.Title</span>
+ <a class="flex items-start gap-2 px-2 py-2 transition-all duration-200 @bgClass text-right" href="@item.Url" onclick="closeSidebarOnMobile()">
+ <span class="material-symbols-outlined text-[16px] mt-0.5 flex-shrink-0 @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
+ <span class="text-[11px] leading-snug">@item.Title</span>
  </a>
  }
  </div>

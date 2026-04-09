@@ -96,19 +96,32 @@
     <!-- Receipt Container -->
     <div class="receipt-paper">
         
+@{
+    var settings = ViewBag.SystemSettings as PharmaSmartWeb.Models.CompanySettings;
+    string orgName = settings?.CompanyName ?? "فارما سمارت";
+    string orgLogo = string.IsNullOrEmpty(settings?.CompanyLogoPath) ? "" : settings.CompanyLogoPath;
+    string taxNo = settings?.TaxNumber ?? "—";
+    string brName = ViewBag.ActiveBranchName ?? "—";
+}
+
         <!-- Header -->
         <div class="receipt-header">
-            <div class="receipt-logo">
-                <span class="material-symbols-outlined" style="font-size:32px;">medical_services</span>
-            </div>
-            <h2 class="receipt-title">صيدلية تالين فارما</h2>
-            <div class="receipt-subtitle">Clinical ERP Sales Network</div>
+            @if (!string.IsNullOrEmpty(orgLogo))
+            {
+                <img src="@orgLogo" alt="Logo" style="width:64px; height:64px; object-fit:contain; border-radius:50%; border:1px solid #e2e8f0; margin:0 auto 12px auto; display:block; background:white; padding:4px;" />
+            }
+            else
+            {
+                <div class="receipt-logo">
+                    <span class="material-symbols-outlined" style="font-size:32px;">medical_services</span>
+                </div>
+            }
+            <h2 class="receipt-title">@brName</h2>
+            <div class="receipt-subtitle">@orgName</div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:10px; color:#475569; font-weight:700; margin-top:16px; text-align:right;">
                 <div>الرقم الضريبي:</div>
-                <div style="font-family:monospace; text-align:left;">310123456700003</div>
-                <div>السجل التجاري:</div>
-                <div style="font-family:monospace; text-align:left;">1010654321</div>
+                <div style="font-family:monospace; text-align:left;">@taxNo</div>
             </div>
         </div>
 

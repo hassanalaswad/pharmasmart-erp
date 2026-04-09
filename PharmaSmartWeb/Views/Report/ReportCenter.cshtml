@@ -81,6 +81,18 @@
         </div>
     </div>
 
+    @if (isGlobalScope)
+    {
+        <!-- Enterprise Comparison Chart -->
+        <div class="enterprise-panel" style="padding:20px; background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <h3 style="font-size:14px; font-weight:bold; color:#063955; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="font-size:18px;">bar_chart</span>
+                مقارنة الأداء الشامل للفروع (المبيعات، الإيرادات، والمصروفات)
+            </h3>
+            <canvas id="enterpriseCompareChart" height="80" style="max-height: 300px;"></canvas>
+        </div>
+    }
+
     <!-- Reports Section -->
     <div class="enterprise-panel" style="padding:20px;">
         <h3 style="font-size:14px; font-weight:bold; color:#063955; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
@@ -153,3 +165,55 @@
         </div>
     </div>
 </div>
+
+@if (isGlobalScope)
+{
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function () {
+            var labels = @Html.Raw(ViewBag.ComparisonLabels ?? "[]");
+            var sales   = @Html.Raw(ViewBag.ComparisonSales   ?? "[]");
+            var expenses= @Html.Raw(ViewBag.ComparisonExpenses ?? "[]");
+            var revenues= @Html.Raw(ViewBag.ComparisonRevenues ?? "[]");
+
+            // تأجيل حتى تتوفر canvas في DOM
+            function initChart() {
+                var ctx = document.getElementById('enterpriseCompareChart');
+                if (!ctx) { setTimeout(initChart, 200); return; }
+
+                // إذا البيانات فارغة أظهر رسالة
+                if (!labels || labels.length === 0) {
+                    ctx.parentElement.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:40px 0;">لا توجد بيانات مسجّلة هذا الشهر للمقارنة بين الفروع.</p>';
+                    return;
+                }
+
+                new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'المبيعات',    backgroundColor: '#0284c7', data: sales },
+                            { label: 'الإيرادات',   backgroundColor: '#10b981', data: revenues },
+                            { label: 'المصروفات',   backgroundColor: '#e11d48', data: expenses }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { family: 'Tajawal, sans-serif', size: 13 } } },
+                            title: { display: true, text: 'مقارنة أداء الفروع — ' + new Date().toLocaleDateString('ar'), font: { family: 'Tajawal, sans-serif', size: 15 } }
+                        },
+                        scales: { y: { beginAtZero: true, ticks: { font: { family: 'Tajawal, sans-serif' } } } }
+                    }
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initChart);
+            } else {
+                initChart();
+            }
+        })();
+    </script>
+}

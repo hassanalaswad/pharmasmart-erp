@@ -70,6 +70,63 @@ namespace PharmaSmartWeb.Controllers
             // 🚀 تمرير حالة النطاق للواجهة لتغيير الألوان ديناميكياً (بدون استخدام كوكيز في الواجهة)
             ViewBag.IsGlobalScope = isGlobalScope;
 
+            // 🚀 جلب بيانات المخطط البياني للمقارنة بين الفروع (يظهر فقط عند اختيار كافة الفروع)
+            if (isGlobalScope)
+            {
+                // جلب أسماء الفروع أولاً
+                var allBranchList = await _context.Branches
+                    .Where(b => b.IsActive == true)
+                    .Select(b => new { b.BranchId, b.BranchName })
+                    .ToListAsync();
+
+                // مبيعات كل فرع (من جدول المبيعات مباشرة)
+                var rawSales = await _context.Sales
+                    .Where(s => s.SaleDate >= startOfMonth)
+                    .GroupBy(s => s.BranchId)
+                    .Select(g => new { BranchId = g.Key, TotalSales = g.Sum(x => (decimal?)x.TotalAmount) ?? 0m })
+                    .ToListAsync();
+
+                // مصروفات كل فرع (من القيود)
+                var rawExpenses = await _context.Journaldetails
+                    .Include(j => j.Journal)
+                    .Include(j => j.Account)
+                    .Where(j => j.Journal.JournalDate >= startOfMonth 
+                             && j.Journal.IsPosted == true 
+                             && j.Account.AccountCode.StartsWith("5"))
+                    .GroupBy(j => j.Journal.BranchId)
+                    .Select(g => new { BranchId = g.Key, TotalExpenses = g.Sum(x => x.Debit - x.Credit) })
+                    .ToListAsync();
+
+                // إيرادات كل فرع (من القيود)
+                var rawRevenues = await _context.Journaldetails
+                    .Include(j => j.Journal)
+                    .Include(j => j.Account)
+                    .Where(j => j.Journal.JournalDate >= startOfMonth 
+                             && j.Journal.IsPosted == true 
+                             && j.Account.AccountCode.StartsWith("4"))
+                    .GroupBy(j => j.Journal.BranchId)
+                    .Select(g => new { BranchId = g.Key, TotalRevenues = g.Sum(x => x.Credit - x.Debit) })
+                    .ToListAsync();
+
+                var chartLabels   = new List<string>();
+                var chartSales    = new List<decimal>();
+                var chartExpenses = new List<decimal>();
+                var chartRevenues = new List<decimal>();
+
+                foreach (var branch in allBranchList)
+                {
+                    chartLabels.Add(branch.BranchName);
+                    chartSales   .Add(rawSales   .FirstOrDefault(x => x.BranchId == branch.BranchId)?.TotalSales    ?? 0);
+                    chartExpenses.Add(rawExpenses.FirstOrDefault(x => x.BranchId == branch.BranchId)?.TotalExpenses ?? 0);
+                    chartRevenues.Add(rawRevenues.FirstOrDefault(x => x.BranchId == branch.BranchId)?.TotalRevenues ?? 0);
+                }
+
+                ViewBag.ComparisonLabels   = System.Text.Json.JsonSerializer.Serialize(chartLabels);
+                ViewBag.ComparisonSales    = System.Text.Json.JsonSerializer.Serialize(chartSales);
+                ViewBag.ComparisonExpenses = System.Text.Json.JsonSerializer.Serialize(chartExpenses);
+                ViewBag.ComparisonRevenues = System.Text.Json.JsonSerializer.Serialize(chartRevenues);
+            }
+
             return View(model);
         }
 
@@ -244,52 +301,95 @@ namespace PharmaSmartWeb.Controllers
         }
 
         // ==========================================
-        // 👨‍⚕️ 5. تقرير مبيعات الصيادلة والعمولات
+        // 👨‍⚕️ 5. تقرير إنتاجية الفروع
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> PharmacistSales(DateTime? fromDate, DateTime? toDate, decimal commissionRate = 1)
+        public async Task<IActionResult> PharmacistSales(DateTime? fromDate, DateTime? toDate, int? branchId)
         {
-            int branchId = ReportScopeId;
+            int selectedBranchId = branchId ?? ReportScopeId;
             var start = fromDate?.Date ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var end = toDate?.Date.AddHours(23).AddMinutes(59) ?? DateTime.Now;
 
             ViewBag.FromDate = start.ToString("yyyy-MM-dd");
             ViewBag.ToDate = end.ToString("yyyy-MM-dd");
-            ViewBag.CommissionRate = commissionRate;
+            ViewBag.SelectedBranchId = selectedBranchId;
+            ViewBag.BranchesList = await _context.Branches.Where(b => b.IsActive == true).ToListAsync();
 
-            var query = _context.Sales
-                .AsNoTracking()
-                .Include(s => s.User)
-                .Where(s => s.SaleDate >= start && s.SaleDate <= end && s.IsReturn == false && s.ParentSaleId == null)
+            var jQuery = _context.Journaldetails
+                .Include(d => d.Journal)
+                .ThenInclude(j => j.Branch)
+                .Include(d => d.Account)
+                .Where(d => d.Journal.JournalDate >= start && d.Journal.JournalDate <= end && d.Journal.IsPosted == true)
                 .AsQueryable();
 
-            if (branchId != 0) query = query.Where(s => s.BranchId == branchId);
+            if (selectedBranchId != 0) jQuery = jQuery.Where(d => d.Journal.BranchId == selectedBranchId);
 
-            var salesData = await query
-                .GroupBy(s => new { s.UserId, s.User.Username })
-                .Select(g => new PharmacistSalesViewModel
-                {
-                    UserId = g.Key.UserId,
-                    Username = g.Key.Username,
-                    InvoiceCount = g.Count(),
-                    TotalSales = g.Sum(s => s.TotalAmount),
-                    CommissionAmount = g.Sum(s => s.TotalAmount) * (commissionRate / 100)
+            var journalData = await jQuery.ToListAsync();
+
+            var salesInvoices = await _context.Sales
+                .Where(s => s.SaleDate >= start && s.SaleDate <= end && (selectedBranchId == 0 || s.BranchId == selectedBranchId))
+                .GroupBy(s => s.BranchId)
+                .Select(g => new { BranchId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BranchId, x => x.Count);
+
+            var branchData = journalData
+                .GroupBy(d => new { d.Journal.BranchId, d.Journal.Branch.BranchName })
+                .Select(g => {
+                    var totalSales = g.Where(x => x.Account.AccountCode.StartsWith("4")).Sum(x => x.Credit - x.Debit);
+                    var cogs = g.Where(x => x.Account.AccountCode.StartsWith("511") || x.Account.AccountCode.StartsWith("512")).Sum(x => x.Debit - x.Credit);
+                    var expenses = g.Where(x => x.Account.AccountCode.StartsWith("5") && !x.Account.AccountCode.StartsWith("511") && !x.Account.AccountCode.StartsWith("512")).Sum(x => x.Debit - x.Credit);
+                    
+                    return new BranchProductivityViewModel
+                    {
+                        BranchId = g.Key.BranchId,
+                        BranchName = g.Key.BranchName ?? "غير محدد",
+                        InvoiceCount = salesInvoices.ContainsKey(g.Key.BranchId) ? salesInvoices[g.Key.BranchId] : 0,
+                        TotalSales = totalSales,
+                        TotalExpenses = expenses,
+                        COGS = cogs,
+                        NetProfit = totalSales - cogs - expenses
+                    };
                 })
                 .OrderByDescending(x => x.TotalSales)
-                .ToListAsync();
+                .ToList();
 
-            decimal grandTotalSales = salesData.Sum(x => x.TotalSales);
-            foreach (var item in salesData)
+            decimal grandTotalSales = branchData.Sum(x => x.TotalSales);
+            foreach (var item in branchData)
             {
-                item.SalesPercentage = grandTotalSales > 0 ? (double)(item.TotalSales / grandTotalSales * 100) : 0;
+                item.ContributionPercentage = grandTotalSales > 0 ? (double)(item.TotalSales / grandTotalSales * 100) : 0;
             }
 
             ViewBag.GrandTotalSales = grandTotalSales;
-            ViewBag.TotalCommissions = salesData.Sum(x => x.CommissionAmount);
-            ViewBag.TopSeller = salesData.FirstOrDefault()?.Username ?? "---";
+            ViewBag.TotalProfits = branchData.Sum(x => x.NetProfit);
+            ViewBag.TotalExpenses = branchData.Sum(x => x.TotalExpenses);
+            ViewBag.IsGlobalScope = (selectedBranchId == 0);
 
-            return View(salesData);
+            // Fetch Branch details for Report Layout Header
+            if (selectedBranchId != 0)
+            {
+                var currentBranch = await _context.Branches.FindAsync(selectedBranchId);
+                if (currentBranch != null)
+                {
+                    ViewBag.ReportBranchName = currentBranch.BranchName;
+                    ViewBag.ReportBranchAddress = currentBranch.Location ?? "-";
+                    ViewBag.ReportBranchPhone = "-";
+                }
+            }
+            else
+            {
+                ViewBag.ReportBranchName = "كافة الفروع";
+                ViewBag.ReportBranchAddress = "-";
+                ViewBag.ReportBranchPhone = "-";
+            }
+
+            // Serialize for Chart.js
+            ViewBag.ChartLabels = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.BranchName).ToArray());
+            ViewBag.ChartSales = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.TotalSales).ToArray());
+            ViewBag.ChartProfits = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.NetProfit).ToArray());
+            ViewBag.ChartExpenses = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.TotalExpenses).ToArray());
+
+            return View(branchData);
         }
 
         // ==========================================

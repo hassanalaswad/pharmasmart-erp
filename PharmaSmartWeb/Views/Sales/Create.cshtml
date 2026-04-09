@@ -115,11 +115,36 @@
         /* مساحة في الأسفل حتى لا يُغطي الزر العائم المحتوى */
         .pos-mobile-bottom-space { height: 70px; }
     }
+    /* زر التحميل (Loading State) */
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .btn-submit:disabled { background: #94a3b8 !important; cursor: not-allowed; }
 </style>
 
 <form id="salesForm" asp-action="Create" method="post" style="max-width:1200px; margin:0 auto; padding: 24px 16px;">
     @Html.AntiForgeryToken()
     <div id="hiddenInputsContainer"></div>
+
+    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+    {
+        <div id="serverErrorBanner" style="background:#fef2f2; border:2px solid #dc2626; border-radius:4px; padding:14px 20px; margin-bottom:16px; color:#dc2626; font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span class="material-symbols-outlined">error</span>
+            <span>@ViewBag.Error</span>
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'فشل حفظ الفاتورة',
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px;">@Html.Raw(ViewBag.Error)</div>`,
+                    confirmButtonText: 'حسناً — سأراجع الفاتورة',
+                    confirmButtonColor: '#dc2626'
+                });
+            });
+        </script>
+    }
 
     <!-- Header Actions -->
     <div class="pos-header">
@@ -380,6 +405,22 @@
         renderCart();
     }
 
+    // ✅ التحقق الفوري من المخزون عند تغيير الكمية
+    function checkStockOnInput(uid, inputEl) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        const val = parseFloat(inputEl.value) || 0;
+        const requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
+        const exceeded = requiredPills > item.maxStock;
+        inputEl.style.border = exceeded ? '2px solid #dc2626' : '1px solid #cbd5e1';
+        inputEl.style.background = exceeded ? '#fef2f2' : '';
+        inputEl.title = exceeded ? `⚠️ المخزون المتاح: ${item.maxStock} ${item.subUnit} فقط` : '';
+        // نحدّث العنصر في الـ cart بالقيمة المؤقتة (حتى تُحسب validatePayments بشكل صحيح)
+        item._pendingQty = val;
+        item._exceeded = exceeded;
+        validatePayments();
+    }
+
     function updateItem(uid, field, value) {
         const item = cart.find(i => i.uid === uid);
         if (!item) return;
@@ -388,10 +429,13 @@
             let val = parseFloat(value) || 1;
             let requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
             if (requiredPills > item.maxStock) {
-                Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'الكمية المطلوبة أكبر من المخزون', showConfirmButton: false, timer: 2000});
-                renderCart(); return;
+                Swal.fire({toast: true, position: 'top-end', icon: 'error', title: `⛔ الكمية المطلوبة (${val}) تتجاوز المخزون (${item.maxStock} ${item.subUnit})`, showConfirmButton: false, timer: 3000});
+                item.uiQty = item.unitType === 'main' ? Math.floor(item.maxStock / item.conv) : item.maxStock;
+                if(item.uiQty < 1) item.uiQty = 1;
+            } else {
+                item.uiQty = val;
             }
-            item[field] = val;
+            item._exceeded = false;
         } else if (field === 'unitType') {
             item[field] = value;
             let requiredPills = item.unitType === 'main' ? (item.uiQty * item.conv) : item.uiQty;
@@ -399,6 +443,7 @@
                 item.uiQty = 1;
                 Swal.fire({toast: true, position: 'top-end', icon: 'info', title: 'تم تعديل الكمية لـ 1 لتناسب المخزون', showConfirmButton: false, timer: 2000});
             }
+            item._exceeded = false;
         }
         renderCart();
     }
@@ -428,12 +473,30 @@
             let serverQty = isMain ? (item.uiQty * item.conv) : item.uiQty;
             let serverUnitPrice = item.packPrice / item.conv;
 
+            // حساب الرصيد المتبقي لعرضه
+            let requiredPills_r = isMain ? (item.uiQty * item.conv) : item.uiQty;
+            let stockExceeded_r = requiredPills_r > item.maxStock;
+            let remainingStock = item.maxStock - requiredPills_r;
+            let stockColor = stockExceeded_r ? '#dc2626' : (remainingStock < 5 ? '#d97706' : '#059669');
+            let stockBg    = stockExceeded_r ? '#fef2f2' : 'transparent';
+
             html += `
-                <tr>
-                    <td><strong style="color:#063955; font-size:13px;">${item.name}</strong></td>
+                <tr style="background:${stockBg}; transition:background 0.2s;">
+                    <td>
+                        <strong style="color:#063955; font-size:13px;">${item.name}</strong>
+                        <div style="font-size:10px; color:${stockColor}; font-weight:700; margin-top:2px;">
+                            ${stockExceeded_r 
+                                ? `⛔ يتجاوز المخزون! المتاح: ${item.maxStock} ${item.subUnit}`
+                                : `✔ متبقي في المخزون: ${remainingStock} ${item.subUnit}`
+                            }
+                        </div>
+                    </td>
                     <td>
                         <div style="display:flex; justify-content:center; align-items:center; gap:4px;">
-                            <input type="number" min="1" value="${item.uiQty}" onchange="updateItem(${item.uid}, 'uiQty', this.value)" style="width:60px; text-align:center; padding:4px; border:1px solid #cbd5e1; border-radius:2px; font-family:monospace; font-weight:700; outline:none;" />
+                            <input type="number" min="1" value="${item.uiQty}"
+                                oninput="checkStockOnInput(${item.uid}, this)"
+                                onchange="updateItem(${item.uid}, 'uiQty', this.value)"
+                                style="width:60px; text-align:center; padding:4px; border:${stockExceeded_r ? '2px solid #dc2626' : '1px solid #cbd5e1'}; border-radius:2px; font-family:monospace; font-weight:700; outline:none; background:${stockExceeded_r ? '#fef2f2' : 'white'};" />
                             <select onchange="updateItem(${item.uid}, 'unitType', this.value)" style="padding:4px; border:1px solid #cbd5e1; background:#f1f5f9; border-radius:2px; font-size:11px; font-weight:700; outline:none; cursor:pointer;">
                                 <option value="sub" ${!isMain ? 'selected' : ''}>${item.subUnit}</option>
                                 <option value="main" ${isMain ? 'selected' : ''}>${item.mainUnit}</option>
@@ -441,7 +504,7 @@
                         </div>
                     </td>
                     <td style="text-align:left; font-family:monospace; font-size:14px; font-weight:700; color:#64748b;">${displayPrice.toFixed(2)}</td>
-                    <td style="text-align:left; font-family:monospace; font-size:15px; font-weight:900; color:#063955;">${subTotal.toFixed(2)}</td>
+                    <td style="text-align:left; font-family:monospace; font-size:15px; font-weight:900; color:${stockExceeded_r ? '#dc2626' : '#063955'};">${subTotal.toFixed(2)}</td>
                     <td style="text-align:center;">
                         <button type="button" onclick="removeItem(${item.uid})" class="btn-icon">
                             <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
@@ -503,7 +566,17 @@
 
         let isValid = true, errorMsg = "";
 
+        // ✅ التحقق من المخزون لجميع أصناف السلة
+        const exceededItems = cart.filter(i => {
+            let req = i.unitType === 'main' ? (i.uiQty * i.conv) : i.uiQty;
+            return req > i.maxStock || i._exceeded === true;
+        });
+
         if (cart.length === 0) isValid = false;
+        else if (exceededItems.length > 0) { 
+            isValid = false; 
+            errorMsg = `⛔ ${exceededItems.map(i => i.name).join('، ')} — الكمية المطلوبة تتجاوز المخزون المتاح!`; 
+        }
         else if ((cash + bank) - net > 0.01) { isValid = false; errorMsg = "إجمالي المدفوع أكبر من الفاتورة!"; }
         else if (cash > 0 && !accCash) { isValid = false; errorMsg = "الرجاء تحديد صندوق النقد!"; }
         else if (bank > 0 && !accBank) { isValid = false; errorMsg = "الرجاء تحديد الحساب البنكي!"; }
@@ -570,19 +643,24 @@
 
     window.addEventListener('offline', () => updateOfflineBar());
 
-    // تحديث الأدوية في IndexedDB عند تحميل الصفحة للمرة الأولى (أونلاين)
-    if (navigator.onLine && typeof inventoryDrugs !== 'undefined' && inventoryDrugs.length > 0) {
-        saveDrugsToCache(inventoryDrugs).catch(() => {});
-    }
-
-    // إذا كنا أوفلاين وقائمة الأدوية فارغة، احمّل من IndexedDB
+    // تحميل الكاش فقط إذا كنا أوفلاين
     (async () => {
-        if (!navigator.onLine || inventoryDrugs.length === 0) {
+        if (!navigator.onLine) {
             const cached = await getDrugsFromCache();
             if (cached && cached.length > 0) {
                 inventoryDrugs.length = 0;
                 cached.forEach(d => inventoryDrugs.push(d));
             }
+        } else if (inventoryDrugs.length > 0) {
+            // تحديث الكاش بالبيانات الجديدة للفرع الحالي
+            saveDrugsToCache(inventoryDrugs).catch(() => {});
+        } else {
+            // إذا كنا أونلاين ولكن الفرع الحالي ليس لديه أي أصناف، يجب تفريغ الكاش القديم
+            // لمنع تداخل أدوية فرع آخر عند انقطاع النت في هذه الجلسة
+            openOfflineDB().then(db => {
+                const tx = db.transaction('drugs_cache', 'readwrite');
+                tx.objectStore('drugs_cache').clear();
+            }).catch(() => {});
         }
         updateOfflineBar();
     })();
@@ -591,24 +669,88 @@
     // 💾 حفظ الفاتورة (أونلاين أو أوفلاين)
     // =======================================
     async function submitPOS() {
-        if (document.getElementById('btnSaveSales').disabled) return;
-        
-        const cashVal = parseFloat(document.getElementById('valCash').value) || 0;
-        const bankVal = parseFloat(document.getElementById('valBank').value) || 0;
-        const accCash = parseInt(document.getElementById('accCash').value) || 0;
-        const accBank = parseInt(document.getElementById('accBank').value) || 0;
-        const customerId = parseInt(document.getElementById('CustomerId').value) || 0;
-        const discount = parseFloat(document.getElementById('inputDiscount').value) || 0;
-        const tax = parseFloat(document.getElementById('inputTax').value) || 0;
+        const btn = document.getElementById('btnSaveSales');
+        if (btn.disabled) return;
+
+        // تأكيد قبل الحفظ
+        const confirm = await Swal.fire({
+            icon: 'question',
+            title: 'تأكيد حفظ الفاتورة',
+            html: `<div style="text-align:right; font-family:Tajawal,sans-serif;">هل أنت متأكد من إصدار هذه الفاتورة؟ لا يمكن التراجع بعد الحفظ.</div>`,
+            showCancelButton: true,
+            confirmButtonText: '✅ نعم — أصدر الفاتورة',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#063955',
+            cancelButtonColor: '#94a3b8'
+        });
+        if (!confirm.isConfirmed) return;
+
+        // إظهار حالة التحميل على الزر
+        const btnOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;animation:spin 1s linear infinite;">progress_activity</span> جاري الحفظ...';
+
+        const cashVal   = parseFloat(document.getElementById('valCash').value)  || 0;
+        const bankVal   = parseFloat(document.getElementById('valBank').value)   || 0;
+        const accCash   = parseInt(document.getElementById('accCash').value)     || 0;
+        const accBank   = parseInt(document.getElementById('accBank').value)     || 0;
 
         if (navigator.onLine) {
-            // ← الطريقة العادية: أرسل النموذج للسيرفر
-            const form = document.getElementById('salesForm');
-            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAmount" value="${cashVal}" />`);
-            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAmount" value="${bankVal}" />`);
-            if (cashVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAccountId" value="${accCash}" />`);
-            if (bankVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAccountId" value="${accBank}" />`);
-            form.submit();
+            try {
+                const form = document.getElementById('salesForm');
+                // إضافة الحقول المخفية لطريقة الدفع
+                ['CashAmount','BankAmount','CashAccountId','BankAccountId'].forEach(n => {
+                    form.querySelectorAll(`input[name="${n}"]`).forEach(el => el.remove());
+                });
+                form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAmount" value="${cashVal}" />`);
+                form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAmount" value="${bankVal}" />`);
+                if (cashVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAccountId" value="${accCash}" />`);
+                if (bankVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAccountId" value="${accBank}" />`);
+
+                // إرسال كـ FormData عبر fetch لنتعامل مع الرد
+                const formData = new FormData(form);
+                const response = await fetch(form.action, { method: 'POST', body: formData });
+
+                if (response.redirected) {
+                    // نجح الحفظ — توجّه لصفحة تفاصيل الفاتورة
+                    window.location.href = response.url;
+                    return;
+                }
+
+                // إذا لم يحدث redirect، حلل النص لمعرفة محتوى الخطأ
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const errorBanner = doc.getElementById('serverErrorBanner');
+                let errorMsg = 'حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.';
+                if (errorBanner) {
+                    const msgSpan = errorBanner.querySelector('span:nth-child(2)');
+                    errorMsg = msgSpan ? msgSpan.innerText.trim() : errorBanner.innerText.trim();
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: '⛔ فشل حفظ الفاتورة',
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px; line-height:2;">${errorMsg}</div>`,
+                    confirmButtonText: 'حسناً — سأراجع الفاتورة',
+                    confirmButtonColor: '#dc2626'
+                });
+
+                // استعادة الزر
+                btn.innerHTML = btnOriginal;
+                btn.disabled = false;
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '⛔ خطأ في الاتصال',
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif;">تعذّر الاتصال بالخادم. تحقق من اتصال الشبكة.<br><small style="color:#94a3b8">${err.message}</small></div>`,
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc2626'
+                });
+                btn.innerHTML = btnOriginal;
+                btn.disabled = false;
+            }
         } else {
             // ← وضع الأوفلاين: احفظ في IndexedDB
             const saleData = {

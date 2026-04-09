@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -67,8 +67,11 @@ namespace PharmaSmartWeb.Controllers
             ModelState.Remove("Sales");
             ModelState.Remove("Stockmovements");
 
-            // 🚀 الختم الآلي: إجبار ربط المستخدم الجديد بالفرع النشط للجميع بلا استثناء
-            newUser.DefaultBranchId = ActiveBranchId;
+            // 🚀 مدير النظام يختار الفرع يدوياً • الموظف العادي يُختم آلياً بفرعه النشط
+            if (!IsSuperAdmin)
+            {
+                newUser.DefaultBranchId = ActiveBranchId;
+            }
 
             if (ModelState.IsValid)
             {
@@ -138,15 +141,17 @@ namespace PharmaSmartWeb.Controllers
 
             if (ModelState.IsValid)
             {
-                // 🚀 حماية أمنية للـ POST: التأكد من أن الحساب المراد تعديله يتبع للفرع النشط فعلاً
+            // 🚀 حماية أمنية للـ POST: للموظف العادي فقط - المدير يستطيع تعديل أي مستخدم
+            if (!IsSuperAdmin)
+            {
                 var existingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == id);
                 if (existingUser?.DefaultBranchId != ActiveBranchId)
                 {
                     return RedirectToAction("AccessDenied", "Home");
                 }
-
-                // 🚀 منع نقل المستخدم لفرع آخر عبر الـ Inspect Element
+                // 🚀 منع نقل المستخدم لفرع آخر عبر الـ Inspect Element (للموظف العادي فقط)
                 updatedUser.DefaultBranchId = ActiveBranchId;
+            }
 
                 bool exists = await _context.Users.AnyAsync(u => u.Username == updatedUser.Username && u.UserId != updatedUser.UserId);
                 if (exists)
@@ -186,9 +191,23 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         private void LoadIsolatedViewData(Users user = null)
         {
-            // 🚀 العزل التام: عرض الفروع والموظفين الخاصين بالفرع النشط فقط
-            var branchesQuery = _context.Branches.Where(b => b.IsActive == true && b.BranchId == ActiveBranchId).AsQueryable();
-            var employeesQuery = _context.Employees.Where(e => e.IsActive == true && e.BranchId == ActiveBranchId).AsQueryable();
+            // 🚀 مدير النظام يرى كافة الفروع والموظفين • الموظف العادي يرى فرعه فقط
+            IQueryable<Branches> branchesQuery;
+            IQueryable<Employees> employeesQuery;
+
+            if (IsSuperAdmin)
+            {
+                // مدير النظام: كل الفروع النشطة وكل الموظفين النشطين
+                branchesQuery  = _context.Branches .Where(b => b.IsActive == true).AsQueryable();
+                employeesQuery = _context.Employees.Where(e => e.IsActive == true).AsQueryable();
+            }
+            else
+            {
+                // الفرع العزل الصارم: الفرع النشط فقط
+                branchesQuery  = _context.Branches .Where(b => b.IsActive == true && b.BranchId == ActiveBranchId).AsQueryable();
+                employeesQuery = _context.Employees.Where(e => e.IsActive == true && e.BranchId == ActiveBranchId).AsQueryable();
+            }
+
             var rolesQuery = _context.Userroles.AsQueryable();
 
             // 🚀 حماية أمنية إضافية: منع الموظف العادي من منح صلاحية "مدير عام"
@@ -197,9 +216,9 @@ namespace PharmaSmartWeb.Controllers
                 rolesQuery = rolesQuery.Where(r => r.RoleId != 1);
             }
 
-            ViewBag.BranchList = new SelectList(branchesQuery, "BranchId", "BranchName", user?.DefaultBranchId);
-            ViewBag.EmployeeList = new SelectList(employeesQuery, "EmployeeId", "FullName", user?.EmployeeId);
-            ViewBag.RoleList = new SelectList(rolesQuery, "RoleId", "RoleName", user?.RoleId);
+            ViewBag.BranchList   = new SelectList(branchesQuery,  "BranchId",   "BranchName", user?.DefaultBranchId);
+            ViewBag.EmployeeList = new SelectList(employeesQuery,  "EmployeeId", "FullName",   user?.EmployeeId);
+            ViewBag.RoleList     = new SelectList(rolesQuery,      "RoleId",     "RoleName",   user?.RoleId);
         }
     }
 }

@@ -95,6 +95,8 @@ namespace PharmaSmartWeb.Controllers
 
             if (sale == null) return RedirectToAction("AccessDenied", "Home");
 
+            ViewBag.SystemSettings = await _context.CompanySettings.FirstOrDefaultAsync();
+
             return View(sale);
         }
 
@@ -181,8 +183,11 @@ namespace PharmaSmartWeb.Controllers
                                 grossTotal += (item.Quantity * item.UnitPrice);
 
                                 var inventory = await _context.Branchinventory.Include(b => b.Drug).FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
-                                if (inventory == null || inventory.StockQuantity < item.Quantity)
-                                    throw new Exception($"الكمية غير متوفرة للصنف المختار.");
+                                if (inventory == null)
+                                    throw new Exception($"الصنف (DrugId: {item.DrugId}) غير موجود في مخزون الفرع الحالي ({ActiveBranchId}).");
+
+                                if (inventory.StockQuantity < item.Quantity)
+                                    throw new Exception($"الكمية ({item.Quantity}) المطلوبة للصنف '{inventory.Drug?.DrugName}' تتجاوز المخزون المتوفر ({inventory.StockQuantity}).");
 
                                 // 🚀 بما أن السيرفر يستقبل (الكمية بالوحدة الصغرى) و(التكلفة للوحدة الصغرى)، فالحسابات هنا دقيقة 100%
                                 decimal costPerPill = (inventory.AverageCost ?? 0) / (inventory.Drug.ConversionFactor > 0 ? inventory.Drug.ConversionFactor : 1);
