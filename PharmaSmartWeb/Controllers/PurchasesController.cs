@@ -20,8 +20,7 @@ namespace PharmaSmartWeb.Controllers
 
         public PurchasesController(ApplicationDbContext context, IAccountingEngine accountingEngine) : base(context)
         {
-            _accountingEngine = accountingEngine;
-        }
+_accountingEngine = new AccountingEngine(_context)        }
 
         private async Task<int> GetValidUserIdAsync()
         {
