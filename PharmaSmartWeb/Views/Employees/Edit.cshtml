@@ -7,105 +7,87 @@
     ViewBag.ModalHeaderIcon = "badge";
 }
 
-<form asp-action="Edit" method="post" class="space-y-8">
+<form asp-action="Edit" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="EmployeeId" />
 
     @if (ViewBag.Error != null)
     {
-        <div class="bg-rose-50 border-r-4 border-rose-500 p-4 rounded-sm flex items-center gap-4 transition-all">
-            <span class="material-symbols-outlined text-rose-500">error</span>
-            <p class="text-rose-700 text-sm font-bold">@ViewBag.Error</p>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
         </div>
     }
 
-    <!-- Section: Personal Info -->
-    <section class="space-y-6">
-        <div class="flex items-center gap-3 mb-2 border-b border-slate-100 pb-2">
-            <div class="w-1 h-6 bg-indigo-500 rounded-full"></div>
-            <h2 class="text-lg font-black text-slate-800 tracking-tight">المعلومات الشخصية</h2>
+    <div class="enterprise-section-title">
+        <span class="material-symbols-outlined" style="font-size:18px;">person</span>
+        المعلومات الشخصية
+    </div>
+    <div class="enterprise-row">
+        <div>
+            <label class="enterprise-label">الاسم الكامل <span style="color:#e11d48;">*</span></label>
+            <input asp-for="FullName" required class="enterprise-input" placeholder="أدخل اسم الموظف" type="text" />
+            <span asp-validation-for="FullName" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Full Name Input -->
-            <div class="space-y-2">
-                <label class="block text-sm font-black text-slate-500 pr-1">الاسم الكامل <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                    <input asp-for="FullName" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-800 placeholder:text-slate-400 font-cairo" placeholder="أدخل اسم الموظف" type="text" />
-                    <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400">person</span>
-                </div>
-            </div>
+        <div>
+            <label class="enterprise-label">المسمى الوظيفي <span style="color:#e11d48;">*</span></label>
+            <input asp-for="Position" required class="enterprise-input" placeholder="مثال: طبيب عام، صيدلي..." type="text" />
+        </div>
+    </div>
 
-            <!-- Position Selection -->
-            <div class="space-y-2">
-                <label class="block text-sm font-black text-slate-500 pr-1">المسمى الوظيفي <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                    <input asp-for="Position" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-800 placeholder:text-slate-400 font-cairo" placeholder="مثال: طبيب عام، صيدلي..." type="text" />
-                    <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400">work</span>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">رقم الهاتف</label>
+        <input asp-for="Phone" class="enterprise-input" dir="ltr" placeholder="05XXXXXXXX" type="tel" style="max-width:18rem;" />
+    </div>
 
-    <!-- Section: Employment Details -->
-    <section class="space-y-6">
-        <div class="flex items-center gap-3 mb-2 border-b border-slate-100 pb-2">
-            <div class="w-1 h-6 bg-indigo-500 rounded-full"></div>
-            <h2 class="text-lg font-black text-slate-800 tracking-tight">تفاصيل العمل</h2>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Branch Selection -->
-            <div class="space-y-2">
-                <label class="block text-sm font-black text-slate-500 pr-1">الفرع / القسم <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                    <select asp-for="BranchId" asp-items="ViewBag.BranchList" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-800 appearance-none cursor-pointer">
-                        <option value="">اختر التوجيه الميداني</option>
-                    </select>
-                    <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400 pointer-events-none">location_on</span>
-                </div>
-            </div>
-
-            <!-- Salary Input -->
-            <div class="space-y-2">
-                <label class="block text-sm font-black text-slate-500 pr-1">الراتب الأساسي <span class="text-rose-500">*</span></label>
-                <div class="relative">
-                    <input asp-for="Salary" step="0.01" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3 pr-12 pl-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-black text-slate-800 text-left ltr" placeholder="0.00" type="number" />
-                    <div class="absolute right-4 top-3.5 text-xs font-black text-slate-400 tracking-wider">ر.ي</div>
-                    <span class="material-symbols-outlined absolute left-3 top-3 text-slate-400">payments</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Section: Status Selection -->
-    <section class="bg-indigo-50/50 p-6 rounded-sm border border-indigo-100 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-            <div class="bg-white p-3 rounded-sm shadow-sm border border-indigo-50">
-                <span class="material-symbols-outlined text-indigo-500 text-2xl">verified_user</span>
-            </div>
-            <div>
-                <h3 class="font-black text-slate-800 text-base">حالة الموظف (النشاط)</h3>
-                <p class="text-xs font-bold text-slate-500">تحديد ما إذا كان الموظف نشطاً في النظام حالياً</p>
-            </div>
-        </div>
-        <div class="w-full md:w-1/3">
-            <select asp-for="IsActive" class="w-full bg-white border border-slate-200 rounded-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-black appearance-none cursor-pointer text-sm">
-                <option value="true" class="text-emerald-600">✅ متواجد (نشط)</option>
-                <option value="false" class="text-rose-600">❌ موقوف / مجاز</option>
+    <div class="enterprise-section-title" style="margin-top:24px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">work</span>
+        تفاصيل العمل
+    </div>
+    <div class="enterprise-row">
+        <div>
+            <label class="enterprise-label">الفرع / القسم <span style="color:#e11d48;">*</span></label>
+            <select asp-for="BranchId" asp-items="ViewBag.BranchList" required class="enterprise-select">
+                <option value="">اختر التوجيه الميداني</option>
             </select>
         </div>
-    </section>
+        <div>
+            <label class="enterprise-label">الراتب الأساسي <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <input asp-for="Salary" step="0.01" required class="enterprise-input" placeholder="0.00" type="number" style="flex:1;" />
+                <span style="font-size:12px;font-weight:800;color:#64748b;white-space:nowrap;">ر.ي</span>
+            </div>
+        </div>
+    </div>
 
-    <div class="ph-modal-actions mt-6">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">
-            <span class="material-symbols-outlined" style="font-size:18px;">block</span>
+    <div class="enterprise-section-title" style="margin-top:24px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">verified_user</span>
+        حالة النظام
+    </div>
+    <div style="border:1px solid #e2e8f0;border-radius:2px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span class="material-symbols-outlined" style="font-size:20px;color:#063955;">person_check</span>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">حالة الموظف (النشاط)</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">تحديد ما إذا كان الموظف نشطاً في النظام حالياً</div>
+            </div>
+        </div>
+        <select asp-for="IsActive" class="enterprise-select" style="width:auto;min-width:10rem;">
+            <option value="true">✅ متواجد (نشط)</option>
+            <option value="false">❌ موقوف / مجاز</option>
+        </select>
+    </div>
+
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">block</span>
             تراجع
         </button>
-        <button type="submit" class="ph-btn-warning">
-            <span class="material-symbols-outlined" style="font-size:18px;">sync_alt</span>
+        <button type="submit" class="enterprise-btn-warning">
+            <span class="material-symbols-outlined" style="font-size:16px;">save</span>
             حفظ التعديلات
         </button>
     </div>
-
 </form>
 
 @section Scripts {

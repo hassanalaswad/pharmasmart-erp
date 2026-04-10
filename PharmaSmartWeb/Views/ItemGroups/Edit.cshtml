@@ -11,43 +11,53 @@
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="GroupId" />
 
-    <div class="ph-form-grid ph-form-grid-2">
+    @if (ViewBag.Error != null)
+    {
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
+    }
+
+    <div class="enterprise-section-title">بيانات المجموعة</div>
+
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">الرمز (Code)</label>
-            <input asp-for="GroupCode" class="ph-form-control" style="font-family:monospace;text-transform:uppercase;" />
+            <label class="enterprise-label">الرمز (Code)</label>
+            <input asp-for="GroupCode" class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
         </div>
         <div>
-            <label class="ph-form-label">اسم المجموعة <span style="color:#e11d48;">*</span></label>
-            <input asp-for="GroupName" required class="ph-form-control" />
+            <label class="enterprise-label">اسم المجموعة <span style="color:#e11d48;">*</span></label>
+            <input asp-for="GroupName" required class="enterprise-input" />
         </div>
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label">ملاحظات / وصف</label>
-            <input asp-for="Description" class="ph-form-control" />
-        </div>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">ملاحظات / وصف</label>
+        <input asp-for="Description" class="enterprise-input" placeholder="وصف مختصر للمجموعة..." />
     </div>
 
-    <div class="ph-form-panel">
+    <div class="enterprise-section-title" style="margin-top:24px;">حالة النظام</div>
+
+    <div style="border:1px solid #e2e8f0;border-radius:2px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;flex-wrap:wrap;gap:12px;">
         <div>
-            <div class="ph-form-panel-title">تفعيل المجموعة</div>
-            <div class="ph-form-panel-hint">تحديد ما إذا كانت المجموعة الدوائية ستظهر في قوائم اختيار الأدوية وتوجيه المخزون.</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">تفعيل المجموعة</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">تحديد ما إذا كانت المجموعة ستظهر في قوائم اختيار الأدوية وتوجيه المخزون.</div>
         </div>
-        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
-            <input type="checkbox" name="IsActive" value="true" @(Model.IsActive == true ? "checked" : "") style="width:1rem;height:1rem;cursor:pointer;accent-color:#063955;" />
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:white;padding:6px 12px;border:1px solid #cbd5e1;border-radius:2px;">
+            <input type="checkbox" name="IsActive" value="true" @(Model.IsActive == true ? "checked" : "") style="width:15px;height:15px;cursor:pointer;accent-color:#063955;" />
             <input type="hidden" name="IsActive" value="false" />
-            <span style="font-size:0.75rem;font-weight:800;color:#063955;">نشطة</span>
+            <span style="font-size:12px;font-weight:700;color:#063955;">@(Model.IsActive == true ? "نشطة" : "غير نشطة")</span>
         </label>
     </div>
 
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">
-            <span class="material-symbols-outlined" style="font-size:18px;">cancel</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">cancel</span>
             إلغاء التعديل
         </button>
-        <button type="submit" class="ph-btn-warning">
-            <span class="material-symbols-outlined" style="font-size:18px;">sync_alt</span>
+        <button type="submit" class="enterprise-btn-warning">
+            <span class="material-symbols-outlined" style="font-size:16px;">sync_alt</span>
             حفظ التحديثات
         </button>
     </div>

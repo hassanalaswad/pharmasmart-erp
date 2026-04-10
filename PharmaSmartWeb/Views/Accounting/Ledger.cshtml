@@ -1,0 +1,313 @@
+@model IEnumerable<PharmaSmartWeb.Models.Journaldetails>
+
+@{
+    ViewData["Title"] = "كشف الحساب التفصيلي";
+    Layout = "_ModalLayout";
+    ViewBag.ModalPanelSize = "xl";
+    ViewBag.ModalHeaderIcon = "account_balance";
+    ViewBag.ModalFlushContent = true;
+}
+
+<style>
+    .ledger-container { padding: 20px 24px; }
+    .ledger-filter-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 16px 20px; margin-bottom: 20px; }
+    .ledger-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; }
+    @@media (max-width: 768px) { .ledger-filter-row { grid-template-columns: 1fr 1fr; } }
+    @@media (max-width: 480px) { .ledger-filter-row { grid-template-columns: 1fr; } }
+
+    .form-label { font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 8px 10px; font-size: 12px; background: white; box-sizing: border-box; }
+    .form-control:focus { outline: none; border-color: #063955; }
+
+    .btn-primary { background: #063955; color: white; border: none; padding: 9px 18px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary:hover { background: #0a4f72; }
+
+    /* بطاقة معلومات الحساب */
+    .account-info-card {
+        background: linear-gradient(135deg, #063955 0%, #0a5f82 100%);
+        color: white;
+        border-radius: 4px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .account-info-name { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .account-info-code { font-size: 12px; color: rgba(255,255,255,0.7); font-family: monospace; }
+    .account-balance-box { text-align: center; }
+    .account-balance-label { font-size: 10px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .account-balance-value { font-size: 28px; font-weight: 900; font-family: monospace; line-height: 1; }
+
+    /* جدول كشف الحساب */
+    .ledger-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .ledger-table th {
+        background: #f1f5f9;
+        padding: 9px 12px;
+        border-bottom: 2px solid #cbd5e1;
+        border-top: 1px solid #cbd5e1;
+        color: #334155;
+        font-weight: 700;
+        text-align: right;
+    }
+    .ledger-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
+    .ledger-table tr:hover td { background: #f8fafc; }
+    .ledger-table tr.opening-row td { background: #fffbeb; font-weight: 700; color: #92400e; }
+    .ledger-table tr.closing-row td { background: #f0fdf4; font-weight: 800; color: #065f46; border-top: 2px solid #a7f3d0; }
+
+    .debit-cell { color: #059669; font-weight: 700; font-family: monospace; }
+    .credit-cell { color: #e11d48; font-weight: 700; font-family: monospace; }
+    .balance-positive { color: #ef4444; font-weight: 800; font-family: monospace; }
+    .balance-negative { color: #059669; font-weight: 800; font-family: monospace; }
+    .balance-zero { color: #94a3b8; font-family: monospace; }
+
+    .ledger-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    @@media (max-width: 640px) { .ledger-summary { grid-template-columns: 1fr; } }
+    .summary-card { background: white; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px 16px; text-align: center; }
+    .summary-card-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+    .summary-card-value { font-size: 20px; font-weight: 800; font-family: monospace; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state .icon { font-size: 56px; opacity: 0.3; display: block; margin-bottom: 12px; }
+
+    /* طباعة */
+    @@media print {
+        .ledger-filter-card { display: none; }
+        .account-info-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .ledger-table th { background: #f1f5f9 !important; }
+    }
+</style>
+
+<div class="ledger-container">
+
+    @* فلتر البحث *@
+    <div class="ledger-filter-card">
+        <form method="get" asp-action="Ledger">
+            <div class="ledger-filter-row">
+                <div>
+                    <label class="form-label">
+                        <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">account_tree</span>
+                        اختر الحساب
+                    </label>
+                    <select name="accountId" class="form-control" onchange="this.form.submit()">
+                        <option value="">-- اختر الحساب --</option>
+                        @if (ViewBag.Accounts != null)
+                        {
+                            int selectedAccountId = ViewBag.SelectedAccount != null ? ((PharmaSmartWeb.Models.Accounts)ViewBag.SelectedAccount).AccountId : 0;
+                            foreach (var acc in ViewBag.Accounts)
+                            {
+                                if (acc.AccountId == selectedAccountId)
+                                {
+                                    <option value="@acc.AccountId" selected="selected">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                                else
+                                {
+                                    <option value="@acc.AccountId">@acc.AccountCode - @acc.AccountName</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">من تاريخ</label>
+                    <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control" />
+                </div>
+                <div>
+                    <label class="form-label">إلى تاريخ</label>
+                    <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control" />
+                </div>
+                <div>
+                    <button type="submit" class="btn-primary">
+                        <span class="material-symbols-outlined" style="font-size:15px;">search</span>
+                        عرض
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @if (ViewBag.SelectedAccount != null)
+    {
+        var selectedAcc = ViewBag.SelectedAccount as PharmaSmartWeb.Models.Accounts;
+        decimal openingBalance = (decimal)(ViewBag.OpeningBalance ?? 0m);
+
+        @* بطاقة الحساب *@
+        <div class="account-info-card">
+            <div>
+                <div class="account-info-name">
+                    <span class="material-symbols-outlined" style="vertical-align:middle;font-size:20px;">account_balance_wallet</span>
+                    @selectedAcc.AccountName
+                </div>
+                <div class="account-info-code">كود الحساب: @selectedAcc.AccountCode</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:4px;">
+                    الفترة من: @ViewBag.FromDate إلى @ViewBag.ToDate
+                </div>
+            </div>
+            <div class="account-balance-box">
+                <div class="account-balance-label">الرصيد الافتتاحي</div>
+                <div class="account-balance-value">
+                    @openingBalance.ToString("N2")
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Any())
+        {
+            @* الحساب الجاري *@
+            decimal runningBalance = openingBalance;
+            decimal totalDebit = 0m, totalCredit = 0m;
+            foreach (var tx in Model)
+            {
+                if (selectedAcc.AccountNature)
+                    runningBalance += tx.Debit - tx.Credit;
+                else
+                    runningBalance += tx.Credit - tx.Debit;
+                totalDebit += tx.Debit;
+                totalCredit += tx.Credit;
+            }
+            decimal closingBalance = runningBalance;
+
+            @* ملخص أعلى الجدول *@
+            <div class="ledger-summary" style="margin-bottom:16px;">
+                <div class="summary-card" style="border-right:4px solid #059669;">
+                    <div class="summary-card-label">إجمالي الحركات المدينة</div>
+                    <div class="summary-card-value" style="color:#059669;">@totalDebit.ToString("N2")</div>
+                </div>
+                <div class="summary-card" style="border-right:4px solid #e11d48;">
+                    <div class="summary-card-label">إجمالي الحركات الدائنة</div>
+                    <div class="summary-card-value" style="color:#e11d48;">@totalCredit.ToString("N2")</div>
+                </div>
+                <div class="summary-card" style="border-right:4px solid #063955;">
+                    <div class="summary-card-label">الرصيد الختامي</div>
+                    <div class="summary-card-value" style="color:@(closingBalance > 0 ? "#e11d48" : "#059669");">
+                        @closingBalance.ToString("N2")
+                    </div>
+                </div>
+            </div>
+
+            @* الجدول *@
+            <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:4px;">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">#</th>
+                            <th>التاريخ</th>
+                            <th>رقم القيد</th>
+                            <th>البيان / الوصف</th>
+                            <th style="text-align:center;">مدين</th>
+                            <th style="text-align:center;">دائن</th>
+                            <th style="text-align:center;">الرصيد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @* الرصيد الافتتاحي *@
+                        <tr class="opening-row">
+                            <td style="text-align:center;" colspan="4">
+                                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">flag</span>
+                                الرصيد الافتتاحي قبل تاريخ @ViewBag.FromDate
+                            </td>
+                            <td colspan="2"></td>
+                            <td style="text-align:center;">
+                                <span class="@(openingBalance > 0 ? "balance-positive" : openingBalance < 0 ? "balance-negative" : "balance-zero")">
+                                    @openingBalance.ToString("N2")
+                                </span>
+                            </td>
+                        </tr>
+
+                        @{
+                            int rowNum = 1;
+                            decimal balance = openingBalance;
+                        }
+
+                        @foreach (var tx in Model)
+                        {
+                            if (selectedAcc.AccountNature)
+                                balance += tx.Debit - tx.Credit;
+                            else
+                                balance += tx.Credit - tx.Debit;
+
+                            string balanceClass = balance > 0 ? "balance-positive" : balance < 0 ? "balance-negative" : "balance-zero";
+
+                            <tr>
+                                <td style="text-align:center; color:#94a3b8; font-size:11px;">@rowNum.ToString("D3")</td>
+                                <td dir="ltr" style="font-family:monospace; font-size:11px;">
+                                    @(tx.Journal?.JournalDate.ToString("yyyy-MM-dd") ?? "-")
+                                </td>
+                                <td>
+                                    <span style="font-family:monospace; font-size:11px; background:#f1f5f9; padding:2px 6px; border-radius:2px;">
+                                        #@(tx.Journal?.JournalId ?? 0)
+                                    </span>
+                                </td>
+                                <td style="max-width:250px;">
+                                    <div style="font-weight:600;">@(tx.Journal?.Description ?? "—")</div>
+                                </td>
+                                <td style="text-align:center;">
+                                    @if (tx.Debit > 0)
+                                    {
+                                        <span class="debit-cell">@tx.Debit.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#cbd5e1;">—</span>
+                                    }
+                                </td>
+                                <td style="text-align:center;">
+                                    @if (tx.Credit > 0)
+                                    {
+                                        <span class="credit-cell">@tx.Credit.ToString("N2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:#cbd5e1;">—</span>
+                                    }
+                                </td>
+                                <td style="text-align:center;">
+                                    <span class="@balanceClass">@balance.ToString("N2")</span>
+                                </td>
+                            </tr>
+                            rowNum++;
+                        }
+
+                        @* الرصيد الختامي *@
+                        <tr class="closing-row">
+                            <td colspan="4" style="text-align:center;">
+                                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">done_all</span>
+                                الرصيد الختامي — نهاية الفترة @ViewBag.ToDate
+                            </td>
+                            <td style="text-align:center;">
+                                <span class="debit-cell">@totalDebit.ToString("N2")</span>
+                            </td>
+                            <td style="text-align:center;">
+                                <span class="credit-cell">@totalCredit.ToString("N2")</span>
+                            </td>
+                            <td style="text-align:center;">
+                                <span class="@(closingBalance > 0 ? "balance-positive" : closingBalance < 0 ? "balance-negative" : "balance-zero")" style="font-size:14px;">
+                                    @closingBalance.ToString("N2")
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <span class="material-symbols-outlined icon">receipt_long</span>
+                <p style="font-size:14px; font-weight:700; margin-bottom:6px;">لا توجد حركات مسجلة في هذه الفترة</p>
+                <p style="font-size:12px;">حاول تغيير نطاق التواريخ أو اختيار حساب آخر</p>
+            </div>
+        }
+    }
+    else if (!Model.Any())
+    {
+        <div class="empty-state">
+            <span class="material-symbols-outlined icon">manage_search</span>
+            <p style="font-size:14px; font-weight:700; margin-bottom:6px;">اختر حساباً لعرض كشف حسابه</p>
+            <p style="font-size:12px;">حدد الحساب المطلوب والفترة الزمنية ثم اضغط عرض</p>
+        </div>
+    }
+
+</div>

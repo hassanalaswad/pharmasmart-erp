@@ -1,9 +1,33 @@
 @inject PharmaSmartWeb.Services.ISystemSettingsService Settings
 @{
     var reportLayoutController = Context.Request.RouteValues["controller"]?.ToString() ?? "Home";
-    var reportLayoutBackFallback = string.Equals(reportLayoutController, "Home", StringComparison.OrdinalIgnoreCase)
-        ? "/Home/Index"
-        : $"/{reportLayoutController}/Index";
+    var reportLayoutBackFallback = "/Home/ReportsHub"; // الافتراضي للتقارير
+
+    if (string.Equals(reportLayoutController, "Home", StringComparison.OrdinalIgnoreCase) || 
+        string.Equals(reportLayoutController, "Admin", StringComparison.OrdinalIgnoreCase))
+    {
+        reportLayoutBackFallback = "/Home/AdminHub";
+    }
+    else if (string.Equals(reportLayoutController, "Inventory", StringComparison.OrdinalIgnoreCase) || 
+             string.Equals(reportLayoutController, "Drugs", StringComparison.OrdinalIgnoreCase))
+    {
+        reportLayoutBackFallback = "/Home/InventoryHub";
+    }
+    else if (string.Equals(reportLayoutController, "Sales", StringComparison.OrdinalIgnoreCase) || 
+             string.Equals(reportLayoutController, "Purchases", StringComparison.OrdinalIgnoreCase))
+    {
+        reportLayoutBackFallback = "/Home/CommercialHub";
+    }
+    else if (string.Equals(reportLayoutController, "Accounting", StringComparison.OrdinalIgnoreCase) || 
+             string.Equals(reportLayoutController, "JournalEntries", StringComparison.OrdinalIgnoreCase))
+    {
+        reportLayoutBackFallback = "/Home/FinanceHub";
+    }
+    else if (!string.Equals(reportLayoutController, "Report", StringComparison.OrdinalIgnoreCase) && 
+             !string.Equals(reportLayoutController, "InventoryIntelligence", StringComparison.OrdinalIgnoreCase))
+    {
+        reportLayoutBackFallback = $"/{reportLayoutController}/Index";
+    }
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -312,19 +336,24 @@
 <body>
     <script>
         function pharmaSmartNavigateBack(fallbackUrl) {
-            var fb = fallbackUrl || '/Home/Index';
-            try {
-                var ref = document.referrer || '';
-                if (ref.indexOf(window.location.origin) === 0 && window.history.length > 1) {
-                    window.history.back();
+            // إذا كان التقرير معروضاً داخل نافذة منبثقة (iframe Modal)
+            if (window.self !== window.top) {
+                try {
+                    window.parent.postMessage('closeModal', '*');
                     return;
+                } catch (e) {
+                    // fallthrough in case of cross-origin block
                 }
-            } catch (e) { }
+            }
+            
+            // إلغاء استخدام history.back لأن الفلترة في التقارير عبارة عن GET requests 
+            // مما يؤدي إلى تعليق المستخدم في نافذة التقرير عند الضغط على رجوع
+            var fb = fallbackUrl || '/Home/ReportsHub';
             window.location.href = fb;
         }
     </script>
     <div class="no-print" style="max-width:210mm;margin:10px auto 0;padding:0 20px;box-sizing:border-box;">
-        <button type="button" data-back-fallback="@reportLayoutBackFallback" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="rf-btn-print" style="display:inline-flex;align-items:center;gap:6px;" title="الرجوع للصفحة التي أتيت منها" aria-label="رجوع">
+        <button type="button" data-back-fallback="@reportLayoutBackFallback" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="rf-btn-print" style="display:inline-flex;align-items:center;gap:6px;" title="الرجوع إلى البوابة / مركز التقارير" aria-label="رجوع">
             <span style="font-size:16px;line-height:1;">↩</span> رجوع
         </button>
     </div>
@@ -425,8 +454,7 @@
 
     <!-- Notes -->
     <div class="notes" style="position: relative; z-index: 10;">
-        ملاحظة: هذا التقرير تم إنشاؤه تلقائيًا من النظام ويعتبر وثيقة رسمية قابلة للمراجعة والتدقيق.
-        @(ViewBag.ReportNotes != null ? " | " + ViewBag.ReportNotes : "")
+.        @(ViewBag.ReportNotes != null ? " | " + ViewBag.ReportNotes : "")
     </div>
 
     <!-- Signatures -->

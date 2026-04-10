@@ -13,54 +13,64 @@
 
     @if (ViewBag.Error != null)
     {
-        <div class="ph-alert-error">⚠ @ViewBag.Error</div>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
     }
 
-    <div class="ph-section-title">المعلومات الشخصية</div>
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-section-title">
+        <span class="material-symbols-outlined" style="font-size:18px;">person</span>
+        المعلومات الشخصية
+    </div>
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">الاسم الكامل <span style="color:#e11d48;">*</span></label>
-            <input asp-for="FullName" required class="ph-form-control" placeholder="أدخل اسم الموظف" type="text" />
-            <span asp-validation-for="FullName" style="color:#e11d48;font-size:11px;"></span>
+            <label class="enterprise-label">الاسم الكامل <span style="color:#e11d48;">*</span></label>
+            <input asp-for="FullName" required class="enterprise-input" placeholder="أدخل اسم الموظف" type="text" />
+            <span asp-validation-for="FullName" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
         <div>
-            <label class="ph-form-label">المسمى الوظيفي <span style="color:#e11d48;">*</span></label>
-            <input asp-for="Position" required class="ph-form-control" placeholder="مثال: طبيب عام، صيدلي..." type="text" />
+            <label class="enterprise-label">المسمى الوظيفي <span style="color:#e11d48;">*</span></label>
+            <input asp-for="Position" required class="enterprise-input" placeholder="مثال: طبيب عام، صيدلي..." type="text" />
         </div>
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label">رقم الهاتف</label>
-            <input asp-for="Phone" class="ph-form-control" dir="ltr" placeholder="05XXXXXXXX" type="tel" style="max-width:18rem;" />
-        </div>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">رقم الهاتف</label>
+        <input asp-for="Phone" class="enterprise-input" dir="ltr" placeholder="05XXXXXXXX" type="tel" style="max-width:18rem;" />
     </div>
 
-    <div class="ph-section-title">تفاصيل العمل</div>
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-section-title" style="margin-top:24px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">work</span>
+        تفاصيل العمل
+    </div>
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">الفرع / القسم <span style="color:#e11d48;">*</span></label>
-            <select asp-for="BranchId" asp-items="ViewBag.BranchList" required class="ph-form-select">
+            <label class="enterprise-label">الفرع / القسم <span style="color:#e11d48;">*</span></label>
+            <select asp-for="BranchId" asp-items="ViewBag.BranchList" required class="enterprise-select">
                 <option value="">اختر التوجيه الميداني</option>
             </select>
         </div>
         <div>
-            <label class="ph-form-label">الراتب الأساسي <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <input asp-for="Salary" step="0.01" required class="ph-form-control" placeholder="0.00" type="number" style="flex:1;" />
-                <span style="font-size:0.75rem;font-weight:800;color:#64748b;white-space:nowrap;">ر.ي</span>
+            <label class="enterprise-label">الراتب الأساسي <span style="color:#e11d48;">*</span></label>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <input asp-for="Salary" step="0.01" required class="enterprise-input" placeholder="0.00" type="number" style="flex:1;" />
+                <span style="font-size:12px;font-weight:800;color:#64748b;white-space:nowrap;">ر.ي</span>
             </div>
         </div>
     </div>
 
-    <div class="ph-alert-info">
-        ℹ الموظف الجديد سيكون «نشطاً» بشكل افتراضي. يمكنك لاحقاً تعديل الحالة من شاشة التعديل.
+    <div class="enterprise-info-box" style="background:#f0f9ff;border-color:#bae6fd;">
+        <span class="material-symbols-outlined" style="color:#0284c7;font-size:20px;">info</span>
+        <div style="font-size:12px;color:#0369a1;font-weight:600;">
+            الموظف الجديد سيكون «نشطاً» بشكل افتراضي. يمكنك لاحقاً تعديل الحالة من شاشة التعديل.
+        </div>
     </div>
 
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">رجوع</button>
-        <button type="submit" class="ph-btn-primary">
-            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">رجوع</button>
+        <button type="submit" class="enterprise-btn-submit">
+            <span class="material-symbols-outlined" style="font-size:16px;">save</span>
             حفظ واعتماد الموظف
         </button>
     </div>

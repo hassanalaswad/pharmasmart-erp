@@ -84,8 +84,6 @@ namespace PharmaSmartWeb.Services
                     group.Items.Add(new MenuItem { Title = "مرتجع المشتريات", Url = "/PurchasesReturn/Index", Icon = "remove_shopping_cart" });
 
                 // Reporting link mapped to unit Operations
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
-                    group.Items.Add(new MenuItem { Title = "إنتاجية الصيادلة", Url = "/Report/PharmacistSales", Icon = "timeline" });
 
                 if (group.Items.Any()) allowedGroups.Add(group);
             }
@@ -165,7 +163,7 @@ namespace PharmaSmartWeb.Services
                     group.Items.Add(new MenuItem { Title = "مراقبة الصلاحية والاستهلاك", Url = "/Report/StockExpiry", Icon = "event_busy" });
 
                     // الأداء والعمليات
-                    group.Items.Add(new MenuItem { Title = "إنتاجية وعمولات الموظفين", Url = "/Report/PharmacistSales", Icon = "local_pharmacy" });
+                    group.Items.Add(new MenuItem { Title = "انتاجية الفروع", Url = "/Report/PharmacistSales", Icon = "local_pharmacy" });
                 }
 
                 if (group.Items.Any()) allowedGroups.Add(group);

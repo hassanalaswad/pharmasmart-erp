@@ -11,66 +11,64 @@
 
     @if (ViewBag.Error != null)
     {
-        <div class="ph-alert-error">⚠ @ViewBag.Error</div>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
     }
 
-    <div class="ph-section-title">بيانات العملة</div>
+    <div class="enterprise-section-title">بيانات العملة</div>
 
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label" for="CurrencyName">اسم العملة <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">payments</span>
-                <input type="text" asp-for="CurrencyName" id="CurrencyName" required autocomplete="off" placeholder="مثال: ريال يمني" class="ph-form-control" style="flex:1;" />
-            </div>
-            <span asp-validation-for="CurrencyName" style="color:#e11d48;font-size:11px;"></span>
+            <label class="enterprise-label">اسم العملة <span style="color:#e11d48;">*</span></label>
+            <input type="text" asp-for="CurrencyName" required autocomplete="off" placeholder="مثال: ريال يمني" class="enterprise-input" />
+            <span asp-validation-for="CurrencyName" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
         <div>
-            <label class="ph-form-label" for="CurrencyCode">كود العملة (ISO) <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">tag</span>
-                <input type="text" asp-for="CurrencyCode" id="CurrencyCode" required autocomplete="off" placeholder="مثال: YER / USD / SAR" class="ph-form-control" style="flex:1;font-family:monospace;text-transform:uppercase;" />
-            </div>
-            <span asp-validation-for="CurrencyCode" style="color:#e11d48;font-size:11px;"></span>
+            <label class="enterprise-label">كود العملة (ISO) <span style="color:#e11d48;">*</span></label>
+            <input type="text" asp-for="CurrencyCode" required autocomplete="off" placeholder="مثال: YER / USD / SAR" class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
+            <span asp-validation-for="CurrencyCode" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label" for="ExchangeRate">سعر الصرف مقابل العملة المرجعية <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">currency_exchange</span>
-                <input type="number" asp-for="ExchangeRate" id="ExchangeRate" step="0.0001" min="0.0001" required placeholder="1.0000" class="ph-form-control" style="flex:1;font-family:monospace;font-weight:800;max-width:14rem;" />
-            </div>
-            <div class="ph-info-note">سعر الصرف مقابل العملة الرئيسية للنظام. للعملة الأساسية اجعله 1.0000</div>
-            <span asp-validation-for="ExchangeRate" style="color:#e11d48;font-size:11px;"></span>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">سعر الصرف مقابل العملة المرجعية <span style="color:#e11d48;">*</span></label>
+        <input type="number" asp-for="ExchangeRate" step="0.0001" min="0.0001" required placeholder="1.0000"
+               class="enterprise-input" style="font-family:monospace;font-weight:800;max-width:16rem;" />
+        <div style="font-size:11px;color:#64748b;margin-top:6px;">
+            <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</span>
+            سعر الصرف مقابل العملة الرئيسية للنظام. للعملة الأساسية اجعله 1.0000
         </div>
+        <span asp-validation-for="ExchangeRate" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
     </div>
 
-    <div class="ph-form-grid ph-form-grid-2">
-        <label class="ph-form-check" for="IsBaseCurrency">
-            <input type="checkbox" asp-for="IsBaseCurrency" id="IsBaseCurrency" />
-            <span class="ph-form-check-label">
-                <strong>العملة الأساسية (المرجعية)</strong><br />
-                <span style="font-size:0.6875rem;color:#64748b;">تحديد هذه العملة كعملة مرجعية للنظام</span>
-            </span>
+    <div class="enterprise-section-title" style="margin-top:24px;">إعدادات العملة</div>
+
+    <div class="enterprise-row">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid #e2e8f0;border-radius:2px;background:#f8fafc;">
+            <input type="checkbox" asp-for="IsBaseCurrency" style="width:15px;height:15px;cursor:pointer;accent-color:#063955;flex-shrink:0;" />
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">العملة الأساسية (المرجعية)</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">تحديد هذه العملة كعملة مرجعية للنظام</div>
+            </div>
         </label>
-        <label class="ph-form-check" for="IsActive">
-            <input type="checkbox" asp-for="IsActive" id="IsActive" checked />
-            <span class="ph-form-check-label">
-                <strong>العملة نشطة</strong><br />
-                <span style="font-size:0.6875rem;color:#64748b;">تفعيل استخدام هذه العملة في النظام</span>
-            </span>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid #e2e8f0;border-radius:2px;background:#f8fafc;">
+            <input type="checkbox" asp-for="IsActive" checked style="width:15px;height:15px;cursor:pointer;accent-color:#063955;flex-shrink:0;" />
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">العملة نشطة</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">تفعيل استخدام هذه العملة في النظام</div>
+            </div>
         </label>
     </div>
 
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">
-            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">close</span>
             إلغاء
         </button>
-        <button type="submit" class="ph-btn-primary">
-            <span class="material-symbols-outlined" style="font-size:18px;">add_circle</span>
+        <button type="submit" class="enterprise-btn-submit">
+            <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
             إضافة العملة
         </button>
     </div>

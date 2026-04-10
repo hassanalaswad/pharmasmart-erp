@@ -1,72 +1,80 @@
 @model PharmaSmartWeb.Models.Currencies
-@{ 
+@{
     Layout = "_ModalLayout";
-    ViewData["Title"] = $"تعديل العملة: {@Model.CurrencyName}";
-    ViewBag.ModalPanelSize = "lg";
+    ViewData["Title"] = $"تعديل العملة: {Model.CurrencyName}";
+    ViewBag.ModalPanelSize = "md";
     ViewBag.ModalHeaderIcon = "payments";
 }
 
-<form asp-action="Edit" method="post" class="space-y-6">
+<form asp-action="Edit" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="CurrencyId" />
 
-    <div class="space-y-4 max-h-[60vh] overflow-y-auto pl-2 pr-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    @if (ViewBag.Error != null)
+    {
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
+    }
 
-            <div class="space-y-2">
-                <label class="text-xs font-bold text-outline uppercase tracking-widest block">اسم العملة <span class="text-error">*</span></label>
-                <input asp-for="CurrencyName" class="w-full bg-surface-container-lowest border border-outline-variant rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-sm font-bold text-on-surface" required />
-                <span asp-validation-for="CurrencyName" class="text-xs text-error font-bold block mt-1"></span>
-            </div>
+    <div class="enterprise-section-title">بيانات العملة</div>
 
-            <div class="space-y-2">
-                <label class="text-xs font-bold text-outline uppercase tracking-widest block">كود العملة (ISO) <span class="text-error">*</span></label>
-                <input asp-for="CurrencyCode" class="w-full bg-surface-container-lowest border border-outline-variant rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-sm font-mono font-bold text-primary" required />
-                <span asp-validation-for="CurrencyCode" class="text-xs text-error font-bold block mt-1"></span>
-            </div>
-
-            <div class="space-y-2 md:col-span-2 relative">
-                <label class="text-xs font-bold text-outline uppercase tracking-widest block mb-1">
-                    <span class="material-symbols-outlined text-sm text-secondary align-middle" style="font-variation-settings: 'FILL' 1;">info</span>
-                    سعر الصرف (Exchange Rate) <span class="text-error">*</span>
-                </label>
-                <div class="absolute right-4 top-[38px] text-outline pointer-events-none">
-                    <span class="material-symbols-outlined">currency_exchange</span>
-                </div>
-                <input asp-for="ExchangeRate" type="number" step="0.0001" class="w-full bg-surface-container-low border border-outline-variant rounded-sm pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all font-mono text-lg font-black text-on-surface shadow-inner" required />
-                <span asp-validation-for="ExchangeRate" class="text-xs text-error font-bold block mt-1"></span>
-            </div>
-
-            <div class="space-y-2">
-                <label class="flex items-center gap-3 cursor-pointer p-4 rounded-sm border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm">
-                    <input asp-for="IsBaseCurrency" type="checkbox" class="w-5 h-5 text-primary rounded border-outline focus:ring-primary" />
-                    <span class="block">
-                        <span class="font-bold text-on-surface block text-sm">العملة الأساسية (المرجعية)</span>
-                    </span>
-                </label>
-            </div>
-
-            <div class="space-y-2">
-                <label class="flex items-center gap-3 cursor-pointer p-4 rounded-sm border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm">
-                    <input asp-for="IsActive" type="checkbox" class="w-5 h-5 text-primary rounded border-outline focus:ring-primary" />
-                    <span class="block">
-                        <span class="font-bold text-on-surface block text-sm">تفعيل كعملة نشطة</span>
-                    </span>
-                </label>
-            </div>
-
+    <div class="enterprise-row">
+        <div>
+            <label class="enterprise-label">اسم العملة <span style="color:#e11d48;">*</span></label>
+            <input asp-for="CurrencyName" required autocomplete="off" placeholder="مثال: ريال يمني" class="enterprise-input" />
+            <span asp-validation-for="CurrencyName" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
+        </div>
+        <div>
+            <label class="enterprise-label">كود العملة (ISO) <span style="color:#e11d48;">*</span></label>
+            <input asp-for="CurrencyCode" required autocomplete="off" placeholder="مثال: YER / USD / SAR" class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
+            <span asp-validation-for="CurrencyCode" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
     </div>
 
-    <!-- Sticky Bottom Actions -->
-    <div class="mt-8 pt-4 border-t border-surface-container flex justify-end gap-3 sticky bottom-0 bg-surface z-10">
-        <button type="button" onclick="modalNavigateBack()" class="px-6 py-2.5 rounded-sm font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-2 border border-outline-variant">
-            <span class="material-symbols-outlined text-lg">close</span>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">سعر الصرف مقابل العملة المرجعية <span style="color:#e11d48;">*</span></label>
+        <input asp-for="ExchangeRate" type="number" step="0.0001" min="0.0001" required placeholder="1.0000"
+               class="enterprise-input" style="font-family:monospace;font-weight:800;max-width:16rem;" />
+        <div style="font-size:11px;color:#64748b;margin-top:6px;">
+            <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</span>
+            سعر الصرف مقابل العملة الرئيسية للنظام. للعملة الأساسية اجعله 1.0000
+        </div>
+        <span asp-validation-for="ExchangeRate" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
+    </div>
+
+    <div class="enterprise-section-title">إعدادات العملة</div>
+
+    <div class="enterprise-row">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid #e2e8f0;border-radius:2px;background:#f8fafc;">
+            <input asp-for="IsBaseCurrency" type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:#063955;flex-shrink:0;" />
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">العملة الأساسية (المرجعية)</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">تحديد هذه العملة كعملة مرجعية للنظام</div>
+            </div>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;border:1px solid #e2e8f0;border-radius:2px;background:#f8fafc;">
+            <input asp-for="IsActive" type="checkbox" style="width:15px;height:15px;cursor:pointer;accent-color:#063955;flex-shrink:0;" />
+            <div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;">العملة نشطة</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">تفعيل استخدام هذه العملة في النظام</div>
+            </div>
+        </label>
+    </div>
+
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">close</span>
             إلغاء التعديل
         </button>
-        <button type="submit" class="bg-primary text-white px-8 py-2.5 rounded-sm font-bold hover:bg-primary-container hover:text-white transition-colors flex items-center gap-2 shadow-sm border border-slate-200 shadow-primary/20">
-            <span class="material-symbols-outlined text-lg">save</span>
+        <button type="submit" class="enterprise-btn-warning">
+            <span class="material-symbols-outlined" style="font-size:16px;">save</span>
             حفظ التعديلات
         </button>
     </div>
 </form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

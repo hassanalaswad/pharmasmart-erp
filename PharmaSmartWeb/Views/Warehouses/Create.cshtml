@@ -12,33 +12,40 @@
 
 @if (!string.IsNullOrEmpty(errorMsg))
 {
-    <div class="ph-alert-error">⚠ @errorMsg</div>
+    <div class="enterprise-alert-error">
+        <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+        @errorMsg
+    </div>
 }
 
 <form asp-action="Create" method="post" id="warehouseForm">
     @Html.AntiForgeryToken()
 
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-section-title">بيانات المستودع</div>
+
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">اسم المستودع <span style="color:#e11d48;">*</span></label>
-            <input asp-for="WarehouseName" required placeholder="مثال: المعرض الرئيسي" class="ph-form-control" />
+            <label class="enterprise-label">اسم المستودع <span style="color:#e11d48;">*</span></label>
+            <input asp-for="WarehouseName" required placeholder="مثال: المعرض الرئيسي" class="enterprise-input" />
         </div>
         <div>
-            <label class="ph-form-label">الموقع والتصنيف</label>
-            <input asp-for="Location" placeholder="مثال: الفرع أو الدور الأول" class="ph-form-control" />
-        </div>
-        <div class="ph-form-panel ph-span-2" style="grid-column:1/-1;">
-            <div>
-                <div class="ph-form-panel-title">حالة المستودع</div>
-                <div class="ph-form-panel-hint">تحديد ما إذا كان هذا المستودع مستعداً لعمليات نقل وتخزين وجرد الأصناف.</div>
-            </div>
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
-                <input asp-for="IsActive" type="checkbox" checked style="width:1rem;height:1rem;cursor:pointer;accent-color:#063955;" />
-                <span style="font-size:0.75rem;font-weight:800;color:#063955;">نشط</span>
-            </label>
+            <label class="enterprise-label">الموقع والتصنيف</label>
+            <input asp-for="Location" placeholder="مثال: الفرع أو الدور الأول" class="enterprise-input" />
         </div>
     </div>
 
+    <div style="border:1px solid #e2e8f0;border-radius:2px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">حالة المستودع</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">تحديد ما إذا كان هذا المستودع مستعداً لعمليات نقل وتخزين وجرد الأصناف.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:white;padding:6px 12px;border:1px solid #cbd5e1;border-radius:2px;">
+            <input asp-for="IsActive" type="checkbox" checked style="width:15px;height:15px;cursor:pointer;accent-color:#063955;" />
+            <span style="font-size:12px;font-weight:700;color:#063955;">نشط</span>
+        </label>
+    </div>
+
+    <!-- جدول الرفوف -->
     <div class="ph-modal-toolbar">
         <div class="flex items-center gap-1.5">
             <span class="material-symbols-outlined text-[18px] opacity-95" aria-hidden="true">table_rows</span>
@@ -61,13 +68,13 @@
         </table>
     </div>
 
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">
-            <span class="material-symbols-outlined" style="font-size:18px;">cancel</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">cancel</span>
             إلغاء الإضافة
         </button>
-        <button type="submit" class="ph-btn-success">
-            <span class="material-symbols-outlined" style="font-size:18px;">domain_add</span>
+        <button type="submit" class="enterprise-btn-success">
+            <span class="material-symbols-outlined" style="font-size:16px;">domain_add</span>
             إنشاء المستودع واعتماد الرفوف
         </button>
     </div>
@@ -91,7 +98,7 @@
                                style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:5px;font-family:monospace;font-weight:700;text-transform:uppercase;text-align:center;" />
                     </td>
                     <td style="padding:6px 12px;">
-                        <select name="Shelves[${shelfIndex}].GroupId" class="ph-form-select" style="padding:5px;font-size:12px;">
+                        <select name="Shelves[${shelfIndex}].GroupId" class="enterprise-select" style="padding:5px;font-size:12px;">
                             ${groupOptions}
                         </select>
                         <input type="hidden" name="Shelves[${shelfIndex}].IsActive" value="true">

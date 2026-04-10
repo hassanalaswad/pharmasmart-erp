@@ -182,6 +182,7 @@ namespace PharmaSmartWeb.Controllers
                 {
                     FullName = dto.FullName,
                     Phone = dto.Phone,
+                    Address = dto.Address,
                     CreditLimit = dto.CreditLimit,
                     AccountId = newAccount.AccountId,
                     BranchId = ActiveBranchId,

@@ -9,46 +9,50 @@
 
 <form asp-action="Create" method="post">
     @Html.AntiForgeryToken()
+
     @if (ViewBag.Error != null)
     {
-        <div class="ph-alert-error">⚠ @ViewBag.Error</div>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
     }
 
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-section-title">بيانات الفرع</div>
+
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">كود الفرع (الرمز) <span style="color:#e11d48;">*</span></label>
-            <input type="text" asp-for="BranchCode" required placeholder="مثال: BR-01" class="ph-form-control" style="font-family:monospace;text-transform:uppercase;" />
+            <label class="enterprise-label">كود الفرع (الرمز) <span style="color:#e11d48;">*</span></label>
+            <input type="text" asp-for="BranchCode" required placeholder="مثال: BR-01" class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
         </div>
         <div>
-            <label class="ph-form-label">اسم الفرع <span style="color:#e11d48;">*</span></label>
-            <input type="text" asp-for="BranchName" required placeholder="مثال: فرع تالين الرئيسي" class="ph-form-control" />
+            <label class="enterprise-label">اسم الفرع <span style="color:#e11d48;">*</span></label>
+            <input type="text" asp-for="BranchName" required placeholder="مثال: فرع الرئيسي" class="enterprise-input" />
         </div>
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label">الموقع الجغرافي</label>
-            <input type="text" asp-for="Location" placeholder="العنوان بالتفصيل..." class="ph-form-control" />
-        </div>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">الموقع الجغرافي</label>
+        <input type="text" asp-for="Location" placeholder="العنوان بالتفصيل..." class="enterprise-input" />
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label">حالة الفرع</label>
-            <select asp-for="IsActive" class="ph-form-select">
-                <option value="true">✅ فرع نشط ويعمل</option>
-                <option value="false">❌ فرع مغلق أو قيد التجهيز</option>
-            </select>
-        </div>
+    <div class="enterprise-section-title" style="margin-top:24px;">حالة الفرع</div>
+
+    <div style="border:1px solid #e2e8f0;border-radius:2px;padding:12px 16px;background:#f8fafc;">
+        <label class="enterprise-label">حالة التشغيل</label>
+        <select asp-for="IsActive" class="enterprise-select">
+            <option value="true">✅ فرع نشط ويعمل</option>
+            <option value="false">❌ فرع مغلق أو قيد التجهيز</option>
+        </select>
     </div>
 
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">
-            <span class="material-symbols-outlined" style="font-size:18px;">cancel</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">cancel</span>
             إلغاء العملية
         </button>
-        <button type="submit" class="ph-btn-primary">
-            <span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>
+        <button type="submit" class="enterprise-btn-submit">
+            <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span>
             حفظ الفرع
         </button>
     </div>

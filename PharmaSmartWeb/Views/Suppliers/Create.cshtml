@@ -2,87 +2,80 @@
 
 @{
     ViewData["Title"] = "إضافة مورد دوائي جديد";
+    bool isPopup = ViewBag.IsPopup == true;
+    Layout = isPopup ? "_PopupLayout" : "_ModalLayout";
+    ViewBag.ModalPanelSize = "lg";
+    ViewBag.ModalHeaderIcon = "local_shipping";
 }
 
-<style>
-    .form-label { font-size: 13px; font-weight: 700; color: #063955; margin-bottom: 6px; display: block; }
-    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px 14px; font-size: 14px; background: #f8fafc; transition: all 0.2s; }
-    .form-control:focus { outline: none; border-color: #063955; background: white; box-shadow: 0 0 0 3px rgba(6,57,85,0.1); }
-    .form-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px 14px; font-size: 14px; background: #f8fafc; transition: all 0.2s; }
-    .form-select:focus { outline: none; border-color: #063955; background: white; box-shadow: 0 0 0 3px rgba(6,57,85,0.1); }
-    .section-title { font-size: 16px; font-weight: 800; color: #063955; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
-    .alert-error { background: #fff1f2; border-right: 4px solid #e11d48; border-radius: 4px; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #e11d48; margin-bottom: 24px; }
-    
-    /* Buttons */
-    .btn-submit { background: #063955; color: white; border: none; padding: 10px 28px; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-    .btn-submit:hover { background: #0a4f72; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    .btn-cancel { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-    .btn-cancel:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
-</style>
-
-<div class="bg-white border border-slate-200 shadow-sm rounded-md p-8 max-w-4xl">
 <form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    @* حقل مخفي لتمرير وضع الـ Popup إلى الـ POST action *@
+    <input type="hidden" name="isPopup" value="@(isPopup ? "true" : "false")" />
 
     @if (ViewBag.Error != null || TempData["Error"] != null)
     {
-        <div class="alert-error">⚠ @(ViewBag.Error ?? TempData["Error"])</div>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @(ViewBag.Error ?? TempData["Error"])
+        </div>
     }
 
-    <div class="section-title">البيانات الأساسية للشركة / المصنع</div>
+    <div class="enterprise-section-title">
+        <span class="material-symbols-outlined" style="font-size:18px;">domain</span>
+        البيانات الأساسية للشركة / المصنع
+    </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+    <div class="enterprise-row">
         <div>
-            <label class="form-label">اسم المورد <span style="color:#e11d48;">*</span></label>
-            <input asp-for="SupplierName" required class="form-control" placeholder="مثال: شركة الأدوية العالمية" type="text" />
-            <span asp-validation-for="SupplierName" style="color:#e11d48; font-size:11px;"></span>
+            <label class="enterprise-label">اسم المورد <span style="color:#e11d48;">*</span></label>
+            <input asp-for="SupplierName" required class="enterprise-input" placeholder="مثال: شركة الأدوية العالمية" type="text" />
+            <span asp-validation-for="SupplierName" style="color:#e11d48;font-size:11px;margin-top:4px;display:block;"></span>
         </div>
         <div>
-            <label class="form-label">المسؤول عن التواصل</label>
-            <input asp-for="ContactPerson" class="form-control" placeholder="الاسم الثلاثي للمندوب" type="text" />
+            <label class="enterprise-label">المسؤول عن التواصل</label>
+            <input asp-for="ContactPerson" class="enterprise-input" placeholder="الاسم الثلاثي للمندوب" type="text" />
+        </div>
+        <div>
+            <label class="enterprise-label">رقم الهاتف / الجوال</label>
+            <input asp-for="Phone" class="enterprise-input" dir="ltr" placeholder="05XXXXXXXX" type="tel" />
+        </div>
+        <div>
+            <label class="enterprise-label">العنوان بالتفصيل</label>
+            <input asp-for="Address" class="enterprise-input" placeholder="المدينة، الحي، اسم الشارع، رقم المبنى" type="text" />
         </div>
     </div>
 
-    <div class="section-title">بيانات التواصل والفاتورة</div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-        <div>
-            <label class="form-label">رقم الهاتف / الجوال</label>
-            <input asp-for="Phone" class="form-control" dir="ltr" placeholder="05XXXXXXXX" type="tel" />
-        </div>
-        <div>
-            <label class="form-label">العنوان بالتفصيل</label>
-            <input asp-for="Address" class="form-control" placeholder="المدينة، الحي، اسم الشارع، رقم المبنى" type="text" />
-        </div>
-    </div>
-
-    <div class="mt-8 mb-6 p-5 bg-[#f0f9ff] border border-[#bae6fd] rounded-md">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
-            <span class="material-symbols-outlined" style="color:#0284c7; font-size:24px;">account_balance_wallet</span>
-            <strong style="font-size:15px; color:#0369a1;">التوجيه المحاسبي الآلي للمورد</strong>
-        </div>
-        <div>
-            <label class="form-label" style="color:#059669;">الحساب الرئيسي المرتبط <span style="color:#e11d48;">*</span></label>
-            <select name="ParentAccountId" required class="form-select" style="border-color:#bbf7d0; max-width:400px;">
+    <div class="enterprise-info-box" style="margin-top:8px;background:#f0f9ff;border-color:#bae6fd;">
+        <span class="material-symbols-outlined" style="color:#0284c7;font-size:26px;">account_balance_wallet</span>
+        <div style="flex:1;">
+            <strong style="font-size:13px;color:#0369a1;display:block;margin-bottom:12px;">التوجيه المحاسبي الآلي للمورد</strong>
+            <label class="enterprise-label" style="color:#059669;">الحساب الرئيسي المرتبط <span style="color:#e11d48;">*</span></label>
+            <select name="ParentAccountId" required class="enterprise-select" style="border-color:#bbf7d0;max-width:400px;">
                 <option value="">-- اختر مجموعة الموردين في الدليل المالي --</option>
-                @foreach (var acc in ViewBag.ParentAccounts)
+                @if (ViewBag.ParentAccounts != null)
                 {
-                    <option value="@acc.Value">@acc.Text</option>
+                    foreach (var acc in ViewBag.ParentAccounts)
+                    {
+                        <option value="@acc.Value">@acc.Text</option>
+                    }
                 }
             </select>
-            <div style="font-size:11px; color:#64748b; margin-top:6px;">
-                ℹ سيتم إنشاء كود فرعي تلقائياً لهذا المورد تحت الحساب المختار في شجرة الحسابات.
+            <div style="font-size:11px;color:#64748b;margin-top:6px;">
+                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</span>
+                سيتم إنشاء كود فرعي تلقائياً لهذا المورد تحت الحساب المختار في شجرة الحسابات.
             </div>
+        </div>
     </div>
-    
-    <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:30px; padding-top:20px; border-top:1px solid #e2e8f0;">
-        <button type="button" onclick="history.back()" class="btn-cancel">إلغاء الإضافة</button>
-        <button type="submit" class="btn-submit">
-            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">إلغاء الإضافة</button>
+        <button type="submit" class="enterprise-btn-submit">
+            <span class="material-symbols-outlined" style="font-size:16px;">save</span>
             إنشاء المورد وفتح حساب مالي
         </button>
     </div>
 </form>
-</div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}

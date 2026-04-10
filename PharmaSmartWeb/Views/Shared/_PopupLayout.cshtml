@@ -1,0 +1,158 @@
+@using PharmaSmartWeb.Infrastructure
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"] | PharmaSmart ERP</title>
+    <script src="@AppAssets.CSS.Tailwind"></script>
+    <link rel="stylesheet" href="@AppAssets.CSS.FontAwesome">
+    <link rel="stylesheet" href="@AppAssets.CSS.AppCustom">
+    <script src="~/js/tailwind.config.js"></script>
+    <link href="~/css/cura-styles.css" rel="stylesheet"/>
+    <link href="~/css/modal-form-shell.css" rel="stylesheet" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/local-fonts.css" />
+    <style>
+        /* تنسيق خاص بوضع الـ Popup (داخل iframe) */
+        body {
+            background: white !important;
+            margin: 0;
+            padding: 0;
+            font-family: Tahoma, 'Cairo', sans-serif;
+        }
+        /* ضمان ظهور كلاسات enterprise داخل الـ popup بدون modal-shell-root */
+        .enterprise-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #063955;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .enterprise-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+            display: block;
+            letter-spacing: 0.02em;
+        }
+        .enterprise-input, .enterprise-select {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 2px;
+            padding: 9px 12px;
+            font-size: 13px;
+            background: #f8fafc;
+            transition: all 0.18s;
+            color: #0f172a;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .enterprise-input:focus, .enterprise-select:focus {
+            outline: none;
+            border-color: #063955;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(6, 57, 85, 0.1);
+        }
+        .enterprise-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        @@media (max-width: 600px) {
+            .enterprise-row { grid-template-columns: 1fr; }
+        }
+        .enterprise-alert-error {
+            background: #fff1f2;
+            border-right: 4px solid #e11d48;
+            border-radius: 2px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #e11d48;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .enterprise-info-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 2px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .enterprise-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+        .enterprise-btn-submit {
+            background: #063955;
+            color: white;
+            border: none;
+            padding: 8px 22px;
+            border-radius: 2px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.18s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+        .enterprise-btn-submit:hover { background: #0a4f72; }
+        .enterprise-btn-cancel {
+            background: white;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            padding: 8px 18px;
+            border-radius: 2px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.18s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+        .enterprise-btn-cancel:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+        /* محتوى الصفحة بداخل الـ popup */
+        .popup-body {
+            padding: 20px 24px;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        function modalNavigateBack() {
+            window.parent.postMessage('closeModal', '*');
+        }
+    </script>
+    <div class="popup-body">
+        @RenderBody()
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

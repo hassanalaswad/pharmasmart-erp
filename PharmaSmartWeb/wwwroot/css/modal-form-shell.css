@@ -1,6 +1,6 @@
 /**
  * PharmaSmart — قالب موحّد للشاشات المنبثقة (Create / Edit)
- * يُحمَّل من _ModalLayout فقط.
+ * يُحمَّل من _ModalLayout فقط.
  */
 .modal-shell-root {
   --ph-modal-primary: #063955;
@@ -9,30 +9,32 @@
   --ph-modal-success-hover: #047857;
   --ph-modal-border: #e2e8f0;
   --ph-modal-surface: #f8fafc;
-  --ph-modal-radius: 6px;
+  --ph-modal-radius: 4px;
 }
 
-/* أحجام اللوحة: تتكيّف مع العرض وعدد الحقول */
+/* ─── أحجام اللوحة ─────────────────────────────────────────── */
 .modal-shell-panel {
   width: 100%;
   margin-inline: auto;
-  max-width: min(96vw, 52rem);
+  max-width: min(96vw, 56rem);
   min-width: min(100%, 280px);
 }
-.modal-shell-panel--sm { max-width: min(96vw, 26rem); }
-.modal-shell-panel--md { max-width: min(96vw, 37.5rem); }
-.modal-shell-panel--lg { max-width: min(96vw, 52rem); }
-.modal-shell-panel--xl { max-width: min(96vw, 72rem); }
+.modal-shell-panel--sm  { max-width: min(96vw, 28rem); }
+.modal-shell-panel--md  { max-width: min(96vw, 42rem); }
+.modal-shell-panel--lg  { max-width: min(96vw, 60rem); }
+.modal-shell-panel--xl  { max-width: min(96vw, 76rem); }
 
+/* ─── جسم اللوحة ───────────────────────────────────────────── */
 .modal-shell-root .ph-modal-body {
-  padding: 1rem 1.125rem 1.25rem;
+  padding: 1.5rem 1.75rem 1.75rem;
 }
-@media (min-width: 640px) {
+@media (max-width: 640px) {
   .modal-shell-root .ph-modal-body {
-    padding: 1.25rem 1.5rem 1.5rem;
+    padding: 1.125rem 1.25rem 1.5rem;
   }
 }
 
+/* ─── ph-* Classes (Legacy - محفوظة للتوافقية) ───────────────── */
 .modal-shell-root .ph-form-label {
   font-size: 0.7rem;
   font-weight: 800;
@@ -69,14 +71,13 @@
   resize: vertical;
 }
 
-/* شبكة حقول: عمود واحد على الجوال، عمودان من md */
 .modal-shell-root .ph-form-grid {
   display: grid;
   gap: 0.875rem 1rem;
   grid-template-columns: 1fr;
   margin-bottom: 0.875rem;
 }
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .modal-shell-root .ph-form-grid.ph-form-grid-2 {
     grid-template-columns: 1fr 1fr;
   }
@@ -86,7 +87,6 @@
   grid-column: 1 / -1;
 }
 
-/* صندوق إعدادات (نشط / تفعيل) */
 .modal-shell-root .ph-form-panel {
   background: var(--ph-modal-surface);
   border: 1px solid var(--ph-modal-border);
@@ -110,7 +110,6 @@
   line-height: 1.45;
 }
 
-/* شريط فرعي (رفوف / أقسام) */
 .modal-shell-root .ph-modal-toolbar {
   background: linear-gradient(135deg, #063955 0%, #0a4f72 100%);
   color: #fff;
@@ -146,7 +145,6 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* شريط الإجراءات السفلي */
 .modal-shell-root .ph-modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -172,9 +170,7 @@
   gap: 0.35rem;
   font-family: inherit;
 }
-.modal-shell-root .ph-btn-primary:hover {
-  background: var(--ph-modal-primary-hover);
-}
+.modal-shell-root .ph-btn-primary:hover { background: var(--ph-modal-primary-hover); }
 
 .modal-shell-root .ph-btn-success {
   background: var(--ph-modal-success);
@@ -190,9 +186,7 @@
   gap: 0.35rem;
   font-family: inherit;
 }
-.modal-shell-root .ph-btn-success:hover {
-  background: var(--ph-modal-success-hover);
-}
+.modal-shell-root .ph-btn-success:hover { background: var(--ph-modal-success-hover); }
 
 .modal-shell-root .ph-btn-warning {
   background: #d97706;
@@ -208,11 +202,8 @@
   gap: 0.35rem;
   font-family: inherit;
 }
-.modal-shell-root .ph-btn-warning:hover {
-  background: #b45309;
-}
+.modal-shell-root .ph-btn-warning:hover { background: #b45309; }
 
-/* صناديق اختيار (عملات، خيارات) */
 .modal-shell-root .ph-form-check {
   display: flex;
   align-items: flex-start;
@@ -223,9 +214,7 @@
   cursor: pointer;
   background: var(--ph-modal-surface);
 }
-.modal-shell-root .ph-form-check:hover {
-  background: #f1f5f9;
-}
+.modal-shell-root .ph-form-check:hover { background: #f1f5f9; }
 .modal-shell-root .ph-form-check input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
@@ -347,9 +336,182 @@
   letter-spacing: 0.04em;
 }
 
-/* طباعة */
+/* ═══════════════════════════════════════════════════════════════
+   Enterprise Form Classes — القالب الموحد لجميع شاشات الإدخال
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-shell-root .enterprise-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #063955;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+  margin-bottom: 18px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-shell-root .enterprise-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 5px;
+  display: block;
+  letter-spacing: 0.02em;
+}
+
+.modal-shell-root .enterprise-input,
+.modal-shell-root .enterprise-select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: #f8fafc;
+  transition: all 0.18s;
+  color: #0f172a;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.modal-shell-root .enterprise-input:focus,
+.modal-shell-root .enterprise-select:focus {
+  outline: none;
+  border-color: #063955;
+  background: white;
+  box-shadow: 0 0 0 2px rgba(6, 57, 85, 0.1);
+}
+
+.modal-shell-root .enterprise-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .modal-shell-root .enterprise-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modal-shell-root .enterprise-alert-error {
+  background: #fff1f2;
+  border-right: 4px solid #e11d48;
+  border-radius: 2px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e11d48;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-shell-root .enterprise-info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-shell-root .enterprise-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+/* زر الحفظ (إضافة جديدة) — أزرق داكن */
+.modal-shell-root .enterprise-btn-submit {
+  background: #063955;
+  color: white;
+  border: none;
+  padding: 8px 22px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.modal-shell-root .enterprise-btn-submit:hover { background: #0a4f72; }
+
+/* زر الحفظ (تعديل) — أصفر/برتقالي */
+.modal-shell-root .enterprise-btn-warning {
+  background: #d97706;
+  color: white;
+  border: none;
+  padding: 8px 22px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.modal-shell-root .enterprise-btn-warning:hover { background: #b45309; }
+
+/* زر إضافة (أخضر) */
+.modal-shell-root .enterprise-btn-success {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 8px 22px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.modal-shell-root .enterprise-btn-success:hover { background: #047857; }
+
+/* زر الإلغاء */
+.modal-shell-root .enterprise-btn-cancel {
+  background: white;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 8px 18px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.modal-shell-root .enterprise-btn-cancel:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+/* ─── طباعة ─────────────────────────────────────────────────── */
 @media print {
   .modal-shell-root .ph-modal-actions,
+  .modal-shell-root .enterprise-actions,
   .modal-shell-root .modal-shell-header-actions {
     display: none !important;
   }

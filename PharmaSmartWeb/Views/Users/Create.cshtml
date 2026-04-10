@@ -13,63 +13,67 @@
 
     @if (ViewBag.Error != null)
     {
-        <div class="ph-alert-error">⚠ @ViewBag.Error</div>
+        <div class="enterprise-alert-error">
+            <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+            @ViewBag.Error
+        </div>
     }
 
-    <div class="ph-section-title">بيانات الحساب الأساسية</div>
+    <div class="enterprise-section-title">
+        <span class="material-symbols-outlined" style="font-size:18px;">key</span>
+        بيانات الحساب الأساسية
+    </div>
 
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">اسم الدخول (Username) <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">person</span>
-                <input type="text" asp-for="Username" required autocomplete="off" placeholder="مثال: ahmed_2024" class="ph-form-control" style="flex:1;" />
-            </div>
-            <span asp-validation-for="Username" style="color:#e11d48;font-size:11px;"></span>
+            <label class="enterprise-label">اسم الدخول (Username) <span style="color:#e11d48;">*</span></label>
+            <input type="text" asp-for="Username" required autocomplete="off" placeholder="مثال: ahmed_2024" class="enterprise-input" />
+            <span asp-validation-for="Username" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
         <div>
-            <label class="ph-form-label">كلمة المرور <span style="color:#e11d48;">*</span></label>
-            <div style="display:flex;align-items:center;gap:0.35rem;">
-                <span class="material-symbols-outlined" style="font-size:18px;color:#94a3b8;">lock</span>
-                <input type="password" asp-for="PasswordHash" required autocomplete="new-password" placeholder="كلمة مرور قوية" class="ph-form-control" style="flex:1;" />
-            </div>
+            <label class="enterprise-label">كلمة المرور <span style="color:#e11d48;">*</span></label>
+            <input type="password" asp-for="PasswordHash" required autocomplete="new-password" placeholder="كلمة مرور قوية" class="enterprise-input" />
         </div>
     </div>
 
-    <div class="ph-section-title">الصلاحيات والفرع</div>
+    <div class="enterprise-section-title" style="margin-top:24px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">admin_panel_settings</span>
+        الصلاحيات والفرع
+    </div>
 
-    <div class="ph-form-grid ph-form-grid-2">
+    <div class="enterprise-row">
         <div>
-            <label class="ph-form-label">مجموعة الصلاحيات <span style="color:#e11d48;">*</span></label>
-            <select asp-for="RoleId" asp-items="ViewBag.RoleList" required class="ph-form-select">
+            <label class="enterprise-label">مجموعة الصلاحيات <span style="color:#e11d48;">*</span></label>
+            <select asp-for="RoleId" asp-items="ViewBag.RoleList" required class="enterprise-select">
                 <option value="">-- اختر الصلاحية --</option>
             </select>
         </div>
         <div>
-            <label class="ph-form-label">فرع العمل الافتراضي <span style="color:#e11d48;">*</span></label>
-            <select asp-for="DefaultBranchId" asp-items="ViewBag.BranchList" required class="ph-form-select">
+            <label class="enterprise-label">فرع العمل الافتراضي <span style="color:#e11d48;">*</span></label>
+            <select asp-for="DefaultBranchId" asp-items="ViewBag.BranchList" required class="enterprise-select">
                 <option value="">-- اختر الفرع --</option>
             </select>
         </div>
     </div>
 
-    <div class="ph-form-grid">
-        <div>
-            <label class="ph-form-label">ربط الحساب بموظف (اختياري)</label>
-            <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="ph-form-select" style="max-width:28rem;">
-                <option value="">-- حساب إداري (بدون تخصيص موظف) --</option>
-            </select>
+    <div style="margin-bottom:16px;">
+        <label class="enterprise-label">ربط الحساب بموظف (اختياري)</label>
+        <select asp-for="EmployeeId" asp-items="ViewBag.EmployeeList" class="enterprise-select" style="max-width:28rem;">
+            <option value="">-- حساب إداري (بدون تخصيص موظف) --</option>
+        </select>
+    </div>
+
+    <div class="enterprise-info-box" style="background:#f0f9ff;border-color:#bae6fd;">
+        <span class="material-symbols-outlined" style="color:#0284c7;font-size:20px;">info</span>
+        <div style="font-size:12px;color:#0369a1;font-weight:600;">
+            سيتم تفعيل الحساب فور الإنشاء. يمكن تعطيله لاحقاً من شاشة التعديل.
         </div>
     </div>
 
-    <div class="ph-alert-info">
-        ℹ سيتم تفعيل الحساب فور الإنشاء. يمكن تعطيله لاحقاً من شاشة التعديل.
-    </div>
-
-    <div class="ph-modal-actions">
-        <button type="button" onclick="modalNavigateBack()" class="ph-btn-back">إلغاء</button>
-        <button type="submit" class="ph-btn-primary">
-            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+    <div class="enterprise-actions">
+        <button type="button" onclick="modalNavigateBack()" class="enterprise-btn-cancel">إلغاء</button>
+        <button type="submit" class="enterprise-btn-submit">
+            <span class="material-symbols-outlined" style="font-size:16px;">save</span>
             إنشاء المستخدم
         </button>
     </div>
