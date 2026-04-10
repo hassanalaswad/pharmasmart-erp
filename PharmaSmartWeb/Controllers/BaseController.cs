@@ -34,7 +34,8 @@ namespace PharmaSmartWeb.Controllers
             var actionName = context.RouteData.Values["action"]?.ToString() ?? "";
 
             if (string.Equals(controllerName, "Account", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(actionName, "Login", StringComparison.OrdinalIgnoreCase))
+                && (string.Equals(actionName, "Login", StringComparison.OrdinalIgnoreCase) || 
+                    string.Equals(actionName, "Logout", StringComparison.OrdinalIgnoreCase)))
             {
                 base.OnActionExecuting(context);
                 return;

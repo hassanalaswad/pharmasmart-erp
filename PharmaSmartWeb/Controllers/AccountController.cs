@@ -222,17 +222,22 @@ namespace PharmaSmartWeb.Controllers
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Login(string returnUrl = null)
         {
-            // مسح جلسة المستخدم الحالي فقط (وليس كل الكوكيز لتجنب مشكلة CSRF Token)
+            // 🛑 إصلاح حلقة التكرار (Redirect Loop):
+            // بدلاً من عمل RedirectToAction لنفس الصفحة (مما يسبب Loop)، 
+            // نقوم بمسح الجلسة والكوكي في الخلفية ثم نظهر الصفحة مباشرة.
             if (User.Identity.IsAuthenticated)
             {
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                // 🛑 الحل الحاسم لمشكلة الخطأ عند التبديل بين الحسابات:
-                // يجب إعادة توجيه المستخدم لنفس الصفحة بعد تسجيل الخروج لتنظيف الـ Identity تماماً 
-                // وتوليد Antiforgery Token جديد متوافق مع زائر غير مسجل (Anonymous)
-                return RedirectToAction("Login", new { returnUrl });
+                // نمسح كوكيز الفروع لضمان بيئة نظيفة للمستخدم الجديد
+                Response.Cookies.Delete("ActiveBranchId");
+                
+                // نوجه المستخدم لصفحة تسجيل الدخول النظيفة (بدون بيانات هوية قديمة)
+                // ولكن بتمرير الـ returnUrl لكي لا يفقده
+                ViewData["ReturnUrl"] = returnUrl;
+                return View();
             }
 
-            // مسح كوكيز الفروع لضمان بيئة نظيفة للمستخدم الجديد
+            // مسح كوكيز الفروع في الحالات العادية أيضاً
             Response.Cookies.Delete("ActiveBranchId");
 
             // تنظيف الرابط من أي مخلفات أخطاء سابقة
@@ -246,6 +251,7 @@ namespace PharmaSmartWeb.Controllers
         // 2. معالجة عملية تسجيل الدخول (POST)
         // ==========================================
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string username, string password, string returnUrl = null)
         {
