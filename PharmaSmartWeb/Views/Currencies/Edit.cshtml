@@ -1,10 +1,13 @@
 @model PharmaSmartWeb.Models.Currencies
 @{ 
     Layout = "_ModalLayout";
-    ViewData["Title"] = $"تعديل العملة: {@Model.CurrencyName}"; 
+    ViewData["Title"] = $"تعديل العملة: {@Model.CurrencyName}";
+    ViewBag.ModalPanelSize = "lg";
+    ViewBag.ModalHeaderIcon = "payments";
 }
 
 <form asp-action="Edit" method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
     <input type="hidden" asp-for="CurrencyId" />
 
     <div class="space-y-4 max-h-[60vh] overflow-y-auto pl-2 pr-4">
@@ -57,7 +60,7 @@
 
     <!-- Sticky Bottom Actions -->
     <div class="mt-8 pt-4 border-t border-surface-container flex justify-end gap-3 sticky bottom-0 bg-surface z-10">
-        <button type="button" onclick="history.back()" class="px-6 py-2.5 rounded-sm font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-2 border border-outline-variant">
+        <button type="button" onclick="modalNavigateBack()" class="px-6 py-2.5 rounded-sm font-bold bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-2 border border-outline-variant">
             <span class="material-symbols-outlined text-lg">close</span>
             إلغاء التعديل
         </button>

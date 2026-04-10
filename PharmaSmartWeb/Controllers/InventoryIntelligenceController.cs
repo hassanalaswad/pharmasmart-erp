@@ -27,6 +27,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [HasPermission("Inventory", "Edit")]
         public async Task<IActionResult> CalculateABC()
         {
@@ -46,6 +47,12 @@ namespace PharmaSmartWeb.Controllers
             decimal grandTotalRevenue = drugSales.Sum(d => d.TotalRevenue);
             if (grandTotalRevenue == 0) return BadRequest("لا توجد مبيعات كافية للتحليل.");
 
+            var drugIds = drugSales.Select(d => d.DrugId).Distinct().ToList();
+            var allInventoryRows = await _context.Branchinventory
+                .Where(b => drugIds.Contains(b.DrugId) && (currentBranchId == 0 || b.BranchId == currentBranchId))
+                .ToListAsync();
+            var inventoryByDrug = allInventoryRows.GroupBy(b => b.DrugId).ToDictionary(g => g.Key, g => g.ToList());
+
             decimal runningTotal = 0;
 
             foreach (var item in drugSales)
@@ -57,11 +64,11 @@ namespace PharmaSmartWeb.Controllers
                 if (cumulativePercentage <= 80) category = 'A';
                 else if (cumulativePercentage <= 95) category = 'B';
 
-                var inventoryItems = await _context.Branchinventory
-                    .Where(b => b.DrugId == item.DrugId && (currentBranchId == 0 || b.BranchId == currentBranchId))
-                    .ToListAsync();
+                if (!inventoryByDrug.TryGetValue(item.DrugId, out var inventoryItems))
+                    continue;
 
-                foreach (var inv in inventoryItems) inv.Abccategory = category.ToString();
+                foreach (var inv in inventoryItems)
+                    inv.Abccategory = category.ToString();
             }
 
             await _context.SaveChangesAsync();
@@ -69,6 +76,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [HasPermission("Inventory", "View")]
         public async Task<IActionResult> GenerateSmartPlan()
         {
@@ -120,7 +128,7 @@ namespace PharmaSmartWeb.Controllers
                 {
                     try
                     {
-                        string pyOut = CallProphetScript(jsonPayload);
+                        string pyOut = await CallProphetScriptAsync(jsonPayload);
                         var pyResult = System.Text.Json.JsonSerializer.Deserialize<ProphetResult>(pyOut, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         if (pyResult != null)
                         {
@@ -196,6 +204,8 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission("Inventory", "View")]
         public IActionResult ExtractExcelHeaders(IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0) return BadRequest("ملف غير صالح.");
@@ -220,6 +230,8 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission("Inventory", "View")]
         public async Task<IActionResult> GenerateSmartPlanFromExcel([FromForm] IFormFile excelFile, [FromForm] int drugCol, [FromForm] int dateCol, [FromForm] int qtyCol)
         {
             if (excelFile == null || excelFile.Length == 0)
@@ -317,7 +329,7 @@ namespace PharmaSmartWeb.Controllers
                 {
                     try
                     {
-                        string pyOut = CallProphetScript(jsonPayload);
+                        string pyOut = await CallProphetScriptAsync(jsonPayload);
                         var pyResult = System.Text.Json.JsonSerializer.Deserialize<ProphetResult>(pyOut, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         if (pyResult != null)
                         {
@@ -381,7 +393,9 @@ namespace PharmaSmartWeb.Controllers
             return Ok(new { success = true, planId = plan.PlanId, message = "تم التوليد بنجاح من بيانات الإكسل المرفوعة" });
         }
 
-        private string CallProphetScript(string jsonPayload)
+        private const string ProphetFallbackJson = "{\"forecast\": 0, \"accuracy\": 0}";
+
+        private static async Task<string> CallProphetScriptAsync(string jsonPayload)
         {
             try
             {
@@ -396,26 +410,33 @@ namespace PharmaSmartWeb.Controllers
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
-                
-                using (var process = Process.Start(psi))
+
+                using var process = Process.Start(psi);
+                if (process == null) return ProphetFallbackJson;
+
+                using (var sw = process.StandardInput)
                 {
-                    if (process == null) return "{\"forecast\": 0, \"accuracy\": 0}";
-                    using (var sw = process.StandardInput)
-                    {
-                        if (sw.BaseStream.CanWrite) sw.Write(jsonPayload);
-                    }
-                    var readTask = process.StandardOutput.ReadToEndAsync();
-                    if (!process.WaitForExit(10000))
-                    {
-                        try { process.Kill(); } catch { }
-                        return "{\"forecast\": 0, \"accuracy\": 0}";
-                    }
-                    return readTask.GetAwaiter().GetResult();
+                    if (sw.BaseStream.CanWrite)
+                        sw.Write(jsonPayload);
                 }
+
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                var exitTask = process.WaitForExitAsync();
+                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(10));
+                var finished = await Task.WhenAny(exitTask, timeoutTask).ConfigureAwait(false);
+                if (finished != exitTask)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    return ProphetFallbackJson;
+                }
+
+                await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                return await stdoutTask.ConfigureAwait(false);
             }
             catch
             {
-                return "{\"forecast\": 0, \"accuracy\": 0}";
+                return ProphetFallbackJson;
             }
         }
         
@@ -428,6 +449,7 @@ namespace PharmaSmartWeb.Controllers
         // 🖨️ 5. طباعة الخطة الشرائية الذكية كتقرير رسمي
         // ==========================================
         [HttpGet]
+        [HasPermission("Inventory", "View")]
         public async Task<IActionResult> SmartPlanPrint(int id)
         {
             var plan = await _context.PurchasePlans
@@ -436,6 +458,9 @@ namespace PharmaSmartWeb.Controllers
                 .FirstOrDefaultAsync(p => p.PlanId == id);
 
             if (plan == null) return NotFound("خطة الشراء غير موجودة!");
+
+            if (!IsSuperAdmin && plan.BranchId != ActiveBranchId)
+                return RedirectToAction("AccessDenied", "Home");
 
             return View(plan);
         }

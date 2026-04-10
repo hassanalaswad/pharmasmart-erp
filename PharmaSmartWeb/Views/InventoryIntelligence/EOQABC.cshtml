@@ -2,6 +2,7 @@
     Layout = "_Layout";
     ViewData["Title"] = "الذكاء المخزني المالي (ABC, EOQ & Budget)";
 }
+@Html.AntiForgeryToken()
 
 <style>
     body { background-color: #f4f6f8; }
@@ -120,13 +121,19 @@
     </div>
 
 <script>
+    function invIntelAntiForgeryHeaders() {
+        const el = document.querySelector('input[name="__RequestVerificationToken"]');
+        const t = el ? el.value : '';
+        return t ? { 'RequestVerificationToken': t } : {};
+    }
+
     async function runABCAlgorithm() {
         const btn = document.getElementById('btnCalcABC');
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل...';
         btn.disabled = true;
 
         try {
-            const response = await fetch('/InventoryIntelligence/CalculateABC', { method: 'POST' });
+            const response = await fetch('/InventoryIntelligence/CalculateABC', { method: 'POST', headers: invIntelAntiForgeryHeaders() });
             if (response.ok) {
                 showAlert('success', 'نجاح', await response.text());
                 fetchEOQRecommendations();
@@ -148,7 +155,7 @@
         btn.disabled = true;
 
         try {
-            const response = await fetch('/InventoryIntelligence/GenerateSmartPlan', { method: 'POST' });
+            const response = await fetch('/InventoryIntelligence/GenerateSmartPlan', { method: 'POST', headers: invIntelAntiForgeryHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -181,6 +188,7 @@
         try {
             const response = await fetch('/InventoryIntelligence/ExtractExcelHeaders', { 
                 method: 'POST',
+                headers: invIntelAntiForgeryHeaders(),
                 body: formData
             });
             if (response.ok) {
@@ -249,6 +257,7 @@
         try {
             const response = await fetch('/InventoryIntelligence/GenerateSmartPlanFromExcel', { 
                 method: 'POST',
+                headers: invIntelAntiForgeryHeaders(),
                 body: formData
             });
             if (response.ok) {

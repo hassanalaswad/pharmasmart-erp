@@ -706,6 +706,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ChangeActiveBranch(int branchId, string returnUrl)
         {
             if (IsSuperAdmin)

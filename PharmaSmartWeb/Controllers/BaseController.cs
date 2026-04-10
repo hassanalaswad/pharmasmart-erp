@@ -1,23 +1,20 @@
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PharmaSmartWeb.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace PharmaSmartWeb.Controllers
 {
-    // 🚀 التصحيح الأهم: جعل الكلاس abstract لمنع النظام من محاولة تشغيله ككنترولر مستقل
     public abstract class BaseController : Controller
     {
         protected readonly ApplicationDbContext _context;
 
-        // 🚀 يجب أن يكون هناك مُنشئ (Constructor) واحد فقط كما يلي
         public BaseController(ApplicationDbContext context)
         {
             _context = context;
@@ -28,16 +25,16 @@ namespace PharmaSmartWeb.Controllers
         protected bool IsSuperAdmin => UserRoleId == 1;
 
         public int ActiveBranchId => (IsSuperAdmin && Request.Cookies.TryGetValue("ActiveBranchId", out string? bId) && int.TryParse(bId, out int id) && id > 0) ? id : UserBranchId;
+
         public int ReportScopeId => (IsSuperAdmin && Request.Cookies.TryGetValue("ActiveBranchId", out string? bId) && int.TryParse(bId, out int id) && id >= 0) ? id : UserBranchId;
 
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            // جلب معلومات المسار الحالي
-            var controllerName = context.RouteData.Values["controller"]?.ToString();
-            var actionName = context.RouteData.Values["action"]?.ToString();
+            var controllerName = context.RouteData.Values["controller"]?.ToString() ?? "";
+            var actionName = context.RouteData.Values["action"]?.ToString() ?? "";
 
-            // 🛑 السماح بفتح صفحة تسجيل الدخول دون فحص الهوية لمنع الـ 404 والـ Loop
-            if (controllerName == "Account" && actionName == "Login")
+            if (string.Equals(controllerName, "Account", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(actionName, "Login", StringComparison.OrdinalIgnoreCase))
             {
                 base.OnActionExecuting(context);
                 return;
@@ -51,66 +48,118 @@ namespace PharmaSmartWeb.Controllers
 
             base.OnActionExecuting(context);
 
-            if (User.Identity.IsAuthenticated)
+            PopulatePharmaSmartPageContext(controllerName, actionName);
+        }
+
+        /// <summary>
+        /// يجهّز بيانات التخطيط والعناوين لكل طلب MVC مصادَق عليه (قائمة الشاشات، الفرع النشط، قسم النظام).
+        /// </summary>
+        private void PopulatePharmaSmartPageContext(string controllerName, string actionName)
+        {
+            ViewData["CurrentController"] = controllerName;
+            ViewData["CurrentAction"] = actionName;
+            ViewData["AppSection"] = ResolveAppSection(controllerName);
+
+            try
+            {
+                var cache = HttpContext.RequestServices.GetService<IMemoryCache>();
+
+                var allScreens = GetCachedSystemScreens(cache);
+                bool HasPerm(string screenName) =>
+                    IsSuperAdmin || User.HasClaim(c => c.Type == "Permission" && c.Value == $"{screenName}.View");
+
+                foreach (var screen in allScreens)
                 {
-                // ✅ الإصلاح: تغليف استعلامات DB في try-catch لمنع انهيار كل الطلبات عند فشل الاتصال، واستخدام الكاش
-                try
+                    string cleanKey = screen.ScreenName.Replace(".", "");
+                    ViewData[$"CanView{cleanKey}"] = HasPerm(screen.ScreenName);
+                }
+
+                ViewBag.SystemScreens = allScreens;
+
+                bool showBranchSelector =
+                    User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "System.ChangeBranch");
+
+                List<Branches>? activeBranches = null;
+                if (IsSuperAdmin || showBranchSelector)
+                    activeBranches = GetCachedActiveBranches(cache);
+
+                if (IsSuperAdmin && activeBranches != null)
                 {
-                    var cache = context.HttpContext.RequestServices.GetService(typeof(IMemoryCache)) as IMemoryCache;
-                    
-                    var allScreens = (cache != null
-                        ? cache.GetOrCreate("Global_SystemScreens", entry => {
-                            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
-                            return _context.Systemscreens.AsNoTracking().ToList();
-                          })
-                        : null) ?? _context.Systemscreens.AsNoTracking().ToList();
-
-                    bool HasPerm(string screenName) => IsSuperAdmin || User.HasClaim(c => c.Type == "Permission" && c.Value == $"{screenName}.View");
-
-                    foreach (var screen in allScreens)
+                    if (Request.Cookies.TryGetValue("ActiveBranchId", out string? bId)
+                        && int.TryParse(bId, out int cookieBranchId)
+                        && cookieBranchId > 0
+                        && !activeBranches.Any(b => b.BranchId == cookieBranchId))
                     {
-                        string cleanKey = screen.ScreenName.Replace(".", "");
-                        ViewData[$"CanView{cleanKey}"] = HasPerm(screen.ScreenName);
-                    }
-
-                    ViewBag.SystemScreens = allScreens;
-
-                    var allBranches = (cache != null
-                        ? cache.GetOrCreate("Global_ActiveBranches", entry => {
-                            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
-                            return _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
-                          })
-                        : null) ?? _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
-
-                    if (IsSuperAdmin)
-                    {
-                        ViewBag.Branches = allBranches;
-
-                        // إذا كان كوكيز الفرع يشير لفرع غير موجود — يتم تجاهله وإعادة الفرع الافتراضي
-                        if (Request.Cookies.TryGetValue("ActiveBranchId", out string? bId)
-                            && int.TryParse(bId, out int cookieBranchId)
-                            && cookieBranchId > 0
-                            && !allBranches.Any(b => b.BranchId == cookieBranchId))
-                        {
-                            Response.Cookies.Delete("ActiveBranchId");
-                        }
-                    }
-
-                    if (IsSuperAdmin && ReportScopeId == 0)
-                        ViewBag.ActiveBranchName = "المؤسسة (رؤية شاملة)";
-                    else
-                    {
-                        var branch = allBranches.FirstOrDefault(b => b.BranchId == ActiveBranchId);
-                        ViewBag.ActiveBranchName = branch?.BranchName ?? "فرع غير محدد";
+                        Response.Cookies.Delete("ActiveBranchId");
                     }
                 }
-                catch
+
+                if (showBranchSelector && activeBranches != null)
+                    ViewBag.Branches = activeBranches;
+
+                int scopeForUi = ReportScopeId;
+                ViewBag.HeaderReportScopeId = scopeForUi;
+
+                if (IsSuperAdmin && scopeForUi == 0)
+                    ViewBag.ActiveBranchName = "المؤسسة (رؤية شاملة)";
+                else if (activeBranches != null)
                 {
-                    // الفشل الصامت عند استعلامات التنقل لا يجب أن يوقف الطلب
-                    ViewBag.SystemScreens = new List<PharmaSmartWeb.Models.Systemscreens>();
-                    ViewBag.ActiveBranchName = "—";
+                    var branch = activeBranches.FirstOrDefault(b => b.BranchId == ActiveBranchId);
+                    ViewBag.ActiveBranchName = branch?.BranchName
+                        ?? User.FindFirst("BranchName")?.Value
+                        ?? "فرع غير محدد";
                 }
+                else
+                    ViewBag.ActiveBranchName = User.FindFirst("BranchName")?.Value ?? "فرع غير محدد";
             }
+            catch
+            {
+                ViewBag.SystemScreens = new List<Systemscreens>();
+                ViewBag.ActiveBranchName = "—";
+                ViewBag.Branches = null;
+                ViewBag.HeaderReportScopeId = UserBranchId;
+            }
+        }
+
+        private static string ResolveAppSection(string controllerName)
+        {
+            var c = controllerName?.ToUpperInvariant() ?? "";
+            return c switch
+            {
+                "SALES" or "SALESRETURN" or "CUSTOMERS" => "التجاري",
+                "PURCHASES" or "PURCHASESRETURN" or "SUPPLIERS" => "المشتريات",
+                "DRUGS" or "INVENTORY" or "WAREHOUSES" or "ITEMGROUPS" or "DRUGTRANSFERS" or "STOCKAUDIT" or "INVENTORYINTELLIGENCE" => "المخزون والأصناف",
+                "ACCOUNTING" or "JOURNALENTRIES" or "VOUCHERS" or "FINANCIALSETTINGS" or "FUNDTRANSFERS" or "CURRENCIES" => "المحاسبة والمالية",
+                "REPORT" => "التقارير",
+                "USERS" or "ROLES" or "EMPLOYEES" or "BRANCHES" or "ADMIN" => "الإدارة والصلاحيات",
+                "HOME" => "لوحة التحكم",
+                _ when c.Contains("REPORT", StringComparison.Ordinal) => "التقارير",
+                _ => "Pharma Smart"
+            };
+        }
+
+        private List<Systemscreens> GetCachedSystemScreens(IMemoryCache? cache)
+        {
+            if (cache == null)
+                return _context.Systemscreens.AsNoTracking().ToList();
+
+            return cache.GetOrCreate("Global_SystemScreens", entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
+                return _context.Systemscreens.AsNoTracking().ToList();
+            })!;
+        }
+
+        private List<Branches> GetCachedActiveBranches(IMemoryCache? cache)
+        {
+            if (cache == null)
+                return _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+
+            return cache.GetOrCreate("Global_ActiveBranches", entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+                return _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+            })!;
         }
 
         protected async Task RecordLog(string action, string screen, string details)
@@ -131,11 +180,10 @@ namespace PharmaSmartWeb.Controllers
             }
             catch { }
         }
+
         public override RedirectResult Redirect(string url)
         {
             return base.Redirect(url);
         }
-
-
     }
 }

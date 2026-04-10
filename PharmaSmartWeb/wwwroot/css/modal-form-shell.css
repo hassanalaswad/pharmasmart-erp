@@ -1,0 +1,356 @@
+/**
+ * PharmaSmart — قالب موحّد للشاشات المنبثقة (Create / Edit)
+ * يُحمَّل من _ModalLayout فقط.
+ */
+.modal-shell-root {
+  --ph-modal-primary: #063955;
+  --ph-modal-primary-hover: #0a4f72;
+  --ph-modal-success: #059669;
+  --ph-modal-success-hover: #047857;
+  --ph-modal-border: #e2e8f0;
+  --ph-modal-surface: #f8fafc;
+  --ph-modal-radius: 6px;
+}
+
+/* أحجام اللوحة: تتكيّف مع العرض وعدد الحقول */
+.modal-shell-panel {
+  width: 100%;
+  margin-inline: auto;
+  max-width: min(96vw, 52rem);
+  min-width: min(100%, 280px);
+}
+.modal-shell-panel--sm { max-width: min(96vw, 26rem); }
+.modal-shell-panel--md { max-width: min(96vw, 37.5rem); }
+.modal-shell-panel--lg { max-width: min(96vw, 52rem); }
+.modal-shell-panel--xl { max-width: min(96vw, 72rem); }
+
+.modal-shell-root .ph-modal-body {
+  padding: 1rem 1.125rem 1.25rem;
+}
+@media (min-width: 640px) {
+  .modal-shell-root .ph-modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+}
+
+.modal-shell-root .ph-form-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ph-modal-primary);
+  margin-bottom: 0.35rem;
+  display: block;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.modal-shell-root .ph-form-control,
+.modal-shell-root .ph-form-select,
+.modal-shell-root .ph-form-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  background: var(--ph-modal-surface);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.modal-shell-root .ph-form-control:focus,
+.modal-shell-root .ph-form-select:focus,
+.modal-shell-root .ph-form-textarea:focus {
+  outline: none;
+  border-color: var(--ph-modal-primary);
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(6, 57, 85, 0.12);
+}
+
+.modal-shell-root .ph-form-textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+/* شبكة حقول: عمود واحد على الجوال، عمودان من md */
+.modal-shell-root .ph-form-grid {
+  display: grid;
+  gap: 0.875rem 1rem;
+  grid-template-columns: 1fr;
+  margin-bottom: 0.875rem;
+}
+@media (min-width: 768px) {
+  .modal-shell-root .ph-form-grid.ph-form-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.modal-shell-root .ph-form-grid .ph-span-2 {
+  grid-column: 1 / -1;
+}
+
+/* صندوق إعدادات (نشط / تفعيل) */
+.modal-shell-root .ph-form-panel {
+  background: var(--ph-modal-surface);
+  border: 1px solid var(--ph-modal-border);
+  border-radius: var(--ph-modal-radius);
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+.modal-shell-root .ph-form-panel-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--ph-modal-primary);
+}
+.modal-shell-root .ph-form-panel-hint {
+  font-size: 0.625rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+  line-height: 1.45;
+}
+
+/* شريط فرعي (رفوف / أقسام) */
+.modal-shell-root .ph-modal-toolbar {
+  background: linear-gradient(135deg, #063955 0%, #0a4f72 100%);
+  color: #fff;
+  padding: 0.55rem 0.875rem;
+  border-radius: var(--ph-modal-radius) var(--ph-modal-radius) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.modal-shell-root .ph-modal-toolbar + .ph-modal-toolbar-body {
+  border: 1px solid #cbd5e1;
+  border-top: none;
+  border-radius: 0 0 var(--ph-modal-radius) var(--ph-modal-radius);
+  overflow: hidden;
+}
+
+.modal-shell-root .ph-btn-toolbar {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.modal-shell-root .ph-btn-toolbar:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* شريط الإجراءات السفلي */
+.modal-shell-root .ph-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem 0.625rem;
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--ph-modal-border);
+}
+
+.modal-shell-root .ph-btn-primary {
+  background: var(--ph-modal-primary);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--ph-modal-radius);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+}
+.modal-shell-root .ph-btn-primary:hover {
+  background: var(--ph-modal-primary-hover);
+}
+
+.modal-shell-root .ph-btn-success {
+  background: var(--ph-modal-success);
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--ph-modal-radius);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+}
+.modal-shell-root .ph-btn-success:hover {
+  background: var(--ph-modal-success-hover);
+}
+
+.modal-shell-root .ph-btn-warning {
+  background: #d97706;
+  color: #fff;
+  border: none;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--ph-modal-radius);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+}
+.modal-shell-root .ph-btn-warning:hover {
+  background: #b45309;
+}
+
+/* صناديق اختيار (عملات، خيارات) */
+.modal-shell-root .ph-form-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ph-modal-border);
+  border-radius: var(--ph-modal-radius);
+  cursor: pointer;
+  background: var(--ph-modal-surface);
+}
+.modal-shell-root .ph-form-check:hover {
+  background: #f1f5f9;
+}
+.modal-shell-root .ph-form-check input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  accent-color: var(--ph-modal-primary);
+}
+.modal-shell-root .ph-form-check-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.modal-shell-root .ph-info-note {
+  background: #eff6ff;
+  border-right: 4px solid #3b82f6;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.6875rem;
+  color: #1e40af;
+  margin-top: 0.5rem;
+}
+
+.modal-shell-root .ph-btn-back {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #d1d5db;
+  padding: 0.55rem 1rem;
+  border-radius: var(--ph-modal-radius);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+}
+.modal-shell-root .ph-btn-back:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.modal-shell-root .ph-section-title {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--ph-modal-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--ph-modal-primary);
+  margin-bottom: 1rem;
+  margin-top: 0.25rem;
+}
+
+.modal-shell-root .ph-alert-error {
+  background: #fff1f2;
+  border-right: 4px solid #e11d48;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: #be123c;
+  margin-bottom: 0.875rem;
+}
+
+.modal-shell-root .ph-alert-info {
+  background: #eff6ff;
+  border-right: 4px solid #1d4ed8;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: #1d4ed8;
+  margin-top: 0.75rem;
+}
+
+.modal-shell-root .ph-alert-warning {
+  background: #fffbeb;
+  border-right: 4px solid #d97706;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: #92400e;
+  margin-top: 0.75rem;
+}
+
+.modal-shell-root .ph-banner {
+  background: var(--ph-modal-surface);
+  border: 1px solid var(--ph-modal-border);
+  border-radius: var(--ph-modal-radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.modal-shell-root .ph-info-row {
+  background: #f1f5f9;
+  border: 1px solid var(--ph-modal-border);
+  border-right: 4px solid #94a3b8;
+  border-radius: var(--ph-modal-radius);
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.modal-shell-root .ph-section-muted {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: #64748b;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--ph-modal-border);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* طباعة */
+@media print {
+  .modal-shell-root .ph-modal-actions,
+  .modal-shell-root .modal-shell-header-actions {
+    display: none !important;
+  }
+}

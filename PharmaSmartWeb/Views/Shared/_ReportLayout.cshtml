@@ -1,4 +1,10 @@
 @inject PharmaSmartWeb.Services.ISystemSettingsService Settings
+@{
+    var reportLayoutController = Context.Request.RouteValues["controller"]?.ToString() ?? "Home";
+    var reportLayoutBackFallback = string.Equals(reportLayoutController, "Home", StringComparison.OrdinalIgnoreCase)
+        ? "/Home/Index"
+        : $"/{reportLayoutController}/Index";
+}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -304,6 +310,24 @@
 </head>
 
 <body>
+    <script>
+        function pharmaSmartNavigateBack(fallbackUrl) {
+            var fb = fallbackUrl || '/Home/Index';
+            try {
+                var ref = document.referrer || '';
+                if (ref.indexOf(window.location.origin) === 0 && window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+            } catch (e) { }
+            window.location.href = fb;
+        }
+    </script>
+    <div class="no-print" style="max-width:210mm;margin:10px auto 0;padding:0 20px;box-sizing:border-box;">
+        <button type="button" data-back-fallback="@reportLayoutBackFallback" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="rf-btn-print" style="display:inline-flex;align-items:center;gap:6px;" title="الرجوع للصفحة التي أتيت منها" aria-label="رجوع">
+            <span style="font-size:16px;line-height:1;">↩</span> رجوع
+        </button>
+    </div>
     <!-- Global Preloader -->
     <div id="preloader">
         <div class="preloader-spinner"></div>

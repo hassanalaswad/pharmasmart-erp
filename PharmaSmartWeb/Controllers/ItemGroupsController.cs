@@ -74,6 +74,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [HasPermission("ItemGroups", "Delete")]
         public async Task<IActionResult> Delete(int id)
         {

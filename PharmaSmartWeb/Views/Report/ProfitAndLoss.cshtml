@@ -2,6 +2,9 @@
 @{
     Layout = "_ModalLayout";
     ViewData["Title"] = "التحليل المالي للأرباح والخسائر";
+    ViewBag.ModalPanelSize = "xl";
+    ViewBag.ModalFlushContent = true;
+    ViewBag.ModalHeaderIcon = "account_balance";
     var revenues = ViewBag.Revenues as List<PharmaSmartWeb.Models.PnlAccountViewModel> ?? new List<PharmaSmartWeb.Models.PnlAccountViewModel>();
     var expenses = ViewBag.Expenses as List<PharmaSmartWeb.Models.PnlAccountViewModel> ?? new List<PharmaSmartWeb.Models.PnlAccountViewModel>();
     decimal totalRev = ViewBag.TotalRevenue ?? 0m;

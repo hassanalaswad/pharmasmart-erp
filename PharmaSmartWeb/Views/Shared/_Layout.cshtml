@@ -1,5 +1,4 @@
 @inject PharmaSmartWeb.Services.INavigationService Navigation
-@inject PharmaSmartWeb.Models.ApplicationDbContext DbContext
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -27,7 +26,7 @@
   </div>
   <div class="text-center">
    <h2 class="text-white text-lg font-black tracking-widest mb-1">PHARMA SMART</h2>
-   <p class="text-sky-300/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">جاري تحسين تجربتك...</p>
+   <p class="text-sky-300/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">جاري تحميل واجهة الصيدلية...</p>
   </div>
   </div>
  </div>
@@ -60,7 +59,12 @@
  bool isReportsModule = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
  && string.Equals(currentAction, "ReportsHub", StringComparison.OrdinalIgnoreCase);
 
- string backUrl = $"/{currentController}/Index";
+ // احتياطي عندما لا يتوفر تاريخ متصفح (تبويب جديد، دخول مباشر، إلخ)
+ string backFallbackUrl = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+  ? "/Home/Index"
+  : $"/{currentController}/Index";
+
+ bool showHeaderBack = !isMainHub && ViewData["HideLayoutBack"] as bool? != true;
 }
 
 @if (!isMainHub)
@@ -182,11 +186,11 @@
   <button id="btnToggleSidebar" onclick="toggleSidebar()" title="القائمة">
    <span class="material-symbols-outlined" style="font-size:22px;">menu</span>
   </button>
-  @if (isSubPage)
+  @if (showHeaderBack)
   {
-  <a href="@backUrl" class="w-10 h-10 flex items-center justify-center rounded-sm bg-surface-container-high text-secondary hover:bg-primary hover:text-white transition-all shadow-sm group" title="عودة للقائمة السابقة">
+  <button type="button" data-back-fallback="@backFallbackUrl" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="w-10 h-10 flex items-center justify-center rounded-sm bg-surface-container-high text-secondary hover:bg-primary hover:text-white transition-all shadow-sm group border-0 cursor-pointer" title="الرجوع للصفحة التي أتيت منها" aria-label="رجوع">
   <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_forward</span>
-  </a>
+  </button>
   <div class="h-8 w-px bg-slate-200"></div>
   }
   <div>
@@ -207,17 +211,17 @@
   @RenderSection("HeaderActions", required: false)
 
   <!-- Branch Selector (For SuperAdmin) -->
-  @if (User.HasClaim("Permission", "System.ChangeBranch") && !isSubPage)
+  @if ((User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "System.ChangeBranch")) && !isSubPage)
   {
-  <form action="/Home/ChangeActiveBranch" method="post" class="flex m-0 branch-selector">
+  <form asp-controller="Home" asp-action="ChangeActiveBranch" method="post" class="flex m-0 branch-selector">
   <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
   <div class="relative flex items-center bg-surface-container-highest rounded-full hover:bg-surface-variant transition-all h-10 w-48 border border-slate-200">
   <span class="material-symbols-outlined text-xl text-primary pointer-events-none absolute right-3">storefront</span>
   <select name="branchId" onchange="this.form.submit()" class="appearance-none bg-transparent w-full text-primary font-black text-sm border-none focus:ring-0 pr-10 pl-8 cursor-pointer h-full">
   @{ 
-  var branchesList = DbContext.Branches.ToList();
-  var activeBranchIdClaim = User.Claims.FirstOrDefault(c => c.Type == "ReportScopeId")?.Value;
-  bool isAllBranches = string.IsNullOrEmpty(activeBranchIdClaim) || activeBranchIdClaim == "0"; 
+  var branchesList = ViewBag.Branches as IEnumerable<Branches> ?? Enumerable.Empty<Branches>();
+  int headerScope = ViewBag.HeaderReportScopeId is int hs ? hs : int.TryParse(ViewBag.HeaderReportScopeId?.ToString(), out int p) ? p : 0;
+  bool isAllBranches = headerScope == 0;
   }
   @if (isAllBranches)
   {
@@ -229,7 +233,7 @@
   }
   @foreach (var br in branchesList)
   {
-  bool isSelected = (!isAllBranches && activeBranchIdClaim == br.BranchId.ToString());
+  bool isSelected = (!isAllBranches && headerScope == br.BranchId);
   if (isSelected)
   {
   <option value="@br.BranchId" selected>@br.BranchName</option>
@@ -248,23 +252,7 @@
   {
   <div class="flex items-center gap-2 px-4 py-2 bg-surface-container-highest border border-slate-200 rounded-full text-primary font-black text-sm transition-all h-10 cursor-default whitespace-nowrap branch-selector">
   <span class="material-symbols-outlined text-xl">storefront</span>
-  @{
-  var branchName = ViewBag.ActiveBranchName?.ToString() ?? "الفرع الحالي";
-  if (User.Identity.IsAuthenticated)
-  {
-  var activeIdStr = User.Claims.FirstOrDefault(c => c.Type == "ReportScopeId")?.Value;
-  if (!string.IsNullOrEmpty(activeIdStr) && activeIdStr != "0" && int.TryParse(activeIdStr, out int bid))
-  {
-  var br = DbContext.Branches.FirstOrDefault(b => b.BranchId == bid);
-  if (br != null) branchName = br.BranchName;
-  }
-  else if (activeIdStr == "0")
-  {
-  branchName = "كافة الفروع (رؤية شاملة)";
-  }
-  }
-  }
-  <span>@branchName</span>
+  <span>@(ViewBag.ActiveBranchName?.ToString() ?? "الفرع الحالي")</span>
   </div>
   }
 
@@ -297,6 +285,21 @@
 </style>
 
 <script>
+ // ════════════════════════════════════════
+ // ◀ رجوع ذكي: تاريخ المتصفح إن جئت من داخل النظام، وإلا الانتقال لقائمة الوحدة
+ // ════════════════════════════════════════
+ function pharmaSmartNavigateBack(fallbackUrl) {
+  var fb = fallbackUrl || '/Home/Index';
+  try {
+   var ref = document.referrer || '';
+   if (ref.indexOf(window.location.origin) === 0 && window.history.length > 1) {
+    window.history.back();
+    return;
+   }
+  } catch (e) { }
+  window.location.href = fb;
+ }
+
  // ════════════════════════════════════════
  // 📱 Sidebar Toggle (Mobile Responsive)
  // ════════════════════════════════════════

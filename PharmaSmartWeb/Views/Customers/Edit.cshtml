@@ -3,9 +3,12 @@
 @{
     Layout = "_ModalLayout";
     ViewData["Title"] = $"تعديل ملف العميل: {Model.FullName}";
+    ViewBag.ModalPanelSize = "lg";
+    ViewBag.ModalHeaderIcon = "person";
 }
 
 <form asp-action="Edit" method="post" class="space-y-6">
+    @Html.AntiForgeryToken()
     <input type="hidden" asp-for="CustomerId" />
     <input type="hidden" asp-for="AccountId" />
     <input type="hidden" asp-for="CreatedAt" />
@@ -64,7 +67,7 @@
     </div>
 
     <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 bg-white shadow-[0_-10px_15px_-3px_rgba(255,255,255,1)]">
-        <button type="button" onclick="history.back()" class="px-6 py-2.5 rounded-sm font-black bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all flex items-center gap-2">
+        <button type="button" onclick="modalNavigateBack()" class="px-6 py-2.5 rounded-sm font-black bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-all flex items-center gap-2">
             <span class="material-symbols-outlined text-lg">cancel</span> إلغاء التعديل
         </button>
         <button type="submit" class="bg-amber-500 text-white px-8 py-2.5 rounded-sm font-black shadow-sm border border-slate-200 shadow-amber-500/30 hover:bg-amber-600 transition-all flex items-center gap-2">

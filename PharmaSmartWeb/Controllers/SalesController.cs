@@ -99,6 +99,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         [HttpGet]
+        [HasPermission("Sales", "Add")]
         public async Task<IActionResult> GetCustomersList()
         {
             var customers = await _context.Customers
@@ -323,55 +324,60 @@ namespace PharmaSmartWeb.Controllers
             return RedirectToAction("SalesHub", "Home");
         }
 
-      [HttpPost]
-[ValidateAntiForgeryToken]
-[HasPermission("Sales", "Add")]
-public async Task<IActionResult> SyncOfflineSale([FromForm] string saleJson)
-{
-    if (string.IsNullOrEmpty(saleJson))
-        return BadRequest(new { success = false, message = "بيانات الفاتورة فارغة." });
-
-    try
-    {
-        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var offlineData = System.Text.Json.JsonSerializer.Deserialize<OfflineSaleDto>(saleJson, options);
-        if (offlineData == null)
-            return BadRequest(new { success = false, message = "فاتورة غير صالحة." });
-
-        var strategy = _context.Database.CreateExecutionStrategy();
-        int newSaleId = 0;
-
-        // ✅ قائمة لتتبع الأصناف التي تم تخطيها بسبب نقص المخزون
-        var skippedItems = new List<object>();
-
-        await strategy.ExecuteAsync(async () =>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission("Sales", "Add")]
+        public async Task<IActionResult> SyncOfflineSale([FromForm] string saleJson)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            if (string.IsNullOrEmpty(saleJson))
+                return BadRequest(new { success = false, message = "بيانات الفاتورة فارغة." });
+
             try
             {
-                var userId = await GetValidUserIdAsync();
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var offlineData = System.Text.Json.JsonSerializer.Deserialize<OfflineSaleDto>(saleJson, options);
+                if (offlineData == null)
+                    return BadRequest(new { success = false, message = "فاتورة غير صالحة." });
 
-                var sale = new Sales
+                var strategy = _context.Database.CreateExecutionStrategy();
+                int newSaleId = 0;
+
+                // ✅ قائمة لتتبع الأصناف التي تم تخطيها بسبب نقص المخزون
+                var skippedItems = new List<object>();
+
+                await strategy.ExecuteAsync(async () =>
                 {
-                    UserId = userId,
-                    BranchId = ActiveBranchId,
-                    SaleDate = DateTime.Now,
-                    IsReturn = false,
-                    CustomerId = offlineData.CustomerId > 0 ? offlineData.CustomerId : null,
-                    Discount = offlineData.Discount,
-                    TaxAmount = offlineData.TaxAmount,
-                };
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        var userId = await GetValidUserIdAsync();
 
-                decimal grossTotal = 0, totalCogs = 0;
-                sale.Saledetails = new List<Saledetails>();
+                        var sale = new Sales
+                        {
+                            UserId = userId,
+                            BranchId = ActiveBranchId,
+                            SaleDate = DateTime.Now,
+                            IsReturn = false,
+                            CustomerId = offlineData.CustomerId > 0 ? offlineData.CustomerId : null,
+                            Discount = offlineData.Discount,
+                            TaxAmount = offlineData.TaxAmount,
+                        };
 
-                foreach (var item in offlineData.Items)
-                {
-                    int itemQty = (int)Math.Round(item.Quantity);
+                        decimal grossTotal = 0, totalCogs = 0;
+                        sale.Saledetails = new List<Saledetails>();
 
-                    var inventory = await _context.Branchinventory
-                        .Include(b => b.Drug)
-                        .FirstOrDefaultAsync(b => b.DrugId == item.DrugId && b.BranchId == ActiveBranchId);
+                        var drugIds = offlineData.Items.Select(i => i.DrugId).Distinct().ToList();
+                        var inventoriesList = await _context.Branchinventory
+                            .Include(b => b.Drug)
+                            .Where(b => b.BranchId == ActiveBranchId && drugIds.Contains(b.DrugId))
+                            .ToListAsync();
+                        var inventoriesDict = inventoriesList.ToDictionary(b => b.DrugId);
+
+                        foreach (var item in offlineData.Items)
+                        {
+                            int itemQty = (int)Math.Round(item.Quantity);
+
+                            inventoriesDict.TryGetValue(item.DrugId, out var inventory);
 
                     // ✅ الإصلاح الجوهري:
                     // الصنف لا يُضاف للفاتورة إلا إذا تحقق الشرطان معاً:

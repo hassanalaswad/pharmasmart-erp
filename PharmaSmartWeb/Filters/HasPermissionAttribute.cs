@@ -174,7 +174,7 @@ namespace PharmaSmartWeb.Filters
                     rolePermissions = rawPermissions.Where(p => p.Screen != null).ToList();
 
                     var cacheOptions = new MemoryCacheEntryOptions()
-                        .SetSlidingExpiration(TimeSpan.FromHours(12));
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(30));
 
                     _cache.Set(cacheKey, rolePermissions, cacheOptions);
                 }

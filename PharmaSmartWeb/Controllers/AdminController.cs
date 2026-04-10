@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PharmaSmartWeb.Models;
 using System.Threading.Tasks;
 using PharmaSmartWeb.Filters;
+using PharmaSmartWeb.Infrastructure;
 using System.Linq;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using MySqlConnector;
 
 namespace PharmaSmartWeb.Controllers
 {
@@ -18,9 +21,11 @@ namespace PharmaSmartWeb.Controllers
     [Authorize]
     public class AdminController : BaseController
     {
-        // نعتمد على BaseController لتمرير سياق قاعدة البيانات
-        public AdminController(ApplicationDbContext context) : base(context)
+        private readonly IConfiguration _configuration;
+
+        public AdminController(ApplicationDbContext context, IConfiguration configuration) : base(context)
         {
+            _configuration = configuration;
         }
 
         // ==========================================
@@ -149,40 +154,36 @@ namespace PharmaSmartWeb.Controllers
             if (!IsSuperAdmin)
                 return RedirectToAction("AccessDenied", "Home");
 
-            // مسار mysqldump - يدعم XAMPP وWAMP والـ PATH العام
-            string[] possiblePaths = new[]
+            string connectionString;
+            try
             {
-                @"C:\xampp\mysql\bin\mysqldump.exe",
-                @"C:\wamp64\bin\mysql\mysql8.0.31\bin\mysqldump.exe",
-                @"C:\wamp\bin\mysql\mysql5.7.36\bin\mysqldump.exe",
-                "mysqldump"  // إذا كان في PATH
-            };
-
-            string dumpPath = "mysqldump";
-            foreach (var p in possiblePaths)
+                connectionString = MySqlConnectionResolver.ResolveConnectionString(_configuration);
+            }
+            catch (InvalidOperationException ex)
             {
-                if (p == "mysqldump" || System.IO.File.Exists(p))
-                {
-                    dumpPath = p;
-                    break;
-                }
+                TempData["BackupError"] = ex.Message;
+                return RedirectToAction(nameof(Backup));
             }
 
-            string dbName = "dblast";
-            string dbUser = "root";
-            string dbHost = "localhost";
+            if (!MySqlConnectionResolver.TryGetCliParameters(connectionString, out var dbHost, out var dbPort, out var dbUser, out var dbPassword, out var dbName))
+            {
+                TempData["BackupError"] = "تعذر قراءة اسم قاعدة البيانات أو المستخدم من سلسلة الاتصال.";
+                return RedirectToAction(nameof(Backup));
+            }
+
+            string dumpPath = ResolveMySqlToolPath("mysqldump");
             string fileName = $"PharmaSmart_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.sql";
-            string tempFile = Path.Combine(Path.GetTempPath(), fileName);
+            string cnfPath = Path.Combine(Path.GetTempPath(), $"ps_dump_{Guid.NewGuid():N}.cnf");
 
             try
             {
-                var process = new Process
+                await System.IO.File.WriteAllTextAsync(cnfPath, MySqlConnectionResolver.BuildClientOptionsFileContent(dbHost, dbPort, dbUser, dbPassword), Encoding.UTF8);
+
+                using var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = dumpPath,
-                        // --no-create-info = بيانات فقط بدون CREATE TABLE
-                        Arguments = $"--host={dbHost} --user={dbUser} --no-tablespaces --single-transaction --no-create-info --skip-triggers {dbName}",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
@@ -190,10 +191,33 @@ namespace PharmaSmartWeb.Controllers
                     }
                 };
 
+                var psi = process.StartInfo;
+                psi.ArgumentList.Add($"--defaults-extra-file={cnfPath}");
+                var csb = new MySqlConnectionStringBuilder(connectionString);
+                if (csb.SslMode is MySqlSslMode.Required or MySqlSslMode.VerifyCA or MySqlSslMode.VerifyFull)
+                    psi.ArgumentList.Add("--ssl-mode=REQUIRED");
+
+                psi.ArgumentList.Add("--no-tablespaces");
+                psi.ArgumentList.Add("--single-transaction");
+                psi.ArgumentList.Add("--no-create-info");
+                psi.ArgumentList.Add("--skip-triggers");
+                psi.ArgumentList.Add(dbName);
+
                 process.Start();
-                string output = await process.StandardOutput.ReadToEndAsync();
-                string error = await process.StandardError.ReadToEndAsync();
-                process.WaitForExit();
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                var exitTask = process.WaitForExitAsync();
+                var backupTimeout = TimeSpan.FromMinutes(10);
+                var finished = await Task.WhenAny(exitTask, Task.Delay(backupTimeout));
+                if (finished != exitTask)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    TempData["BackupError"] = $"انتهت مهلة النسخ الاحتياطي ({(int)backupTimeout.TotalMinutes} دقيقة). إذا كانت قاعدة البيانات كبيرة جداً، نفّذ النسخ يدوياً من الخادم.";
+                    return RedirectToAction(nameof(Backup));
+                }
+
+                string output = await stdoutTask;
+                string error = await stderrTask;
 
                 if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
                 {
@@ -201,7 +225,6 @@ namespace PharmaSmartWeb.Controllers
                     return RedirectToAction(nameof(Backup));
                 }
 
-                // إضافة تعليق توضيحي في رأس الملف
                 var header = new StringBuilder();
                 header.AppendLine($"-- ====================================================");
                 header.AppendLine($"-- PharmaSmart ERP - نسخة احتياطية (بيانات فقط - Data Only)");
@@ -218,8 +241,12 @@ namespace PharmaSmartWeb.Controllers
             }
             catch (Exception ex)
             {
-                TempData["BackupError"] = $"خطأ تقني: {ex.Message}. تأكد من أن mysqldump مثبت على الجهاز.";
+                TempData["BackupError"] = $"خطأ تقني: {ex.Message}. تأكد من أن mysqldump مثبت وفي PATH أو مسار XAMPP/WAMP.";
                 return RedirectToAction(nameof(Backup));
+            }
+            finally
+            {
+                try { if (System.IO.File.Exists(cnfPath)) System.IO.File.Delete(cnfPath); } catch { }
             }
         }
 
@@ -257,58 +284,93 @@ namespace PharmaSmartWeb.Controllers
                 return RedirectToAction(nameof(Backup));
             }
 
+            string connectionString;
             try
             {
-                string sqlContent;
-                using (var reader = new StreamReader(sqlFile.OpenReadStream(), Encoding.UTF8))
+                connectionString = MySqlConnectionResolver.ResolveConnectionString(_configuration);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["RestoreError"] = ex.Message;
+                return RedirectToAction(nameof(Backup));
+            }
+
+            if (!MySqlConnectionResolver.TryGetCliParameters(connectionString, out var dbHost, out var dbPort, out var dbUser, out var dbPassword, out var dbName))
+            {
+                TempData["RestoreError"] = "تعذر قراءة معاملات الاتصال لقاعدة البيانات.";
+                return RedirectToAction(nameof(Backup));
+            }
+
+            string mysqlPath = ResolveMySqlToolPath("mysql");
+            string sqlTempPath = Path.Combine(Path.GetTempPath(), $"ps_restore_{Guid.NewGuid():N}.sql");
+            string cnfPath = Path.Combine(Path.GetTempPath(), $"ps_restore_cnf_{Guid.NewGuid():N}.cnf");
+
+            try
+            {
+                await using (var fs = System.IO.File.Create(sqlTempPath))
                 {
-                    sqlContent = await reader.ReadToEndAsync();
+                    await sqlFile.CopyToAsync(fs);
                 }
 
-                if (string.IsNullOrWhiteSpace(sqlContent))
+                var fileInfo = new FileInfo(sqlTempPath);
+                if (fileInfo.Length == 0)
                 {
                     TempData["RestoreError"] = "الملف فارغ أو تالف.";
                     return RedirectToAction(nameof(Backup));
                 }
 
-                // تنفيذ SQL مباشرة عبر Entity Framework
-                // تقسيم الأوامر على حسب ; للتنفيذ التتابعي
-                var statements = sqlContent
-                    .Split(new[] { ";\n", ";\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                await System.IO.File.WriteAllTextAsync(cnfPath, MySqlConnectionResolver.BuildClientOptionsFileContent(dbHost, dbPort, dbUser, dbPassword), Encoding.UTF8);
 
-                int executed = 0;
-                string[] dangerousKeywords = new[] { "DROP", "ALTER", "TRUNCATE", "DELETE FROM", "GRANT", "REVOKE", "XP_CMDSHELL" };
-
-                foreach (var stmt in statements)
+                using var process = new Process
                 {
-                    var trimmed = stmt.Trim();
-                    if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("--"))
-                        continue;
-
-                    // 🚨 حماية من الحقن المدمر: تخطي أي أوامر خطيرة
-                    bool isDangerous = false;
-                    string upperStmt = trimmed.ToUpperInvariant();
-                    foreach (var kw in dangerousKeywords)
+                    StartInfo = new ProcessStartInfo
                     {
-                        if (upperStmt.Contains(kw))
-                        {
-                            isDangerous = true;
-                            break;
-                        }
+                        FileName = mysqlPath,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     }
+                };
 
-                    if (isDangerous) continue;
+                var psi = process.StartInfo;
+                psi.ArgumentList.Add($"--defaults-extra-file={cnfPath}");
+                var csb = new MySqlConnectionStringBuilder(connectionString);
+                if (csb.SslMode is MySqlSslMode.Required or MySqlSslMode.VerifyCA or MySqlSslMode.VerifyFull)
+                    psi.ArgumentList.Add("--ssl-mode=REQUIRED");
+                psi.ArgumentList.Add("--default-character-set=utf8mb4");
+                psi.ArgumentList.Add(dbName);
 
-                    try
-                    {
-                        _context.Database.ExecuteSqlRaw(trimmed);
-                        executed++;
-                    }
-                    catch { /* تجاهل الأخطاء الفردية وإكمال الباقي */ }
+                process.Start();
+
+                await using (var sqlStream = System.IO.File.OpenRead(sqlTempPath))
+                await sqlStream.CopyToAsync(process.StandardInput.BaseStream).ConfigureAwait(false);
+                process.StandardInput.Close();
+
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                _ = process.StandardOutput.ReadToEndAsync();
+
+                var exitTask = process.WaitForExitAsync();
+                var restoreTimeout = TimeSpan.FromMinutes(30);
+                if (await Task.WhenAny(exitTask, Task.Delay(restoreTimeout)).ConfigureAwait(false) != exitTask)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    TempData["RestoreError"] = $"انتهت مهلة الاستعادة ({(int)restoreTimeout.TotalMinutes} دقيقة). جرّب تقسيم الملف أو الاستعادة من سطر الأوامر.";
+                    return RedirectToAction(nameof(Backup));
                 }
 
-                await RecordLog("Restore", "Admin", $"تم استرجاع البيانات من الملف ({sqlFile.FileName}). عدد الأوامر المنفذة: {executed}");
-                TempData["RestoreSuccess"] = $"✅ تم استرجاع البيانات بنجاح! عدد الأوامر المنفذة: {executed}";
+                string err = await stderrTask.ConfigureAwait(false);
+                if (process.ExitCode != 0)
+                {
+                    TempData["RestoreError"] = string.IsNullOrWhiteSpace(err)
+                        ? "فشل تنفيذ mysql (رمز خروج غير صفري). تحقق من صلاحيات المستخدم وصحة الملف."
+                        : $"فشل الاستعادة: {err}";
+                    return RedirectToAction(nameof(Backup));
+                }
+
+                await RecordLog("Restore", "Admin", $"تم استرجاع البيانات عبر mysql CLI من الملف ({sqlFile.FileName}).");
+                TempData["RestoreSuccess"] = "✅ تم استرجاع البيانات بنجاح عبر عميل MySQL الرسمي.";
                 return RedirectToAction(nameof(Backup));
             }
             catch (Exception ex)
@@ -316,9 +378,43 @@ namespace PharmaSmartWeb.Controllers
                 TempData["RestoreError"] = $"خطأ أثناء الاسترجاع: {ex.Message}";
                 return RedirectToAction(nameof(Backup));
             }
+            finally
+            {
+                try { if (System.IO.File.Exists(sqlTempPath)) System.IO.File.Delete(sqlTempPath); } catch { }
+                try { if (System.IO.File.Exists(cnfPath)) System.IO.File.Delete(cnfPath); } catch { }
+            }
         }
 
-        // ملاحظة: يمكنك إضافة أكواد إضافية هنا لتنظيف السجلات القديمة أو تصديرها
+        /// <summary>مسارات شائعة لـ XAMPP/WAMP ثم الاعتماد على PATH.</summary>
+        private static string ResolveMySqlToolPath(string toolName)
+        {
+            bool isDump = toolName.Equals("mysqldump", StringComparison.OrdinalIgnoreCase);
+            string[] candidates = isDump
+                ? new[]
+                {
+                    @"C:\xampp\mysql\bin\mysqldump.exe",
+                    @"C:\wamp64\bin\mysql\mysql8.0.31\bin\mysqldump.exe",
+                    @"C:\wamp\bin\mysql\mysql5.7.36\bin\mysqldump.exe",
+                    "mysqldump"
+                }
+                : new[]
+                {
+                    @"C:\xampp\mysql\bin\mysql.exe",
+                    @"C:\wamp64\bin\mysql\mysql8.0.31\bin\mysql.exe",
+                    @"C:\wamp\bin\mysql\mysql5.7.36\bin\mysql.exe",
+                    "mysql"
+                };
+
+            foreach (var p in candidates)
+            {
+                if (p == "mysqldump" || p == "mysql")
+                    return p;
+                if (System.IO.File.Exists(p))
+                    return p;
+            }
+
+            return isDump ? "mysqldump" : "mysql";
+        }
     }
 }
 

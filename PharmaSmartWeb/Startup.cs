@@ -8,17 +8,20 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using PharmaSmartWeb.Models;
 using Microsoft.AspNetCore.Authentication;
+using PharmaSmartWeb.Infrastructure;
 
 namespace PharmaSmartWeb
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, IWebHostEnvironment environment)
         {
             Configuration = configuration;
+            Environment = environment;
         }
 
         public IConfiguration Configuration { get; }
+        public IWebHostEnvironment Environment { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -30,23 +33,29 @@ namespace PharmaSmartWeb
             });
             services.AddMemoryCache();
 
+            // طلبات fetch/AJAX: إرسال الرمز في الهيدر RequestVerificationToken
+            services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+
             services.AddTransient<IClaimsTransformation, PharmaSmartWeb.Security.ClaimsTransformer>();
             services.AddScoped<PharmaSmartWeb.Services.IAccountingEngine, PharmaSmartWeb.Services.AccountingEngine>();
             services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<PharmaSmartWeb.Models.Users>, Microsoft.AspNetCore.Identity.PasswordHasher<PharmaSmartWeb.Models.Users>>();
 
             // ── قاعدة البيانات ─────────────────────────────────────────────
-            string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
-                ?? "server=localhost;database=dblast;uid=root;pwd=;";
-            
-            // دعم روابط Cloud (مثل Aiven) التي تبدأ بـ mysql://
-            if (connectionString.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase))
+            string connectionString;
+            try
             {
-                var uri = new Uri(connectionString);
-                var userInfo = uri.UserInfo.Split(':');
-                string user = userInfo[0];
-                string pass = userInfo.Length > 1 ? userInfo[1] : "";
-                string dbName = uri.AbsolutePath.TrimStart('/');
-                connectionString = $"Server={uri.Host};Port={uri.Port};Database={dbName};Uid={user};Pwd={pass};SslMode=Required;";
+                connectionString = MySqlConnectionResolver.ResolveConnectionString(Configuration);
+            }
+            catch (InvalidOperationException)
+            {
+                if (Environment.IsDevelopment())
+                {
+                    connectionString = "server=127.0.0.1;port=3306;database=dblast;user=root;password=;";
+                }
+                else
+                {
+                    throw;
+                }
             }
             
             // تحديد إصدار MySQL مسبقاً بدلاً من AutoDetect لمنع تعليق (Crash) التطبيق عند الإقلاع البطيء

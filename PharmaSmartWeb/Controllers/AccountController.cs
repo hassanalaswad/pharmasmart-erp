@@ -198,6 +198,7 @@ using System.Security.Claims;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using System.Linq;
 using System;
 
@@ -206,8 +207,11 @@ namespace PharmaSmartWeb.Controllers
     // 🚀 يرث من BaseController للوصول لمحرك العزل وخدمة RecordLog
     public class AccountController : BaseController
     {
-        public AccountController(ApplicationDbContext context) : base(context)
+        private readonly IPasswordHasher<Users> _passwordHasher;
+
+        public AccountController(ApplicationDbContext context, IPasswordHasher<Users> passwordHasher) : base(context)
         {
+            _passwordHasher = passwordHasher;
         }
 
         // ==========================================
@@ -259,23 +263,26 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
-            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
-            
-            // 🚀 Migration Logic: Check if it's plaintext, hash it, and save.
+            // 🚀 Migration Logic: plaintext → hash on first successful login; otherwise verify with IPasswordHasher.
             if (user.PasswordHash == password)
             {
-                user.PasswordHash = hasher.HashPassword(user, password);
+                user.PasswordHash = _passwordHasher.HashPassword(user, password);
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
             }
             else
             {
-                // Verify using hash
-                var result = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
-                if (result != Microsoft.AspNetCore.Identity.PasswordVerificationResult.Success)
+                var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+                if (result != PasswordVerificationResult.Success && result != PasswordVerificationResult.SuccessRehashNeeded)
                 {
                     ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب محظور.";
                     return View();
+                }
+                if (result == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    user.PasswordHash = _passwordHasher.HashPassword(user, password);
+                    _context.Users.Update(user);
+                    await _context.SaveChangesAsync();
                 }
             }
 
@@ -374,7 +381,17 @@ namespace PharmaSmartWeb.Controllers
         public async Task<IActionResult> ChangePassword(string currentPassword, string newPassword, string confirmPassword)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == User.Identity.Name);
-            if (user == null || user.PasswordHash != currentPassword)
+            if (user == null)
+            {
+                ViewBag.Error = "تعذر تحميل بيانات المستخدم.";
+                return View();
+            }
+
+            bool currentValid =
+                user.PasswordHash == currentPassword
+                || _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword) is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
+
+            if (!currentValid)
             {
                 ViewBag.Error = "كلمة المرور الحالية غير صحيحة!";
                 return View();
@@ -386,7 +403,7 @@ namespace PharmaSmartWeb.Controllers
                 return View();
             }
 
-            user.PasswordHash = newPassword;
+            user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
             _context.Update(user);
             await _context.SaveChangesAsync();
 

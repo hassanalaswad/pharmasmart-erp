@@ -137,6 +137,7 @@ namespace PharmaSmartWeb.Controllers
         // ⚡ 2B. إضافة عميل سريع من POS (AJAX/JSON)
         // ==========================================
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [HasPermission("Customers", "Add")]
         public async Task<IActionResult> QuickCreate([FromBody] QuickCustomerDto dto)
         {

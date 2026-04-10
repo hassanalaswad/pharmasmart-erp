@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +17,11 @@ namespace PharmaSmartWeb.Controllers
     [Authorize] // يمنع دخول الزوار غير المسجلين أصلاً
     public class UsersController : BaseController
     {
-        public UsersController(ApplicationDbContext context) : base(context)
+        private readonly IPasswordHasher<Users> _passwordHasher;
+
+        public UsersController(ApplicationDbContext context, IPasswordHasher<Users> passwordHasher) : base(context)
         {
+            _passwordHasher = passwordHasher;
         }
 
         // ==========================================
@@ -83,8 +87,7 @@ namespace PharmaSmartWeb.Controllers
                     return View(newUser);
                 }
 
-                var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
-                newUser.PasswordHash = hasher.HashPassword(newUser, newUser.PasswordHash);
+                newUser.PasswordHash = _passwordHasher.HashPassword(newUser, newUser.PasswordHash);
                 
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
@@ -168,8 +171,7 @@ namespace PharmaSmartWeb.Controllers
                 var existingUserHashCheck = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == updatedUser.UserId);
                 if (existingUserHashCheck != null && existingUserHashCheck.PasswordHash != updatedUser.PasswordHash && !string.IsNullOrWhiteSpace(updatedUser.PasswordHash))
                 {
-                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Users>();
-                    updatedUser.PasswordHash = hasher.HashPassword(updatedUser, updatedUser.PasswordHash);
+                    updatedUser.PasswordHash = _passwordHasher.HashPassword(updatedUser, updatedUser.PasswordHash);
                 }
 
                 _context.Update(updatedUser);
