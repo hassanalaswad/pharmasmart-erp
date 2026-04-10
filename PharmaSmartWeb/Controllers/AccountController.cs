@@ -264,9 +264,14 @@ namespace PharmaSmartWeb.Controllers
             }
 
             // 🚀 Migration Logic: plaintext → hash on first successful login; otherwise verify with IPasswordHasher.
-            if (user.PasswordHash == password)
+            // Using .Trim() here to handle legacy data that might have trailing spaces in the database.
+            string dbPwd = user.PasswordHash?.Trim();
+            string inputPwd = password?.Trim();
+
+            if (!string.IsNullOrEmpty(dbPwd) && dbPwd == inputPwd)
             {
-                user.PasswordHash = _passwordHasher.HashPassword(user, password);
+                // Convert to hash immediately and save
+                user.PasswordHash = _passwordHasher.HashPassword(user, inputPwd);
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
             }
