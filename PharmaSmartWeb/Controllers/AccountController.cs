@@ -264,6 +264,12 @@ namespace PharmaSmartWeb.Controllers
                 .Include(u => u.Employee)
                 .FirstOrDefaultAsync(u => u.Username == cleanUsername);
 
+            // ✅ التحقق الصارم من حالة الأحرف في C# لأن MySQL افتراضياً غير حساسة (case-insensitive)
+            if (user != null && !string.Equals(user.Username, cleanUsername, StringComparison.Ordinal))
+            {
+                user = null; // نرفض المستخدم إذا اختلفت الحالة
+            }
+
             // 1. التشخيص: هل المستخدم موجود؟
             if (user == null)
             {
