@@ -220,7 +220,7 @@ namespace PharmaSmartWeb.Controllers
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-        public async Task<IActionResult> Login(string returnUrl = null)
+        public async Task<IActionResult> Login(string? returnUrl = null)
         {
             // 🛑 إصلاح حلقة التكرار (Redirect Loop):
             // بدلاً من عمل RedirectToAction لنفس الصفحة (مما يسبب Loop)، 
@@ -253,18 +253,22 @@ namespace PharmaSmartWeb.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(string username, string password, string returnUrl = null)
+        public async Task<IActionResult> Login(string? username, string? password, string? returnUrl = null)
         {
-            if (string.IsNullOrEmpty(username)) return View();
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) return View();
 
             // 🚀 الإجراء الوقائي: مسح المسافات الفارغة (Trim) لحل مشاكل الإدخال
-            string cleanUsername = username?.Trim();
+            string cleanUsername = username.Trim();
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == cleanUsername);
+            var user = await _context.Users
+                .Include(u => u.Employee)
+                .FirstOrDefaultAsync(u => u.Username == cleanUsername);
 
             // 1. التشخيص: هل المستخدم موجود؟
             if (user == null)
             {
+                // ❗️ تسجيل محاولة دخول فاشلة في السجلات
+                await RecordLoginFailureAsync(username, "username_not_found");
                 ViewBag.Error = "اسم المستخدم غير مسجل في النظام.";
                 return View();
             }
@@ -273,14 +277,16 @@ namespace PharmaSmartWeb.Controllers
             // نتعامل مع null كأنه نشط إلا إذا تم إيقافه صراحة 
             if (user.IsActive == false)
             {
+                // ❗️ تسجيل محاولة دخول لحساب موقوف
+                await RecordLoginFailureAsync(username, "account_disabled");
                 ViewBag.Error = "هذا الحساب معطل حالياً، يرجى مراجعة الإدارة.";
                 return View();
             }
 
             // 🚀 محرك الهجرة المطور (Robust Migration Engine):
             // نقوم بالتحقق من النص الصريح مع تجاهل حالة الأحرف والمسافات الزائدة
-            string dbPlaintext = user.PasswordHash?.Trim();
-            string inputPlaintext = password?.Trim();
+            string dbPlaintext = user.PasswordHash.Trim();
+            string inputPlaintext = password.Trim();
             
             bool isLegacyMatch = !string.IsNullOrEmpty(dbPlaintext) && 
                                  string.Equals(dbPlaintext, inputPlaintext, StringComparison.OrdinalIgnoreCase);
@@ -300,6 +306,8 @@ namespace PharmaSmartWeb.Controllers
                     var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
                     if (result != PasswordVerificationResult.Success && result != PasswordVerificationResult.SuccessRehashNeeded)
                     {
+                        // ❗️ تسجيل محاولة دخول بكلمة مرور خاطئة
+                        await RecordLoginFailureAsync(username, "password_mismatch");
                         ViewBag.Error = "كلمة المرور غير صحيحة.";
                         return View();
                     }
@@ -314,6 +322,7 @@ namespace PharmaSmartWeb.Controllers
                 catch
                 {
                     // في حالة وجود نص قديم لا يتوافق مع صيغة الـ Hash ولم ينجح الـ Legacy Match
+                    await RecordLoginFailureAsync(username, "password_mismatch");
                     ViewBag.Error = "بيانات الدخول غير متوافقة مع إعدادات الأمان الجديدة. يرجى التواصل مع الدعم.";
                     return View();
                 }
@@ -335,9 +344,12 @@ namespace PharmaSmartWeb.Controllers
             }
 
             // 3. بناء الهوية البرمجية (Claims) - فقط البيانات الأساسية لتجنب تضخم الكوكي
+            string userFullName = user.Employee?.FullName ?? user.Username;
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, user.Username),
+                new Claim("FullName", userFullName),
                 new Claim("UserID", user.UserId.ToString()),
                 new Claim("RoleID", user.RoleId.ToString()),
                 new Claim(ClaimTypes.Role, roleName),
@@ -411,8 +423,10 @@ namespace PharmaSmartWeb.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangePassword(string currentPassword, string newPassword, string confirmPassword)
+        public async Task<IActionResult> ChangePassword(string? currentPassword, string? newPassword, string? confirmPassword)
         {
+            if (string.IsNullOrEmpty(currentPassword) || string.IsNullOrEmpty(newPassword) || string.IsNullOrEmpty(confirmPassword)) return View();
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == User.Identity.Name);
             if (user == null)
             {
@@ -442,6 +456,36 @@ namespace PharmaSmartWeb.Controllers
 
             await RecordLog("Update", "Account", "تم تغيير كلمة المرور بنجاح.");
             return RedirectToAction("Index", "Home");
+        }
+        // ==========================================
+        // ️⃣ دالة مساعدة خاصة بتسجيل فشل الدخول
+        // (AccountController لا يرث RecordLog العادي لأنه غير مصادق عليه بعد)
+        // ==========================================
+        private async Task RecordLoginFailureAsync(string attemptedUsername, string reason)
+        {
+            try
+            {
+                var reasonText = reason switch
+                {
+                    "username_not_found" => "اسم مستخدم غير موجود",
+                    "account_disabled"   => "حساب معطل",
+                    "password_mismatch"  => "كلمة مرور خاطئة",
+                    _                    => "غير معروف"
+                };
+
+                var log = new SystemLogs
+                {
+                    UserId     = 0, // 0 = محاولة غير مصادق عليه
+                    Action     = "LoginFailed",
+                    ScreenName = "Account",
+                    Details    = $"محاولة دخول فاشلة - اسم المستخدم: [{attemptedUsername}] - السبب: {reasonText}",
+                    IPAddress  = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                    CreatedAt  = DateTime.Now
+                };
+                _context.Systemlogs.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            catch { }
         }
     }
 }

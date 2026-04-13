@@ -108,14 +108,14 @@ namespace PharmaSmartWeb.Controllers
 
                                 string newAccountCode = lastChild != null
                                     ? (long.Parse(lastChild.AccountCode) + 1).ToString()
-                                    : parentAccount.AccountCode + "001";
+                                    : (parentAccount?.AccountCode ?? "1") + "001";
 
                                 var newAccount = new Accounts
                                 {
                                     AccountCode = newAccountCode,
                                     AccountName = supplier.SupplierName,
                                     ParentAccountId = ParentAccountId,
-                                    AccountType = parentAccount.AccountType,
+                                    AccountType = parentAccount?.AccountType ?? "Liabilities",
                                     Balance = 0,
                                     IsActive = true
                                 };

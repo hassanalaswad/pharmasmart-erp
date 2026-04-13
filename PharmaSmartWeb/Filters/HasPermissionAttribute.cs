@@ -1,4 +1,4 @@
-﻿//using Microsoft.AspNetCore.Mvc;
+//using Microsoft.AspNetCore.Mvc;
 //using Microsoft.AspNetCore.Mvc.Filters;
 //using Microsoft.EntityFrameworkCore;
 //using Microsoft.Extensions.Caching.Memory;
@@ -159,7 +159,7 @@ namespace PharmaSmartWeb.Filters
                 return; // الخروج من الفلتر والسماح بالوصول
             }
 
-            string cacheKey = $"Permissions_Role_{roleId}";
+            string cacheKey = $"Filter_Permissions_Role_{roleId}";
 
             if (!_cache.TryGetValue(cacheKey, out List<Screenpermissions> rolePermissions))
             {

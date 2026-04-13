@@ -153,8 +153,8 @@
             <h2 class="pos-title" style="font-size:24px; font-weight:900; color:#063955; margin:0;">فاتورة مبيعات جديدة</h2>
         </div>
         <div class="pos-header-actions">
-            <a href="/Home/CommercialHub" class="btn-cancel">
-                <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span> إلغاء
+            <a href="javascript:history.length > 1 ? history.back() : window.location.href='/Home/CommercialHub'" style="background:white; color:#ef4444; border:1px solid #fecaca; padding:10px 20px; border-radius:4px; font-size:13px; font-weight:900; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px;">close</span> خروج من نقطة البيع
             </a>
             <button type="button" onclick="submitPOS()" id="btnSaveSales" disabled class="btn-submit">
                 <span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> حفظ وإصدار الفاتورة

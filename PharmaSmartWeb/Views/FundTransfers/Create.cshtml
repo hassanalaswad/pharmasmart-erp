@@ -1,4 +1,4 @@
-﻿@{
+@{
  ViewData["Title"] = "إجراء تحويل مالي";
 }
 
@@ -32,7 +32,7 @@
  <label class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 block"><i class="fas fa-arrow-up mr-1"></i> سحب من (المرسل) *</label>
  <select name="FromAccountId" required class="w-full bg-white border border-rose-200 rounded-sm py-4 px-4 font-bold text-slate-700 outline-none focus:border-rose-500 cursor-pointer">
  <option value="">-- اختر الصندوق أو البنك --</option>
- @foreach (var item in ViewBag.FromAccounts as SelectList)
+ @foreach (var item in (ViewBag.FromAccounts as SelectList) ?? new SelectList(Enumerable.Empty<object>()))
  {
  <option value="@item.Value">@item.Text</option>
 }
@@ -45,7 +45,7 @@
  <label class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2 block"><i class="fas fa-arrow-down mr-1"></i> إيداع إلى (المستقبل) *</label>
  <select name="ToAccountId" required class="w-full bg-white border border-emerald-200 rounded-sm py-4 px-4 font-bold text-slate-700 outline-none focus:border-emerald-500 cursor-pointer">
  <option value="">-- اختر الصندوق أو البنك --</option>
- @foreach (var item in ViewBag.ToAccounts as SelectList)
+ @foreach (var item in (ViewBag.ToAccounts as SelectList) ?? new SelectList(Enumerable.Empty<object>()))
  {
  <option value="@item.Value">@item.Text</option>
 }

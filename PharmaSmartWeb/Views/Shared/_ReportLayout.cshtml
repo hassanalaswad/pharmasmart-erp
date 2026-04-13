@@ -434,7 +434,7 @@
             <strong>رقم التقرير:</strong> @(ViewBag.ReportNumber ?? "REP-" + DateTime.Now.ToString("yyyyMMdd-HHmm"))<br>
             <strong>تاريخ الإصدار:</strong> @DateTime.Now.ToString("yyyy/MM/dd HH:mm")<br>
             <strong>الفترة / التاريخ:</strong> @(ViewBag.ReportPeriod ?? "-")<br>
-            <strong>تم بواسطة:</strong> @(User.Identity?.Name ?? "النظام")
+            <strong>تم بواسطة:</strong> @(User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "النظام")
         </div>
     </div>
 

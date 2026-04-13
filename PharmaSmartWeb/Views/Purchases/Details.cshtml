@@ -13,6 +13,7 @@
     .btn-edit:hover { background: #fde68a; }
     .btn-primary { background: #063955; color: white; }
     .btn-primary:active { transform: scale(0.98); }
+    @@media print { .no-print { display: none !important; } }
 </style>
 
 <div style="max-width:1100px; margin:0 auto; padding-bottom:60px; padding-top:24px;">
@@ -31,7 +32,7 @@
             </div>
         </div>
         
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;" class="no-print">
             @if (Model.IsReturn != true)
             {
                 <a href="/PurchasesReturn/Create/@Model.PurchaseId" class="btn-action btn-return">
@@ -40,6 +41,9 @@
             }
             <a href="/Purchases/Edit/@Model.PurchaseId" class="btn-action btn-edit">
                 <span class="material-symbols-outlined">edit_square</span> تعديل الفاتورة
+            </a>
+            <a href="/JournalEntries/ViewRelatedJournal?refType=Purchase&refNo=@Model.InvoiceNumber" class="btn-action" style="background:#059669; color:white; border: 1px solid #047857;">
+                <span class="material-symbols-outlined">account_balance</span> القيد المحاسبي الآلي
             </a>
             <button class="btn-action btn-primary" onclick="window.print()">
                 <span class="material-symbols-outlined">print</span> طباعة الإيصال

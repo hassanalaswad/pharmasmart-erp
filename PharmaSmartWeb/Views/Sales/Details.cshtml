@@ -56,6 +56,7 @@
     .btn-return { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
     @@media print {
+        .no-print { display: none !important; }
         @@page { size: 80mm auto; margin: 0; }
         body * { visibility: hidden; }
         .receipt-paper, .receipt-paper * { visibility: visible; }
@@ -72,7 +73,7 @@
             <a href="/Sales/Index" style="color:#64748b; text-decoration:none;"><span class="material-symbols-outlined">arrow_forward</span></a>
             <h1 style="font-size:18px; font-weight:900; color:#0f172a; margin:0;">فاتورة مبيعات POS</h1>
         </div>
-        <div style="display:flex; gap:12px;">
+        <div style="display:flex; gap:12px;" class="no-print">
             @if (!Model.IsReturn)
             {
                 <a href="/SalesReturn/Create/@Model.SaleId" class="btn-action btn-return">
@@ -86,6 +87,9 @@
                     هذه فاتورة مرتجعة
                 </span>
             }
+            <a href="/JournalEntries/ViewRelatedJournal?refType=Sale&refNo=@Model.SaleId" class="btn-action" style="background:#059669; color:white; border:1px solid #047857;">
+                <span class="material-symbols-outlined">account_balance</span> القيد المحاسبي الآلي
+            </a>
             <button onclick="window.print()" class="btn-action btn-primary">
                 <span class="material-symbols-outlined">print</span> طباعة الفاتورة
             </button>

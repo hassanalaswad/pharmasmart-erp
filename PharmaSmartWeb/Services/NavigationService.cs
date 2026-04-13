@@ -65,17 +65,13 @@ namespace PharmaSmartWeb.Services
                 
                 group.Items.Add(new MenuItem { Title = "لوحة التحكم", Url = "/Home/CommercialHub", Icon = "dashboard" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Sales.Add") || user.IsInRole("Cashier") || user.IsInRole("Pharmacist"))
-                    group.Items.Add(new MenuItem { Title = "نقطة البيع السريعة", Url = "/Sales/Create", Icon = "point_of_sale" });
-                
+
                 if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Sales.View") || user.IsInRole("BranchManager"))
                     group.Items.Add(new MenuItem { Title = "المبيعات ونقاط البيع", Url = "/Sales/Index", Icon = "receipt_long" });
                 
                 if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "SalesReturn.View") || user.IsInRole("BranchManager"))
                     group.Items.Add(new MenuItem { Title = "مرتجع المبيعات", Url = "/SalesReturn/Index", Icon = "assignment_return" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Purchases.Add") || user.IsInRole("BranchManager"))
-                    group.Items.Add(new MenuItem { Title = "فواتير المشتريات", Url = "/Purchases/Create", Icon = "add_shopping_cart" });
 
                 if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Purchases.View") || user.IsInRole("BranchManager") || user.IsInRole("Storekeeper"))
                     group.Items.Add(new MenuItem { Title = "سجل المشتريات", Url = "/Purchases/Index", Icon = "shopping_cart_checkout" });
@@ -103,6 +99,7 @@ namespace PharmaSmartWeb.Services
 
                 if (user.IsInRole("SuperAdmin") || user.IsInRole("Storekeeper") || user.IsInRole("Pharmacist"))
                 {
+                    group.Items.Add(new MenuItem { Title = "تسعير الأدوية (WAC)", Url = "/Pricing/Index", Icon = "price_change" });
                     group.Items.Add(new MenuItem { Title = "المستودعات والرفوف", Url = "/Warehouses/Index", Icon = "warehouse" });
                     group.Items.Add(new MenuItem { Title = "جرد وتسوية المخزون", Url = "/StockAudit/Index", Icon = "rule" });
                     group.Items.Add(new MenuItem { Title = "التحويلات المخزنية", Url = "/DrugTransfers/Index", Icon = "local_shipping" });
@@ -209,7 +206,7 @@ namespace PharmaSmartWeb.Services
             var commercialControllers = new[] { "Sales", "SalesReturn", "Purchases", "PurchasesReturn", "POS" };
             if (commercialControllers.Contains(controller, StringComparer.OrdinalIgnoreCase)) return "Commercial";
 
-            var inventoryControllers = new[] { "Drugs", "ItemGroups", "Warehouses", "Barcode", "Inventory", "StockAudit", "DrugTransfers" };
+            var inventoryControllers = new[] { "Drugs", "ItemGroups", "Warehouses", "Barcode", "Inventory", "StockAudit", "DrugTransfers", "Pricing" };
             if (inventoryControllers.Contains(controller, StringComparer.OrdinalIgnoreCase)) return "Inventory";
 
             var financeControllers = new[] { "Accounting", "Customers", "Suppliers", "Employees", "Vouchers", "FundTransfers", "JournalEntries" };

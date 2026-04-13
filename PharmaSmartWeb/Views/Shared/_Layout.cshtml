@@ -13,34 +13,77 @@
  <link rel="stylesheet" href="~/css/local-fonts.css" />
 </head>
 <body class="text-on-surface flex rtl">
- <!-- Global Preloader -->
- <div id="preloader" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#00314e] transition-opacity duration-700">
-  <div class="flex flex-col items-center gap-6">
-  <div class="relative">
-   <!-- Outer Ring -->
-   <div class="w-20 h-20 border-4 border-slate-700/30 border-t-sky-400 rounded-full animate-spin"></div>
-   <!-- Inner Logo/Icon Pulse -->
-   <div class="absolute inset-0 flex items-center justify-center">
-   <span class="material-symbols-outlined text-sky-400 text-3xl animate-pulse">medication</span>
+ <!-- Premium Global Preloader -->
+ <div id="preloader" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-50/80 backdrop-blur-md transition-all duration-300">
+  <div class="flex flex-col items-center gap-5">
+  <div class="relative flex items-center justify-center">
+   <!-- Glowing Background -->
+   <div class="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse"></div>
+   <!-- Animated Rings -->
+   <div class="w-16 h-16 border-[3px] border-slate-200 rounded-full"></div>
+   <div class="w-16 h-16 border-[3px] border-primary border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+   <!-- Center Icon -->
+   <div class="absolute flex items-center justify-center bg-white w-10 h-10 rounded-full shadow-sm">
+    <span class="material-symbols-outlined text-primary text-[20px] animate-pulse">hourglass_bottom</span>
    </div>
   </div>
-  <div class="text-center">
-   <h2 class="text-white text-lg font-black tracking-widest mb-1">PHARMA SMART</h2>
-   <p class="text-sky-300/60 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">جاري تحميل واجهة الصيدلية...</p>
+  <div class="flex flex-col items-center">
+   <div class="text-primary text-sm font-black tracking-widest uppercase animate-pulse">جاري التحميل...</div>
+   <div class="text-slate-400 text-[10px] font-bold mt-1">يتم الآن تجهيز البيانات</div>
   </div>
   </div>
  </div>
 
  <script>
+  // Hide preloader when page fully loaded
   window.addEventListener('load', function() {
-  const preloader = document.getElementById('preloader');
-  if (preloader) {
-   preloader.style.opacity = '0';
-   setTimeout(() => {
-   preloader.style.visibility = 'hidden';
-   preloader.style.display = 'none';
-   }, 700);
+   const preloader = document.getElementById('preloader');
+   if (preloader) {
+    preloader.style.opacity = '0';
+    setTimeout(() => {
+     preloader.style.visibility = 'hidden';
+     preloader.style.display = 'none';
+    }, 300);
+   }
+  });
+
+  // Show preloader immediately on navigation to prevent the "frozen" feeling
+  function showPreloader() {
+   const preloader = document.getElementById('preloader');
+   if (preloader) {
+    preloader.style.display = 'flex';
+    preloader.style.visibility = 'visible';
+    preloader.style.opacity = '1';
+   }
   }
+
+  // Handle Form Submissions
+  document.addEventListener('submit', function(e) {
+   // Only show if form is not marked with data-noloader
+   if (!e.target.hasAttribute('data-noloader')) {
+    showPreloader();
+   }
+  });
+
+  // Handle Link Clicks
+  document.addEventListener('click', function(e) {
+   const link = e.target.closest('a[href]');
+   if (link) {
+    const href = link.getAttribute('href');
+    const target = link.getAttribute('target');
+    
+    // Ignore empty links, javascript, anchors, or new tabs
+    if (!href || href.startsWith('javascript:') || href.startsWith('#') || target === '_blank') {
+     return;
+    }
+    
+    // Ignore modal toggles or specific exclusions
+    if (link.hasAttribute('data-bs-toggle') || link.hasAttribute('data-noloader') || link.onclick) {
+     return;
+    }
+
+    showPreloader();
+   }
   });
  </script>
 @{
@@ -49,6 +92,10 @@
 
  bool isMainHub = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) 
  && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+
+ bool isPOSMode = string.Equals(currentController, "Sales", StringComparison.OrdinalIgnoreCase) 
+ && string.Equals(currentAction, "Create", StringComparison.OrdinalIgnoreCase);
+
 
  bool isSubPage = !string.IsNullOrEmpty(currentAction)
  && !currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase)
@@ -67,7 +114,7 @@
  bool showHeaderBack = !isMainHub && ViewData["HideLayoutBack"] as bool? != true;
 }
 
-@if (!isMainHub)
+@if (!isMainHub && !isPOSMode)
 {
 <!-- Sidebar Navigation -->
 <aside class="print:hidden h-screen w-64 fixed right-0 top-0 border-l border-slate-100 bg-slate-50 z-50 flex flex-col p-4">
@@ -128,22 +175,29 @@
  }
  </nav>
 
- <!-- Contextual Action Button based on Module -->
- <div class="mt-4 pt-4 border-t border-slate-200">
- @{
- string activeUnit = "Main";
- if (currentController == "Sales" || currentController == "Purchases") activeUnit = "Commercial";
- else if (currentController == "Drugs" || currentController == "Inventory") activeUnit = "Inventory";
- else if (currentController == "Accounting" || currentController == "JournalEntries") activeUnit = "Finance";
- else if (currentController == "Admin" || currentController == "Branches" || currentController == "Users" || currentController == "Roles" || currentController == "Currencies" || currentController == "FinancialSettings") activeUnit = "SystemSettings";
- else if (currentController == "Home" && (currentAction == "AdminHub" || currentAction == "SettingsHub")) activeUnit = "SystemSettings";
- }
- @if(activeUnit == "Commercial" && User.HasClaim("Permission", "Sales.Add"))
+ <!-- Always Visible Quick POS Button at bottom of sidebar -->
+ <div class="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
+ @if (User.HasClaim("Permission", "Sales.Add") || User.IsInRole("SuperAdmin") || User.IsInRole("Cashier") || User.IsInRole("Pharmacist"))
  {
- <a href="/Sales/Create" class="w-full py-3 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
- <span class="material-symbols-outlined" data-icon="add">add</span> فاتورة مبيعات
- </a>
+  <a href="/Sales/Create" class="w-full py-3 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+   <span class="material-symbols-outlined">point_of_sale</span> نقطة بيع سريعة
+  </a>
  }
+ <div class="border-t border-slate-100 my-1"></div>
+ <!-- Contextual Action Button based on Module -->
+ @{
+    string activeUnit = "Commercial"; 
+    if (new[] { "Report", "InventoryIntelligence" }.Contains(currentController)) activeUnit = "Reports";
+    else if (new[] { "Drugs", "Inventory" }.Contains(currentController)) activeUnit = "Inventory";
+    else if (new[] { "Journal", "ChartOfAccounts", "Vouchers", "FinancialSettings" }.Contains(currentController)) activeUnit = "Finance";
+    else if (new[] { "Admin", "Users", "Roles", "Branches", "Account" }.Contains(currentController)) activeUnit = "SystemSettings";
+ }
+  @if(activeUnit == "Commercial")
+  {
+  <a href="/Home/CommercialHub" class="w-full py-3 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
+  <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> لوحة التجارية
+  </a>
+  }
  else if (activeUnit == "Finance" && User.HasClaim("Permission", "JournalEntries.View"))
  {
  <a href="/Vouchers/Index" class="w-full py-3 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
@@ -176,8 +230,9 @@
 <div id="mobileSidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- Main Content Canvas -->
-<main class="print:!m-0 print:!p-0 @(isMainHub ? "" : "mr-64") p-5 min-h-screen flex-1 w-full max-w-full overflow-x-hidden bg-surface">
+<main class="print:!m-0 print:!p-0 @(isMainHub || isPOSMode ? "" : "mr-64") p-5 min-h-screen flex-1 w-full max-w-full overflow-x-hidden bg-surface">
 
+@if (!isPOSMode) {
 <!-- Top Header Navigation -->
 <header class="print:hidden sticky top-0 z-40 flex justify-between items-center w-full px-6 py-4 bg-white rounded-sm mb-8 shadow-sm border border-slate-100">
  <!-- Page Context -->
@@ -258,7 +313,12 @@
 
   <a href="/Home/Notifications" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-container-highest transition-all text-secondary relative border border-slate-200" title="التنبيهات">
   <span class="material-symbols-outlined text-[20px]">notifications</span>
-  <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full border-2 border-white"></span>
+  @if (ViewBag.NotificationCount != null && (int)ViewBag.NotificationCount > 0)
+  {
+      <span class="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-error text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+          @(ViewBag.NotificationCount > 99 ? "99+" : ViewBag.NotificationCount)
+      </span>
+  }
   </a>
   
   <a href="/Account/ChangePassword" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-variant transition-all text-secondary border border-slate-200" title="تغيير كلمة المرور">
@@ -270,6 +330,7 @@
   </a>
  </div>
 </header>
+}
  
  <!-- Render Body -->
  @RenderBody()
@@ -282,7 +343,28 @@
  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
  .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
  .bg-\[#063955\] { background: linear-gradient(135deg, #00314e 0%, #004870 100%); }
+
+ /* === Toast Notification System === */
+ #pharma-toast-container { position:fixed; bottom:24px; left:24px; z-index:9000; display:flex; flex-direction:column-reverse; gap:12px; pointer-events:none; }
+ .pharma-toast { pointer-events:all; min-width:300px; max-width:360px; background:white; border-radius:4px; box-shadow:0 8px 30px rgba(0,0,0,0.15); border-right:4px solid #f59e0b; display:flex; align-items:flex-start; gap:12px; padding:14px 16px; animation:toast-in 0.35s cubic-bezier(.21,1.02,.73,1) both; }
+ .pharma-toast.shortage { border-right-color:#ef4444; }
+ .pharma-toast.expiring { border-right-color:#f59e0b; }
+ .pharma-toast-icon { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+ .pharma-toast.shortage .pharma-toast-icon { background:#fee2e2; color:#ef4444; }
+ .pharma-toast.expiring .pharma-toast-icon { background:#fef3c7; color:#d97706; }
+ .pharma-toast-body { flex:1; }
+ .pharma-toast-title { font-size:13px; font-weight:900; color:#0f172a; margin-bottom:2px; }
+ .pharma-toast-sub { font-size:11px; color:#64748b; font-weight:600; }
+ .pharma-toast-link { font-size:11px; color:#0284c7; font-weight:700; text-decoration:none; display:inline-block; margin-top:6px; }
+ .pharma-toast-link:hover { text-decoration:underline; }
+ .pharma-toast-close { background:none; border:none; cursor:pointer; color:#94a3b8; font-size:18px; line-height:1; padding:0; flex-shrink:0; transition:color .15s; }
+ .pharma-toast-close:hover { color:#ef4444; }
+ @@keyframes toast-in { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
+ @@keyframes toast-out { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-30px); } }
 </style>
+
+<!-- Toast Notification Container -->
+<div id="pharma-toast-container"></div>
 
 <script>
  // ════════════════════════════════════════
@@ -370,6 +452,76 @@
    if(iframe) iframe.remove();
   }
  });
+
+ // ════════════════════════════════════════
+ // 🔔 Proactive Alert Toast System (FEFO + Security)
+ // ════════════════════════════════════════
+
+ /* إضافة نمط Toast للتنبيهات الأمنية */
+ (function addSecurityToastStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+   .pharma-toast.security { border-right-color:#7c3aed; }
+   .pharma-toast.security .pharma-toast-icon { background:#ede9fe; color:#7c3aed; }
+  `;
+  document.head.appendChild(style);
+ })();
+
+ (function initPharmaToasts() {
+  const shortagesCount    = @(ViewBag.ShortagesCount ?? 0);
+  const expiringCount     = @(ViewBag.ExpiringCount ?? 0);
+  const loginFailures     = @(ViewBag.LoginFailuresCount ?? 0);
+  const container = document.getElementById('pharma-toast-container');
+  if (!container) return;
+
+  const DISMISSED_KEY = 'pharma_dismissed_toasts_' + new Date().toDateString();
+  let dismissed = JSON.parse(sessionStorage.getItem(DISMISSED_KEY) || '[]');
+
+  function updateBellBadge() {
+   const badge = document.querySelector('a[href="/Home/Notifications"] span.absolute');
+   const remaining = document.querySelectorAll('.pharma-toast').length;
+   if (badge) {
+    if (remaining > 0) { badge.textContent = remaining > 99 ? '99+' : remaining; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+   }
+  }
+
+  function dismissToast(el, id) {
+   el.style.animation = 'toast-out 0.3s forwards';
+   dismissed.push(id);
+   sessionStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed));
+   setTimeout(() => { el.remove(); updateBellBadge(); }, 310);
+  }
+
+  function createToast(type, iconName, title, subtitle, linkUrl, linkText, id) {
+   if (dismissed.includes(id)) return;
+   const t = document.createElement('div');
+   t.className = 'pharma-toast ' + type;
+   t.setAttribute('data-toast-id', id);
+   t.innerHTML = `
+    <div class="pharma-toast-icon"><span class="material-symbols-outlined" style="font-size:20px;">${iconName}</span></div>
+    <div class="pharma-toast-body">
+     <div class="pharma-toast-title">${title}</div>
+     <div class="pharma-toast-sub">${subtitle}</div>
+     <a href="${linkUrl}" class="pharma-toast-link">${linkText} ←</a>
+    </div>
+    <button class="pharma-toast-close" title="إغلاق">×</button>`;
+   t.querySelector('.pharma-toast-close').addEventListener('click', () => dismissToast(t, id));
+   container.appendChild(t);
+  }
+
+  if (shortagesCount > 0) {
+   createToast('shortage', 'inventory_2', 'تحذير: نواقص مخزون', shortagesCount + ' صنف دون الحد الأدنى للطلب', '/Inventory/Shortages', 'عرض تقرير النواقص', 'shortage');
+  }
+  if (expiringCount > 0) {
+   createToast('expiring', 'event_busy', 'تحذير: صلاحيات مقاربة', expiringCount + ' تشغيلة تنتهي خلال شهرين', '/Inventory/Expiring', 'عرض الادوية المنتهية', 'expiring');
+  }
+  // 🔐 إشعار أمني: محاولات تسجيل دخول فاشلة (للمدير فقط)
+  if (loginFailures > 0) {
+   createToast('security', 'gpp_bad', '⚠️ تنبيه أمني', loginFailures + ' محاولة دخول فاشلة خلال آخر 24 ساعة', '/Home/AdminHub', 'مراجعة سجلات الدخول', 'login_failures');
+  }
+  updateBellBadge();
+ })();
 
  // ════════════════════════════════════════
  // 📡 Service Worker Registration

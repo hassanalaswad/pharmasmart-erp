@@ -149,7 +149,7 @@
                                 @if (!string.IsNullOrEmpty(item.ImagePath))
                                 {
                                     <img src="~/images/drugs/@item.ImagePath" style="width:32px; height:32px; border-radius:4px; object-fit:cover; border:1px solid #e2e8f0;"
-                                         onerror="this.src='/images/placeholder.png';this.onerror='';" />
+                                         onerror="this.src='@Url.Content("~/images/placeholder.png")';this.onerror='';" />
                                 }
                                 else
                                 {

@@ -442,7 +442,40 @@ namespace PharmaSmartWeb.Controllers
                         SuggestedOrder = (predictedDemand > currentStock) ? (predictedDemand - currentStock) : 0,
                         RiskLevel = (currentStock < (predictedDemand * 0.2m)) ? "High" : (currentStock < predictedDemand) ? "Medium" : "Safe"
                     });
+                } // end foreach (var drug in drugs)
+
+                var oneYearAgo = DateTime.Today.AddMonths(-6); // last 6 months is enough
+                var allSalesRaw = await _context.Saledetails.Include(sd => sd.Sale)
+                    .Where(sd => sd.Sale.SaleDate >= oneYearAgo)
+                    .Where(sd => branchId == 0 || sd.Sale.BranchId == branchId)
+                    .Select(sd => new { sd.Sale.SaleDate, sd.Quantity })
+                    .ToListAsync();
+
+                var salesByMonth = allSalesRaw
+                    .GroupBy(x => new { x.SaleDate.Year, x.SaleDate.Month })
+                    .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+                    .ToList();
+
+                var labels = salesByMonth.Select(g => $"{g.Key.Year}-{g.Key.Month:D2}").ToList();
+                var historyData = salesByMonth.Select(g => (decimal)g.Sum(x => x.Quantity)).ToList();
+                var forecastData = new List<decimal?>();
+
+                foreach(var v in historyData) forecastData.Add(null);
+
+                if (historyData.Any()) 
+                {
+                    // connect the lines
+                    forecastData[forecastData.Count - 1] = historyData.Last(); 
                 }
+
+                labels.Add("الشهر القادم");
+                historyData.Add(0);
+                decimal totalForecast = forecastList.Sum(f => f.MonthlyForecast);
+                forecastData.Add(totalForecast);
+
+                ViewBag.ChartLabels = labels.ToArray();
+                ViewBag.ChartHistory = historyData.ToArray();
+                ViewBag.ChartForecast = forecastData.ToArray();
 
                 return View(forecastList.OrderByDescending(x => x.SuggestedOrder).ToList());
             }

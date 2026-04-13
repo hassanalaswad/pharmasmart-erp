@@ -38,21 +38,36 @@
     <!-- Master Actions/Info Bar -->
     <div class="bg-surface-container-lowest border border-surface-variant rounded-sm p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
                 <span class="material-symbols-outlined">info</span>
             </div>
             <div>
-                <p class="text-sm font-bold text-primary mb-1">تنبيهات أمنية</p>
-                <p class="text-xs text-on-surface-variant">تغيير الصلاحيات سيطبق فورياً على جميع المستخدمين التابعين لهذه المجموعة لإخراجهم من الشاشات المسحوبة.</p>
+                <p class="text-sm font-bold text-primary mb-1">آلية تطبيق الصلاحيات</p>
+                <p class="text-xs text-on-surface-variant">
+                    بعد الحفظ، تُطبَّق الصلاحيات الجديدة <strong class="text-amber-600">تلقائياً خلال 30 دقيقة</strong>،
+                    أو <strong class="text-emerald-600">فوراً</strong> عند إعادة تسجيل دخول المستخدم.
+                    اضغط زر <span class="material-symbols-outlined text-xs align-middle">sync</span> لتطبيقها فوراً.
+                </p>
             </div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap items-center">
             <button type="button" class="text-xs px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-sm hover:bg-slate-200 transition-colors" onclick="document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true)">
                 اختيار الكل
             </button>
             <button type="button" class="text-xs px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-sm hover:bg-slate-200 transition-colors" onclick="document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false)">
                 إلغاء الكل
             </button>
+            <!-- زر مسح الكاش (أيقونة فقط) -->
+            <form asp-action="ClearRoleCache" method="post" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="roleId" value="@roleId" />
+                <button type="submit"
+                        title="مسح الكاش وتطبيق الصلاحيات فوراً"
+                        class="w-9 h-9 flex items-center justify-center bg-orange-100 text-orange-600 rounded-sm hover:bg-orange-500 hover:text-white transition-all shadow-sm active:scale-90"
+                        onclick="return confirm('سيتم مسح الكاش وإعادة تحميل الصلاحيات فوراً لجميع المستخدمين عند أول طلب. متأكد؟');">
+                    <span class="material-symbols-outlined text-[20px]">sync</span>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -66,10 +81,19 @@
             {
                 <div class="bg-surface-container-lowest border border-surface-variant rounded-sm overflow-hidden shadow-sm">
                     <!-- Module Header -->
+                    @{
+                        var categoryTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                            {"Sales", "المبيعات"}, {"Purchases", "المشتريات"}, {"Inventory", "المخزون"},
+                            {"Accounting", "الحسابات المالية"}, {"Reports", "التقارير"}, {"SystemSettings", "إعدادات النظام"},
+                            {"Admin", "الإدارة والدعم"}, {"POS", "نقاط البيع"}, {"Settings", "الإعدادات"}, {"Finance", "المالية"}
+                        };
+                        string safeKey = group.Key ?? "";
+                        string groupName = categoryTitles.ContainsKey(safeKey) ? categoryTitles[safeKey] : safeKey;
+                    }
                     <div class="bg-surface-container p-4 border-b border-surface-variant flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors outline-none" onclick="this.nextElementSibling.classList.toggle('hidden');">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-primary">folder_open</span>
-                            <h3 class="font-bold text-on-surface text-lg">@group.Key</h3>
+                            <h3 class="font-bold text-on-surface text-lg">@groupName</h3>
                         </div>
                         <span class="material-symbols-outlined text-on-surface-variant">keyboard_arrow_down</span>
                     </div>
@@ -96,7 +120,6 @@
                                             <input type="hidden" name="permissions[@i].ScreenId" value="@screen.ScreenId" />
                                             <div class="flex flex-col">
                                                 <span class="font-bold text-sm text-primary">@screen.ScreenArabicName</span>
-                                                <span class="text-[10px] text-slate-400 font-mono">@screen.ScreenName</span>
                                             </div>
                                         </td>
                                         <td class="py-4 px-4 text-center">

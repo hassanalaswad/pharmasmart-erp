@@ -1,0 +1,475 @@
+@model IEnumerable<PharmaSmartWeb.Controllers.DrugPricingViewModel>
+@{
+    ViewData["Title"] = "شاشة تسعير الأدوية";
+    string search   = ViewBag.Search ?? "";
+    string abcFilter = ViewBag.ABCFilter ?? "All";
+    int totalDrugs    = ViewBag.TotalDrugs ?? 0;
+    int priceConflicts = ViewBag.PriceConflicts ?? 0;
+}
+
+<style>
+    :root {
+        --pr-bg:    #f0f4f8;
+        --pr-card:  #ffffff;
+        --pr-navy:  #0f3460;
+        --pr-teal:  #16213e;
+        --pr-green: #059669;
+        --pr-red:   #dc2626;
+        --pr-amber: #d97706;
+        --pr-blue:  #2563eb;
+        --pr-purple:#7c3aed;
+        --pr-border:#e2e8f0;
+        --pr-text:  #1e293b;
+        --pr-muted: #64748b;
+    }
+    body { background: var(--pr-bg); }
+
+    /* ════ Stat Cards ════ */
+    .stat-strip { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+        flex: 1 1 160px;
+        background: var(--pr-card);
+        border-radius: 10px;
+        padding: 16px 20px;
+        border: 1px solid var(--pr-border);
+        display: flex; flex-direction: column; gap: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .stat-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--pr-muted); }
+    .stat-card .value { font-size: 26px; font-weight: 900; color: var(--pr-navy); font-family: monospace; }
+    .stat-card.danger .value { color: var(--pr-red); }
+    .stat-card.green  .value { color: var(--pr-green); }
+
+    /* ════ Toolbar ════ */
+    .toolbar {
+        background: var(--pr-card);
+        border: 1px solid var(--pr-border);
+        border-radius: 10px;
+        padding: 14px 18px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .toolbar input[type=text] {
+        border: 1px solid var(--pr-border); border-radius: 6px;
+        padding: 8px 12px; font-size: 13px; width: 240px; outline: none;
+        transition: border-color .2s;
+    }
+    .toolbar input[type=text]:focus { border-color: var(--pr-navy); }
+    .abc-btn {
+        padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
+        cursor: pointer; border: 1px solid var(--pr-border); background: #f8fafc;
+        color: var(--pr-text); text-decoration: none;
+    }
+    .abc-btn.active, .abc-btn:hover { background: var(--pr-navy); color: white; border-color: var(--pr-navy); }
+    .btn-apply-all {
+        margin-right: auto;
+        background: linear-gradient(135deg, var(--pr-purple), var(--pr-blue));
+        color: white; border: none; border-radius: 6px;
+        padding: 8px 18px; font-size: 12px; font-weight: 700;
+        cursor: pointer; display: flex; align-items: center; gap: 6px;
+        transition: opacity .2s;
+    }
+    .btn-apply-all:hover { opacity: .88; }
+
+    /* ════ Table ════ */
+    .pricing-table { background: var(--pr-card); border-radius: 10px;
+        border: 1px solid var(--pr-border); overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .pricing-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .pricing-table thead th {
+        background: #f8fafc; padding: 11px 14px; border-bottom: 2px solid var(--pr-border);
+        text-align: right; font-weight: 700; color: #475569; font-size: 11px;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+    .pricing-table tbody td {
+        padding: 10px 14px; border-bottom: 1px solid var(--pr-border);
+        color: var(--pr-text); vertical-align: middle;
+    }
+    .pricing-table tbody tr:hover td { background: #f8fafc; }
+    .pricing-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ════ Inline Price Edit ════ */
+    .price-input {
+        border: 1px solid var(--pr-border); border-radius: 5px;
+        padding: 5px 8px; font-size: 13px; font-weight: 700;
+        width: 100px; text-align: center; font-family: monospace;
+        background: #f0f9ff; transition: border-color .2s;
+    }
+    .price-input:focus { outline: none; border-color: var(--pr-blue); background: white; }
+    .save-btn {
+        background: var(--pr-green); color: white; border: none;
+        border-radius: 5px; padding: 5px 10px; font-size: 11px; font-weight: 700;
+        cursor: pointer; display: flex; align-items: center; gap: 4px;
+        transition: opacity .2s;
+    }
+    .save-btn:hover { opacity: .85; }
+    .save-btn.saving { opacity: .6; cursor: not-allowed; }
+
+    /* ════ Badges ════ */
+    .abc-badge {
+        display: inline-block; width: 24px; height: 24px; border-radius: 50%;
+        font-size: 11px; font-weight: 900; text-align: center; line-height: 24px;
+    }
+    .abc-A { background: #fef3c7; color: #92400e; }
+    .abc-B { background: #dbeafe; color: #1e40af; }
+    .abc-C { background: #e0e7ff; color: #4338ca; }
+    .conflict-badge {
+        background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;
+        border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 700;
+    }
+    .ok-badge {
+        background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;
+        border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 700;
+    }
+    .margin-pill {
+        border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700;
+        font-family: monospace;
+    }
+    .margin-high   { background: #dcfce7; color: #15803d; }
+    .margin-medium { background: #fef9c3; color: #854d0e; }
+    .margin-low    { background: #fee2e2; color: #b91c1c; }
+
+    /* ════ Batch Drawer ════ */
+    .batch-drawer {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,.5); z-index: 9000; display: none;
+        align-items: center; justify-content: center;
+    }
+    .batch-drawer.open { display: flex; }
+    .batch-panel {
+        background: white; border-radius: 12px; width: 580px; max-height: 85vh;
+        overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .batch-panel h3 { font-size: 16px; font-weight: 800; color: var(--pr-navy); margin-bottom: 16px; }
+    .batch-row {
+        display: grid; grid-template-columns: 1fr 80px 80px 90px 90px;
+        gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--pr-border);
+        font-size: 12px; align-items: center;
+    }
+    .batch-header { font-weight: 700; color: var(--pr-muted); background: #f8fafc;
+        border-radius: 6px 6px 0 0; }
+
+    /* toast */
+    #priceToast {
+        position: fixed; bottom: 24px; left: 24px; z-index: 9999;
+        background: #1e293b; color: white; border-radius: 8px;
+        padding: 12px 20px; font-size: 13px; font-weight: 600;
+        display: none; align-items: center; gap: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    #priceToast.show { display: flex; animation: slideUp .3s ease; }
+    @@keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+    }
+    #priceToast .toast-icon { font-size: 18px; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 style="font-size:20px;font-weight:800;color:#0f3460;margin:0;">
+            <span class="material-symbols-outlined" style="vertical-align:middle;font-size:22px;margin-left:6px;color:#7c3aed;">sell</span>
+            شاشة تسعير الأدوية
+        </h1>
+        <p style="color:#64748b;font-size:12px;margin:4px 0 0;">إدارة أسعار البيع وحساب المتوسط المرجح لكل دواء عبر تشغيلاته</p>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-strip">
+    <div class="stat-card">
+        <span class="label">إجمالي الأصناف</span>
+        <span class="value">@totalDrugs</span>
+    </div>
+    <div class="stat-card @(priceConflicts > 0 ? "danger" : "green")">
+        <span class="label">أصناف بفجوة سعرية</span>
+        <span class="value">@priceConflicts</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">يمكن تحديثها تلقائياً</span>
+        <span class="value" style="font-size:16px;color:#7c3aed;">السعر المرجح</span>
+    </div>
+</div>
+
+<!-- Toolbar -->
+<form method="get" class="toolbar">
+    <span class="material-symbols-outlined" style="color:#64748b;font-size:18px;">search</span>
+    <input type="text" name="search" value="@search" placeholder="ابحث بالاسم أو الباركود...">
+
+    <a href="?abc=All&search=@search"    class="abc-btn @(abcFilter=="All" ? "active" : "")">الكل</a>
+    <a href="?abc=A&search=@search"      class="abc-btn @(abcFilter=="A"   ? "active" : "")">A — سريع الحركة</a>
+    <a href="?abc=B&search=@search"      class="abc-btn @(abcFilter=="B"   ? "active" : "")">B — متوسط</a>
+    <a href="?abc=C&search=@search"      class="abc-btn @(abcFilter=="C"   ? "active" : "")">C — بطيء</a>
+
+    <button type="submit" class="abc-btn active">
+        <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">filter_list</span>
+        تطبيق
+    </button>
+
+    <button type="button" class="btn-apply-all" onclick="applyWeightedAll()">
+        <span class="material-symbols-outlined" style="font-size:16px;">auto_fix_high</span>
+        تطبيق السعر المرجح على الجميع
+    </button>
+</form>
+
+@Html.AntiForgeryToken()
+
+<!-- Table -->
+<div class="pricing-table">
+    <table>
+        <thead>
+            <tr>
+                <th>الدواء</th>
+                <th>ABC</th>
+                <th style="text-align:center;">المخزون</th>
+                <th style="text-align:center;">متوسط التكلفة</th>
+                <th style="text-align:center;">السعر الحالي للبيع</th>
+                <th style="text-align:center;">السعر المرجح (تلقائي)</th>
+                <th style="text-align:center;">هامش الربح</th>
+                <th style="text-align:center;">الحالة</th>
+                <th style="text-align:center;">حفظ</th>
+                <th style="text-align:center;">تشغيلات</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                bool hasConflict = item.WeightedSellingPrice > 0 && Math.Abs(item.CurrentSellingPrice - item.WeightedSellingPrice) > 1;
+                string marginClass = item.ProfitMargin >= 25 ? "margin-high" : (item.ProfitMargin >= 10 ? "margin-medium" : "margin-low");
+                <tr data-drug-id="@item.DrugId">
+                    <td>
+                        <div style="font-weight:700;color:#0f3460;">@item.DrugName</div>
+                        <div style="font-size:11px;color:#64748b;font-family:monospace;">
+                            @(item.Barcode ?? "—") | @item.MainUnit / @item.SubUnit (@item.ConvFactor)
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="abc-badge abc-@item.ABCCategory">@item.ABCCategory</span>
+                    </td>
+                    <td style="text-align:center;font-family:monospace;font-weight:700;">
+                        @item.StockQuantity
+                    </td>
+                    <td style="text-align:center;font-family:monospace;color:#0ea5e9;">
+                        @item.AverageCost.ToString("N2")
+                    </td>
+                    <td style="text-align:center;">
+                        <input type="number"
+                               class="price-input"
+                               id="price-@item.DrugId"
+                               value="@item.CurrentSellingPrice.ToString("F2")"
+                               step="0.01" min="0.01"
+                               onchange="markChanged(@item.DrugId)">
+                    </td>
+                    <td style="text-align:center;font-family:monospace;color:#7c3aed;font-weight:700;">
+                        @(item.WeightedSellingPrice > 0 ? item.WeightedSellingPrice.ToString("N2") : "—")
+                        @if (item.BatchCount > 1)
+                        {
+                            <div style="font-size:10px;color:#64748b;">@item.BatchCount تشغيلة</div>
+                        }
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="margin-pill @marginClass">@item.ProfitMargin.ToString("F1")%</span>
+                    </td>
+                    <td style="text-align:center;">
+                        @if (hasConflict)
+                        {
+                            <span class="conflict-badge">فجوة سعرية</span>
+                        }
+                        else if (item.WeightedSellingPrice > 0)
+                        {
+                            <span class="ok-badge">✓ متزامن</span>
+                        }
+                        else
+                        {
+                            <span style="color:#64748b;font-size:11px;">لا توريد</span>
+                        }
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="save-btn" id="save-@item.DrugId" onclick="savePrice(@item.DrugId)">
+                            <span class="material-symbols-outlined" style="font-size:13px;">save</span>
+                        </button>
+                    </td>
+                    <td style="text-align:center;">
+                        <button class="abc-btn" style="padding:4px 10px;" onclick="showBatches(@item.DrugId, '@item.DrugName.Replace("'","\\'")')">
+                            <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">inventory_2</span>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div style="padding:10px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;">
+        إجمالي: @totalDrugs صنف | الأصناف بفجوة سعرية: @priceConflicts
+    </div>
+</div>
+
+<!-- Batch Drawer -->
+<div class="batch-drawer" id="batchDrawer" onclick="if(event.target===this) closeDrawer()">
+    <div class="batch-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="drawerTitle">تشغيلات الدواء</h3>
+            <button onclick="closeDrawer()" style="border:none;background:transparent;font-size:20px;cursor:pointer;color:#64748b;">×</button>
+        </div>
+        <div id="batchContent">
+            <div class="batch-row batch-header">
+                <span>رقم التشغيلة</span>
+                <span>الكمية</span>
+                <span>التكلفة</span>
+                <span>سعر البيع</span>
+                <span>تاريخ الانتهاء</span>
+            </div>
+            <div id="batchList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="priceToast">
+    <span class="toast-icon material-symbols-outlined" id="toastIcon">check_circle</span>
+    <span id="toastMsg">تم الحفظ</span>
+</div>
+
+@section Scripts {
+<script>
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // ─── Helper: Toast ───────────────────────────────────────
+    function showToast(msg, isError = false) {
+        const t = document.getElementById('priceToast');
+        document.getElementById('toastMsg').textContent = msg;
+        document.getElementById('toastIcon').textContent = isError ? 'error' : 'check_circle';
+        t.style.background = isError ? '#b91c1c' : '#1e293b';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ─── تحديث حساب هامش الربح ─────────────────────────────
+    function markChanged(drugId) {
+        const btn = document.getElementById('save-' + drugId);
+        if (btn) {
+            btn.style.background = '#d97706';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;">save</span> تغيّر';
+        }
+    }
+
+    // ─── حفظ سعر واحد ──────────────────────────────────────
+    async function savePrice(drugId) {
+        const input = document.getElementById('price-' + drugId);
+        const btn   = document.getElementById('save-' + drugId);
+        const newPrice = parseFloat(input.value);
+
+        if (!newPrice || newPrice <= 0) {
+            showToast('السعر يجب أن يكون أكبر من صفر', true);
+            return;
+        }
+
+        btn.classList.add('saving');
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:spin 1s linear infinite;">progress_activity</span>';
+
+        try {
+            const res = await fetch('/Pricing/UpdatePrice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ drugId, newPrice })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('✓ تم تحديث السعر بنجاح');
+                btn.style.background = '#059669';
+                btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;">check</span>';
+            } else {
+                showToast(data.message || 'خطأ غير متوقع', true);
+                btn.classList.remove('saving');
+                btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;">save</span>';
+            }
+        } catch {
+            showToast('فشل الاتصال بالسيرفر', true);
+        } finally {
+            btn.classList.remove('saving');
+        }
+    }
+
+    // ─── تطبيق السعر المرجح على الجميع ────────────────────
+    async function applyWeightedAll() {
+        if (!confirm('سيتم تحديث أسعار البيع لجميع الأصناف بالسعر المرجح المحسوب من التشغيلات.\nهل أنت متأكد؟')) return;
+
+        const btn = document.querySelector('.btn-apply-all');
+        btn.disabled = true;
+        btn.textContent = '...جاري التطبيق';
+
+        try {
+            const res = await fetch('/Pricing/ApplyWeightedPricesAll', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token }
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`✓ تم تحديث ${data.updatedCount} صنف بالأسعار المرجحة`);
+                setTimeout(() => location.reload(), 1800);
+            } else {
+                showToast(data.message || 'خطأ', true);
+            }
+        } catch {
+            showToast('فشل الاتصال بالسيرفر', true);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">auto_fix_high</span> تطبيق السعر المرجح على الجميع';
+        }
+    }
+
+    // ─── عرض Drawer تفاصيل التشغيلات ──────────────────────
+    async function showBatches(drugId, drugName) {
+        document.getElementById('drawerTitle').textContent = 'تشغيلات: ' + drugName;
+        document.getElementById('batchList').innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">جارِ التحميل...</div>';
+        document.getElementById('batchDrawer').classList.add('open');
+
+        try {
+            const res = await fetch(`/Pricing/GetDrugBatches?drugId=${drugId}`);
+            const batches = await res.json();
+
+            if (!batches.length) {
+                document.getElementById('batchList').innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">لا توجد تشغيلات مسجلة لهذا الدواء</div>';
+                return;
+            }
+
+            let totalQty = batches.reduce((s, b) => s + b.quantity, 0);
+            let weightedPrice = totalQty > 0
+                ? batches.reduce((s, b) => s + (b.quantity * b.sellingPrice), 0) / totalQty
+                : 0;
+
+            let html = batches.map(b => `
+                <div class="batch-row">
+                    <span style="font-family:monospace;font-size:11px;">${b.batchNumber}<br>
+                        <small style="color:#64748b;">${b.supplier}</small></span>
+                    <span style="font-weight:700;">${b.quantity} + <span style="color:#059669;">${b.bonusQty}</span></span>
+                    <span style="font-family:monospace;color:#0ea5e9;">${b.costPrice.toFixed(2)}</span>
+                    <span style="font-family:monospace;font-weight:700;color:#7c3aed;">${b.sellingPrice.toFixed(2)}</span>
+                    <span style="font-size:11px;color:#64748b;">${b.expiryDate}<br>${b.purchaseDate}</span>
+                </div>
+            `).join('');
+
+            html += `
+                <div style="background:#f0f4ff;padding:12px 16px;border-radius:0 0 8px 8px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:12px;font-weight:700;color:#4338ca;">
+                        السعر المرجح المحسوب: <strong>${weightedPrice.toFixed(2)}</strong>
+                    </span>
+                    <span style="font-size:11px;color:#64748b;">من ${batches.length} تشغيلة | إجمالي كميات: ${totalQty}</span>
+                </div>`;
+
+            document.getElementById('batchList').innerHTML = html;
+        } catch {
+            document.getElementById('batchList').innerHTML = '<div style="color:red;padding:16px;">فشل جلب البيانات</div>';
+        }
+    }
+
+    function closeDrawer() {
+        document.getElementById('batchDrawer').classList.remove('open');
+    }
+</script>
+<style>
+@@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+}

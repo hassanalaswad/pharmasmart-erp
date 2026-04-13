@@ -122,7 +122,7 @@
                     <div class="w-32 h-32 bg-surface-container-lowest rounded-sm shadow-sm overflow-hidden flex items-center justify-center border border-outline-variant/20 shrink-0">
                         @if (!string.IsNullOrEmpty(Model.ImagePath))
                         {
-                            <img src="~/images/drugs/@Model.ImagePath" class="w-full h-full object-cover p-1 rounded-[10px]" onerror="this.src='/images/placeholder.png';this.onerror='';" />
+                            <img src="~/images/drugs/@Model.ImagePath" class="w-full h-full object-cover p-1 rounded-[10px]" onerror="this.src='@Url.Content("~/images/placeholder.png")';this.onerror='';" />
                         }
                         else
                         {

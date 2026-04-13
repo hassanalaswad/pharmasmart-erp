@@ -112,6 +112,33 @@ namespace PharmaSmartWeb.Controllers
                 }
                 else
                     ViewBag.ActiveBranchName = User.FindFirst("BranchName")?.Value ?? "فرع غير محدد";
+
+                // Notification Count logic - وفق التوثيق: نواقص المخزون + صلاحيات مقاربة فقط
+                int scopeId = scopeForUi;
+                bool isGlobal = scopeId == 0;
+                var invQ = _context.Branchinventory.AsQueryable();
+                if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
+
+                int shortagesCount = invQ.Count(bi => bi.StockQuantity <= bi.MinimumStockLevel);
+
+                DateTime expiryThreshold = DateTime.Today.AddMonths(2);
+                var expiringBatchesQ = _context.DrugBatches.Where(b => b.ExpiryDate <= expiryThreshold);
+                int expiringCount = expiringBatchesQ.Count();
+
+                ViewBag.NotificationCount = shortagesCount + expiringCount;
+                ViewBag.ShortagesCount = shortagesCount;
+                ViewBag.ExpiringCount = expiringCount;
+
+                // ❗ محاولات تسجيل الدخول الفاشلة (للمدير فقط)
+                if (IsSuperAdmin)
+                {
+                    var since24h = DateTime.Now.AddHours(-24);
+                    int loginFailures = _context.Systemlogs
+                        .Count(l => l.Action == "LoginFailed" && l.CreatedAt >= since24h);
+                    ViewBag.LoginFailuresCount = loginFailures;
+                    if (loginFailures > 0)
+                        ViewBag.NotificationCount = (int)(ViewBag.NotificationCount ?? 0) + 1;
+                }
             }
             catch
             {

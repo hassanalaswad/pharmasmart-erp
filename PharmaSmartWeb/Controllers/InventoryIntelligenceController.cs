@@ -17,12 +17,33 @@ namespace PharmaSmartWeb.Controllers
     [Authorize]
     public class InventoryIntelligenceController : BaseController
     {
-        public InventoryIntelligenceController(ApplicationDbContext context) : base(context) { }
+        private readonly PharmaSmartWeb.Services.IForecastApiService _forecastApiService;
+
+        public InventoryIntelligenceController(
+            ApplicationDbContext context,
+            PharmaSmartWeb.Services.IForecastApiService forecastApiService)
+            : base(context)
+        {
+            _forecastApiService = forecastApiService;
+        }
 
         [HttpGet]
         [HasPermission("Inventory", "View")]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            int currentBranchId = ActiveBranchId;
+            var invQuery = _context.Branchinventory.AsQueryable();
+            if (currentBranchId > 0) invQuery = invQuery.Where(b => b.BranchId == currentBranchId);
+
+            var abcCounts = await invQuery
+                .GroupBy(b => b.Abccategory)
+                .Select(g => new { Category = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            ViewBag.CountA = abcCounts.FirstOrDefault(x => x.Category == "A")?.Count ?? 0;
+            ViewBag.CountB = abcCounts.FirstOrDefault(x => x.Category == "B")?.Count ?? 0;
+            ViewBag.CountC = abcCounts.FirstOrDefault(x => x.Category == "C")?.Count ?? 0;
+
             return View("EOQABC");
         }
 
@@ -78,7 +99,7 @@ namespace PharmaSmartWeb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission("Inventory", "View")]
-        public async Task<IActionResult> GenerateSmartPlan()
+        public async Task<IActionResult> GenerateSmartPlan([FromQuery] string model = "prophet")
         {
             int currentBranchId = ActiveBranchId == 0 ? 1 : ActiveBranchId;
             
@@ -121,10 +142,24 @@ namespace PharmaSmartWeb.Controllers
                 
                 string jsonPayload = System.Text.Json.JsonSerializer.Serialize(salesData);
                 
-                // ب. استدعاء بايثون للاستخبارات
+                // ب. استدعاء الذكاء الاصطناعي للتنبؤ
                 decimal forecastedDemand = 0;
                 decimal forecastAccuracy = 0;
-                if (salesData.Any())
+
+                if (model == "vertex" && salesData.Any())
+                {
+                    var salesPoints = salesData
+                        .Select(s => new PharmaSmartWeb.Services.SalesDataPoint(s.date, s.quantity))
+                        .ToList();
+
+                    var forecastResult = await _forecastApiService.GetForecastAsync(
+                        drugName: item.Drug?.DrugName ?? "Unknown Drug",
+                        salesHistory: salesPoints);
+
+                    forecastedDemand = forecastResult.ForecastedDemand;
+                    forecastAccuracy = forecastResult.Accuracy;
+                }
+                else if (salesData.Any())
                 {
                     try
                     {
@@ -192,6 +227,7 @@ namespace PharmaSmartWeb.Controllers
             }
 
             plan.EstimatedTotalCost = accumulatedCost;
+            plan.Notes += $" | مزود التنبؤ: {(model == "vertex" ? "Google Vertex AI 🧠" : "Prophet Model 🐍")}";
             await _context.SaveChangesAsync();
 
             return Ok(new { success = true, planId = plan.PlanId, message = "تم التوليد بنجاح" });
@@ -321,29 +357,31 @@ namespace PharmaSmartWeb.Controllers
                     .Select(e => new { date = e.Date, quantity = e.Quantity })
                     .ToList();
                 
-                string jsonPayload = System.Text.Json.JsonSerializer.Serialize(salesData);
-                
+                // ── Google Vertex AI Forecasting (للبيانات الخارجية - Excel) ──────
                 decimal forecastedDemand = 0;
                 decimal forecastAccuracy = 0;
+                string forecastSource = "Average";
+
                 if (salesData.Any())
                 {
-                    try
-                    {
-                        string pyOut = await CallProphetScriptAsync(jsonPayload);
-                        var pyResult = System.Text.Json.JsonSerializer.Deserialize<ProphetResult>(pyOut, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        if (pyResult != null)
-                        {
-                            forecastedDemand = pyResult.Forecast;
-                            forecastAccuracy = pyResult.Accuracy;
-                        }
-                    }
-                    catch { } 
+                    var salesPoints = salesData
+                        .Select(s => new PharmaSmartWeb.Services.SalesDataPoint(s.date, s.quantity))
+                        .ToList();
+
+                    var forecastResult = await _forecastApiService.GetForecastAsync(
+                        drugName: item.Drug?.DrugName ?? targetNameLower,
+                        salesHistory: salesPoints);
+
+                    forecastedDemand = forecastResult.ForecastedDemand;
+                    forecastAccuracy = forecastResult.Accuracy;
+                    forecastSource   = forecastResult.Source;
                 }
 
                 if (forecastedDemand <= 0)
                 {
-                    forecastedDemand = salesData.Sum(s => s.quantity); 
-                    if (forecastedDemand == 0) continue; 
+                    forecastedDemand = salesData.Sum(s => s.quantity);
+                    if (forecastedDemand == 0) continue;
+                    forecastSource = "Sum (Fallback)";
                 }
 
                 decimal currentWAC = (item.AverageCost != null && item.AverageCost > 0) ? item.AverageCost.Value : 1m;
@@ -388,9 +426,10 @@ namespace PharmaSmartWeb.Controllers
             }
 
             plan.EstimatedTotalCost = accumulatedCost;
+            plan.Notes += $" | مزود التنبؤ: {(shortages.Any() ? "Google Vertex AI" : "N/A")}";
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, planId = plan.PlanId, message = "تم التوليد بنجاح من بيانات الإكسل المرفوعة" });
+            return Ok(new { success = true, planId = plan.PlanId, message = "تم التوليد بنجاح من بيانات الإكسل (Google Vertex AI)" });
         }
 
         private const string ProphetFallbackJson = "{\"forecast\": 0, \"accuracy\": 0}";

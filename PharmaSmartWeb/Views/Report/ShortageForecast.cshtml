@@ -24,6 +24,15 @@
     <div><span style="color:#059669;">آمنة (Low):</span><span style="color:#059669; font-weight:bold;">@Model.Count(x => x.RiskLevel != "High")</span></div>
 }
 
+<!-- Chart Section -->
+<div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 4px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <h3 style="margin-top:0; color:#334155; font-size:16px;">مؤشر التنبؤ الذكي بالطلب (الذكاء الاصطناعي)</h3>
+    <p style="color:#64748b; font-size:13px; margin-bottom:16px;">مقارنة بين اتجاهات المبيعات التاريخية وحجم الطلب المتوقع للشهر القادم لكافة الأصناف.</p>
+    <div style="height: 300px; width: 100%;">
+        <canvas id="forecastChart"></canvas>
+    </div>
+</div>
+
 <!-- Data Table -->
 <table class="report-table">
     <thead>
@@ -54,3 +63,57 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var ctx = document.getElementById('forecastChart');
+            if(!ctx) return;
+
+            var labels = @Html.Raw(Json.Serialize(ViewBag.ChartLabels));
+            var historyData = @Html.Raw(Json.Serialize(ViewBag.ChartHistory));
+            var forecastData = @Html.Raw(Json.Serialize(ViewBag.ChartForecast));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'المبيعات التاريخية',
+                        data: historyData,
+                        borderColor: '#0f766e', // teal-700
+                        backgroundColor: 'rgba(15, 118, 110, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'التنبؤ الذكي (الشهر القادم)',
+                        data: forecastData,
+                        borderColor: '#e11d48', // rose-600
+                        backgroundColor: 'rgba(225, 29, 72, 0.1)',
+                        borderWidth: 3,
+                        borderDash: [5, 5],
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#e11d48',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Cairo' } } },
+                        tooltip: { titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        });
+    </script>
+}

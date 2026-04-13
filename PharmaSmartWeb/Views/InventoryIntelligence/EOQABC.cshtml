@@ -29,17 +29,56 @@
             <h1 class="page-title">الذكاء المخزني وخطط المشتريات</h1>
             <p class="page-sub">دمج باريتو (ABC) والطلب (EOQ) مع الميزانية المالية والأدوية المنقذة للحياة.</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap items-center">
             <button id="btnCalcABC" onclick="runABCAlgorithm()" class="btn-secondary">
                 <i class="fas fa-sync"></i> 1. تحديث خوارزمية ABC
             </button>
-            <button id="btnGetEOQ" onclick="fetchEOQRecommendations()" class="btn-primary" style="background: #059669;">
-                <i class="fas fa-magic"></i> 2. توليد خطة الشراء
-            </button>
-            <button id="btnGetEOQExcel" onclick="document.getElementById('excelFileInput').click()" class="btn-secondary" style="border-color: #0284c7; color: #0284c7;">
-                <i class="fas fa-file-excel"></i> 3. توليد من ملف Excel خارجي
-            </button>
+            <div style="display:inline-flex; align-items:center; border:1px solid #d1d5db; border-radius:2px; overflow:hidden; background:white;">
+                <select id="internalDataModel" style="border:none; outline:none; padding:8px 10px; font-size:12px; font-weight:700; color:#063955; background:transparent; cursor:pointer;" title="اختر نموذج التنبؤ للبيانات الداخلية">
+                    <option value="prophet">Prophet 🐍</option>
+                    <option value="vertex">Google Vertex AI 🧠</option>
+                </select>
+                <button id="btnGetEOQ" onclick="fetchEOQRecommendations()" class="btn-primary" style="background: #059669; border-radius:0;">
+                    <i class="fas fa-magic"></i> 2. توليد خطة الشراء
+                </button>
+            </div>
+            <div style="position: relative; display: inline-flex; align-items: center;">
+                <button id="btnGetEOQExcel" onclick="document.getElementById('excelFileInput').click()" class="btn-secondary" style="border-color: #7c3aed; color: #7c3aed; padding-left: 12px;">
+                    <i class="fas fa-file-excel"></i> 3. توليد من Excel خارجي
+                    <span style="font-size:10px; background:#ede9fe; color:#5b21b6; padding:1px 6px; border-radius:3px; margin-right:4px; font-weight:700;">Google Vertex AI 🧠</span>
+                </button>
+            </div>
             <input type="file" id="excelFileInput" style="display:none" accept=".xlsx, .xls, .csv" onchange="uploadExcelForSmartPlan(this)" />
+        </div>
+    </div>
+
+    <!-- ABC Dashboards Panel -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="enterprise-panel p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-slate-50 to-white">
+            <div class="w-16 h-16 rounded-full bg-error/10 text-error flex items-center justify-center mb-3">
+                <span class="text-2xl font-black">A</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-700 mb-1">أصناف عالية القيمة</h3>
+            <p class="text-xs text-slate-500 mb-3">تمثل 80% من إيرادات الصيدلية. تتطلب طلب متكرر ورقابة صارمة.</p>
+            <span class="bg-error text-white text-xl font-bold px-4 py-1 rounded-sm shadow-sm">@(ViewBag.CountA ?? 0) صنف</span>
+        </div>
+        
+        <div class="enterprise-panel p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-slate-50 to-white">
+            <div class="w-16 h-16 rounded-full bg-warning/10 text-amber-500 flex items-center justify-center mb-3">
+                <span class="text-2xl font-black">B</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-700 mb-1">أصناف متوسطة</h3>
+            <p class="text-xs text-slate-500 mb-3">تمثل 15% من الإيرادات. طلب معتدل ورقابة دورية لدعم المخزون.</p>
+            <span class="bg-amber-500 text-white text-xl font-bold px-4 py-1 rounded-sm shadow-sm">@(ViewBag.CountB ?? 0) صنف</span>
+        </div>
+
+        <div class="enterprise-panel p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-slate-50 to-white">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3">
+                <span class="text-2xl font-black">C</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-700 mb-1">أصناف منخفضة القيمة</h3>
+            <p class="text-xs text-slate-500 mb-3">تمثل 5% من الإيرادات. تدار بمرونة وتطلب بكميات كبيرة نادراً.</p>
+            <span class="bg-emerald-500 text-white text-xl font-bold px-4 py-1 rounded-sm shadow-sm">@(ViewBag.CountC ?? 0) صنف</span>
         </div>
     </div>
 
@@ -83,7 +122,15 @@
                     </tr>
                 </thead>
                 <tbody id="eoq-table-body">
-                    <tr><td colspan="7" class="p-10 text-center text-slate-500 font-bold">اضغط على "توليد خطة الشراء" للبدء بالتحليل وسحب توقعات النواقص.</td></tr>
+                    <tr>
+                        <td colspan="7" class="p-10 text-center text-slate-500 font-bold">
+                            <span style="display:block; font-size:13px; color:#334155;">اضغط على "توليد خطة الشراء" للبدء بالتحليل وسحب توقعات النواقص.</span>
+                            <span style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+                                <span style="background:#d1fae5; color:#065f46; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:700;">قاعدة البيانات → Prophet 🐍</span>
+                                <span style="background:#ede9fe; color:#5b21b6; font-size:11px; padding:2px 8px; border-radius:4px; font-weight:700;">Excel خارجي → Google Vertex AI 🧠</span>
+                            </span>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -154,8 +201,9 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحليل وصناعة الخطة 🤖...';
         btn.disabled = true;
 
+        const selectedModel = document.getElementById('internalDataModel') ? document.getElementById('internalDataModel').value : 'prophet';
         try {
-            const response = await fetch('/InventoryIntelligence/GenerateSmartPlan', { method: 'POST', headers: invIntelAntiForgeryHeaders() });
+            const response = await fetch('/InventoryIntelligence/GenerateSmartPlan?model=' + selectedModel, { method: 'POST', headers: invIntelAntiForgeryHeaders() });
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {

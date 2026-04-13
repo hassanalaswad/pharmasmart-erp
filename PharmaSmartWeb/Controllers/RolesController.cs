@@ -106,10 +106,17 @@ namespace PharmaSmartWeb.Controllers
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
+                    // ─── ✅ مسح الكاش لكلا الطبقتين (ClaimsTransformer + HasPermissionFilter) ───
+                    // مفتاح ClaimsTransformer (يخزن List<CachedPermission>)
                     _cache.Remove($"Permissions_Role_{roleId}");
+                    // مفتاح HasPermissionAttribute (يخزن List<Screenpermissions>)
+                    _cache.Remove($"Filter_Permissions_Role_{roleId}");
+
                     await RecordLog("Update", "Permissions", $"تحديث صلاحيات: ({role.RoleArabicName ?? role.RoleName})");
 
-                    TempData["Success"] = "تم حفظ مصفوفة الصلاحيات بنجاح.";
+                    TempData["Success"] = $"✅ تم حفظ مصفوفة الصلاحيات بنجاح للمجموعة ({role.RoleArabicName ?? role.RoleName}). " +
+                                         "⚠️ المستخدمون الحاليون التابعون لهذه المجموعة سيحصلون على الصلاحيات الجديدة تلقائياً خلال 30 دقيقة، " +
+                                         "أو فوراً عند إعادة تسجيل الدخول.";
                 }
                 catch
                 {
@@ -119,6 +126,18 @@ namespace PharmaSmartWeb.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // 4. مسح كاش الصلاحيات يدوياً (ClearRoleCache)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Roles.Edit")]
+        public IActionResult ClearRoleCache(int roleId)
+        {
+            _cache.Remove($"Permissions_Role_{roleId}");
+            _cache.Remove($"Filter_Permissions_Role_{roleId}");
+            TempData["Success"] = "✅ تم مسح كاش الصلاحيات. ستُطبَّق التغييرات عند أول طلب لكل مستخدم.";
+            return RedirectToAction(nameof(ManagePermissions), new { roleId });
         }
     }
 }

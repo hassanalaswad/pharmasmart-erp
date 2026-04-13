@@ -637,6 +637,8 @@ namespace PharmaSmartWeb.Controllers
                                 .Include(j => j.Journaldetails)
                                 .FirstOrDefaultAsync(j => j.JournalId == id);
 
+                            if (originalEntry == null) throw new Exception("القيد الأصلي غير موجود.");
+
                             var reversalEntry = new Journalentries
                             {
                                 JournalDate = DateTime.Now,
@@ -687,6 +689,28 @@ namespace PharmaSmartWeb.Controllers
                 TempData["Error"] = "خطأ فني أثناء عملية العكس: " + ex.Message;
                 return RedirectToAction(nameof(Details), new { id = id });
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ViewRelatedJournal(string refType, string refNo)
+        {
+            var journal = await _context.Journalentries
+                .FirstOrDefaultAsync(j => j.ReferenceType == refType && j.ReferenceNo == refNo && j.BranchId == ActiveBranchId);
+            
+            // في حال كان القيد عاماً بدون فرع
+            if (journal == null) 
+            {
+                journal = await _context.Journalentries
+                    .FirstOrDefaultAsync(j => j.ReferenceType == refType && j.ReferenceNo == refNo);
+            }
+
+            if (journal != null)
+            {
+                return RedirectToAction("Details", new { id = journal.JournalId });
+            }
+
+            TempData["Error"] = "لم يتم العثور على القيد المحاسبي الآلي المرتبط بهذه العملية.";
+            return Redirect(Request.Headers["Referer"].ToString() ?? "/");
         }
     }
 }

@@ -44,8 +44,8 @@ namespace PharmaSmartWeb.Controllers
             if (IsSuperAdmin) {
                 model.BranchStatuses = await _context.Branches.Select(b => new BranchStatusOverview {
                     BranchName = b.BranchName,
-                    Location = b.Location,
-                    IsActive = (bool)b.IsActive
+                    Location = b.Location ?? string.Empty,
+                    IsActive = b.IsActive == true
                 }).ToListAsync();
 
                 // Chart Data for Branches (Sales & Simple Profit for the month)
@@ -132,7 +132,7 @@ namespace PharmaSmartWeb.Controllers
                                         .Select(b => new ExpiringDrugOverview {
                                             DrugName = b.Drug.DrugName,
                                             ExpiryDate = b.ExpiryDate,
-                                            Quantity = b.Drug.Branchinventory.FirstOrDefault() != null ? b.Drug.Branchinventory.FirstOrDefault().StockQuantity : 0
+                                            Quantity = b.Drug.Branchinventory.FirstOrDefault() != null ? b.Drug.Branchinventory.FirstOrDefault()!.StockQuantity : 0
                                         }).ToListAsync();
             }
 
@@ -166,7 +166,7 @@ namespace PharmaSmartWeb.Controllers
                                 .Select(b => new ExpiringDrugOverview {
                                     DrugName = b.Drug.DrugName,
                                     ExpiryDate = b.ExpiryDate,
-                                    Quantity = b.Drug.Branchinventory.FirstOrDefault() != null ? b.Drug.Branchinventory.FirstOrDefault().StockQuantity : 0
+                                    Quantity = b.Drug.Branchinventory.FirstOrDefault() != null ? b.Drug.Branchinventory.FirstOrDefault()!.StockQuantity : 0
                                 }).ToListAsync();
 
             var purchasesQ = _context.Purchases.Include(p => p.Supplier).AsQueryable();
@@ -234,7 +234,7 @@ namespace PharmaSmartWeb.Controllers
                     InvoiceId = s.SaleId,
                     SaleDate = s.SaleDate,
                     CustomerName = s.Customer != null ? s.Customer.FullName : "عميل نقدي",
-                    PaymentMethod = s.SalePayments.Any() ? s.SalePayments.FirstOrDefault().PaymentMethod : "كاش",
+                    PaymentMethod = s.SalePayments.Any() ? s.SalePayments.FirstOrDefault()!.PaymentMethod : "كاش",
                     TotalAmount = s.TotalAmount
                 }).ToListAsync();
 
@@ -658,7 +658,7 @@ namespace PharmaSmartWeb.Controllers
             model.UsersCount = await _context.Users.CountAsync();
             model.ActiveBranches = await _context.Branches.CountAsync(b => b.IsActive == true);
             model.RolesCount = await _context.Userroles.CountAsync();
-            model.SystemErrorsCount = await _context.Systemlogs.CountAsync(l => l.Action.Contains("Error") || l.Details.Contains("Error") || l.Action.Contains("Exception"));
+            model.SystemErrorsCount = await _context.Systemlogs.CountAsync(l => l.Action.Contains("Error") || (l.Details != null && l.Details.Contains("Error")) || l.Action.Contains("Exception"));
             model.TodayLogsCount = await _context.Systemlogs.CountAsync(l => l.CreatedAt.Date == DateTime.Today);
             
             if (User.IsInRole("SuperAdmin") || User.HasClaim("RoleId", "1") || User.IsInRole("Accountant") || User.HasClaim("RoleId", "3"))

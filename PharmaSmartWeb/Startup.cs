@@ -111,6 +111,16 @@ namespace PharmaSmartWeb
             
             // إضافة مزود الإعدادات للنظام (Dynamic Currency Architecture)
             services.AddScoped<PharmaSmartWeb.Services.ISystemSettingsService, PharmaSmartWeb.Services.SystemSettingsService>();
+
+            // ─── خدمة التنبؤ بالطلب الخارجي (Google Vertex AI) ───────────────
+            // تُستخدم عند رفع ملف Excel خارجي — بيانات قاعدة البيانات تبقى مع Prophet
+            services.AddHttpClient<PharmaSmartWeb.Services.GoogleVertexAiForecastService>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(20);
+                client.DefaultRequestHeaders.Add("User-Agent", "PharmaSmartWeb/1.0");
+            });
+            services.AddScoped<PharmaSmartWeb.Services.IForecastApiService,
+                               PharmaSmartWeb.Services.GoogleVertexAiForecastService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
