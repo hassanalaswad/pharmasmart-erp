@@ -264,18 +264,12 @@ namespace PharmaSmartWeb.Controllers
                 .Include(u => u.Employee)
                 .FirstOrDefaultAsync(u => u.Username == cleanUsername);
 
-            // ✅ التحقق الصارم من حالة الأحرف في C# لأن MySQL افتراضياً غير حساسة (case-insensitive)
-            if (user != null && !string.Equals(user.Username, cleanUsername, StringComparison.Ordinal))
-            {
-                user = null; // نرفض المستخدم إذا اختلفت الحالة
-            }
-
-            // 1. التشخيص: هل المستخدم موجود؟
-            if (user == null)
+            // 1. التشخيص: هل المستخدم موجود ومطابق تماماً لحالة الأحرف؟
+            if (user == null || user.Username != cleanUsername)
             {
                 // ❗️ تسجيل محاولة دخول فاشلة في السجلات
-                await RecordLoginFailureAsync(username, "username_not_found");
-                ViewBag.Error = "اسم المستخدم غير مسجل في النظام.";
+                await RecordLoginFailureAsync(username, "username_not_found_or_case_mismatch");
+                ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة.";
                 return View();
             }
 
@@ -314,7 +308,7 @@ namespace PharmaSmartWeb.Controllers
                     {
                         // ❗️ تسجيل محاولة دخول بكلمة مرور خاطئة
                         await RecordLoginFailureAsync(username, "password_mismatch");
-                        ViewBag.Error = "كلمة المرور غير صحيحة.";
+                        ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة.";
                         return View();
                     }
                     
@@ -328,8 +322,8 @@ namespace PharmaSmartWeb.Controllers
                 catch
                 {
                     // في حالة وجود نص قديم لا يتوافق مع صيغة الـ Hash ولم ينجح الـ Legacy Match
-                    await RecordLoginFailureAsync(username, "password_mismatch");
-                    ViewBag.Error = "بيانات الدخول غير متوافقة مع إعدادات الأمان الجديدة. يرجى التواصل مع الدعم.";
+                    await RecordLoginFailureAsync(username, "password_mismatch_legacy");
+                    ViewBag.Error = "اسم المستخدم أو كلمة المرور غير صحيحة.";
                     return View();
                 }
             }
