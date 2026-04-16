@@ -4,101 +4,99 @@
     ViewData["Title"] = "مصفوفة الصلاحيات والأدوار";
 }
 
-<style>
-    body { background-color: #f4f6f8; }
-    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
-    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
-    .role-card { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 16px; transition: border-color 0.15s; }
-    .role-card:hover { border-color: #063955; }
-    .role-icon { width: 40px; height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
-    .btn-manage { background: #063955; color: white; border: none; padding: 8px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; width: 100%; justify-content: center; }
-    .btn-manage:hover { background: #0a4f72; color: white; }
-    .role-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; }
-    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
-    .page-sub { font-size: 12px; color: #64748b; }
-    .security-notice { background: #0c1a2e; color: white; border-radius: 2px; padding: 16px; margin-top: 20px; display: flex; align-items: center; justify-content: space-between; }
-</style>
-
-<!-- Page Header -->
-<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
-    <div>
-        <h1 class="page-title">إدارة مجموعات الصلاحيات</h1>
-        <p class="page-sub">تخصيص مستويات الوصول للموظفين والكوادر الطبية</p>
-    </div>
-</div>
-
 @if (TempData["Success"] != null)
 {
-    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #059669;">
-        <span class="material-symbols-outlined" style="color:#059669; font-size:18px;">check_circle</span>
-        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+    <div class="bg-emerald-50 border border-emerald-200 border-r-4 border-r-emerald-500 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm text-emerald-700">
+        <i class="fas fa-check-circle"></i> @TempData["Success"]
     </div>
 }
 
+<!-- ===== رأس الصفحة ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-sm">
+            <i class="fas fa-user-lock text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black text-gray-800">إدارة مجموعات الصلاحيات وأدوار النظام</h1>
+            <p class="text-xs text-gray-500">تخصيص مستويات الوصول للموظفين والكوادر الطبية</p>
+        </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        <button class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-not-allowed opacity-70" title="قريباً: إضافة دور مخصص">
+            <i class="fas fa-plus"></i> إضافة دور جديد
+        </button>
+    </div>
+</div>
+
 @if (!Model.Any())
 {
-    <div class="enterprise-panel p-10 text-center">
-        <span class="material-symbols-outlined" style="font-size:40px; color:#cbd5e1; display:block; margin-bottom:8px;">group_off</span>
-        <p style="color:#94a3b8; font-size:13px; font-weight:600;">لا توجد أدوار مضافة حالياً.</p>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <i class="fas fa-users-slash text-5xl mb-4 block text-gray-200"></i>
+        <h3 class="text-lg font-bold text-gray-700 mb-1">لا توجد أدوار مسجلة</h3>
+        <p class="text-sm text-gray-500">لم يتم العثور على أي مجموعات صلاحيات في النظام.</p>
     </div>
 }
 else
 {
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         @foreach (var role in Model)
         {
             var roleNameEn = role.RoleName?.ToLower() ?? "";
-            string icon = "key"; string iconBg = "#f1f5f9"; string iconColor = "#475569";
-            string badgeBg = "#f1f5f9"; string badgeColor = "#475569"; string badgeLabel = "مجموعة صلاحيات";
+            string icon = "fa-key"; string iconColor = "text-slate-600"; string iconBg = "bg-slate-100";
+            string badgeColor = "text-slate-700"; string badgeBg = "bg-slate-100 text-slate-600 border-slate-200"; string badgeLabel = "مجموعة صلاحيات";
             string description = "تعديل أذونات شاشات النظام لهذا الدور الوظيفي والمستخدمين التابعين له.";
 
             if (roleNameEn.Contains("admin") || role.RoleId == 1)
             {
-                icon = "security"; iconBg = "#fff1f2"; iconColor = "#e11d48";
-                badgeBg = "#fff1f2"; badgeColor = "#e11d48"; badgeLabel = "وصول كامل";
+                icon = "fa-shield-alt"; iconColor = "text-rose-600"; iconBg = "bg-rose-100";
+                badgeBg = "bg-rose-50 text-rose-700 border-rose-200"; badgeLabel = "وصول كامل";
                 description = "مدير النظام الرئيسي. يتمتع بكافة الصلاحيات لإدارة المستخدمين، الإعدادات العامة، والبيانات.";
             }
             else if (roleNameEn.Contains("branchmanager") || role.RoleId == 2)
             {
-                icon = "storefront"; iconBg = "#f3e8ff"; iconColor = "#9333ea";
-                badgeBg = "#f3e8ff"; badgeColor = "#9333ea"; badgeLabel = "إدارة فروع";
+                icon = "fa-store-alt"; iconColor = "text-purple-600"; iconBg = "bg-purple-100";
+                badgeBg = "bg-purple-50 text-purple-700 border-purple-200"; badgeLabel = "إدارة فروع";
                 description = "مدير الفرع. يمتلك صلاحيات لإدارة فرعه ومراقبة أدائه التشغيلي وصلاحيات الموظفين فيه.";
             }
             else if (roleNameEn.Contains("pharmacist") || role.RoleId == 3)
             {
-                icon = "prescriptions"; iconBg = "#eff6ff"; iconColor = "#1d4ed8";
-                badgeBg = "#eff6ff"; badgeColor = "#1d4ed8"; badgeLabel = "طاقم طبي ومبيعات";
+                icon = "fa-pills"; iconColor = "text-blue-600"; iconBg = "bg-blue-100";
+                badgeBg = "bg-blue-50 text-blue-700 border-blue-200"; badgeLabel = "طاقم طبي ومبيعات";
                 description = "إدارة المخزون الدوائي، صرف الوصفات الطبية، وإدارة نقاط البيع النقدية.";
             }
 
-            <div class="role-card">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                    <div class="role-icon" style="background:@iconBg; color:@iconColor;">
-                        <span class="material-symbols-outlined" style="font-size:20px;">@icon</span>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 transition-all hover:shadow-md hover:border-indigo-200 flex flex-col group">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-12 h-12 rounded-xl @iconBg @iconColor flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <i class="fas @icon text-xl"></i>
                     </div>
-                    <span class="role-badge" style="background:@badgeBg; color:@badgeColor; border:1px solid @badgeColor;">@badgeLabel</span>
+                    <span class="px-2.5 py-1 text-[10px] font-bold rounded border @badgeBg">@badgeLabel</span>
                 </div>
-                <h3 style="font-size:14px; font-weight:700; color:#063955; margin-bottom:6px;">@(role.RoleArabicName ?? role.RoleName)</h3>
-                <p style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:14px;">@description</p>
-                <a asp-controller="Roles" asp-action="ManagePermissions" asp-route-roleId="@role.RoleId" class="btn-manage">
-                    <span class="material-symbols-outlined" style="font-size:15px;">settings_suggest</span>
-                    ضبط مصفوفة الصلاحيات
+                <h3 class="text-base font-bold text-gray-800 mb-2">@(role.RoleArabicName ?? role.RoleName)</h3>
+                <p class="text-xs text-gray-500 leading-relaxed mb-6 flex-1">@description</p>
+                <a asp-controller="Roles" asp-action="ManagePermissions" asp-route-roleId="@role.RoleId"
+                   class="w-full text-center px-4 py-2.5 bg-slate-800 hover:bg-slate-900 border border-slate-900 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-sliders-h"></i> ضبط مصفوفة الصلاحيات
                 </a>
             </div>
         }
     </div>
 
     <!-- Security Notice -->
-    <div class="security-notice">
-        <div style="display:flex; align-items:center; gap:12px;">
-            <span class="material-symbols-outlined" style="color:#f59e0b; font-size:24px;">security</span>
+    <div class="mt-8 bg-slate-900 rounded-2xl p-6 flex items-start sm:items-center justify-between gap-6 overflow-hidden relative border border-slate-800 shadow-lg">
+        <div class="flex items-start sm:items-center gap-4 z-10">
+            <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                <i class="fas fa-shield-virus text-2xl"></i>
+            </div>
             <div>
-                <div style="font-size:12px; font-weight:700; color:#e2e8f0;">العزل والأمان الشامل</div>
-                <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
-                    تضمن هذه الشاشة سياسة العزل الأمني (Vertical Security Isolation)، حيث لا يُسمح بتغيير صلاحيات مدير النظام الرئيسي. أي تغييرات أخرى تُطبق وتُحدث فورياً بفضل نظام تفريغ الكاش التلقائي.
-                </div>
+                <h4 class="text-white font-bold text-sm mb-1">العزل والأمان الشامل (Vertical Security Isolation)</h4>
+                <p class="text-slate-400 text-xs font-medium leading-relaxed max-w-2xl">
+                    هذه الشاشة تطبق سياسة صارمة للعزل الأمني. لا يُسمح بتغيير الصلاحيات الجذرية لمدير النظام لتجنب الإغلاق العرضي (Lockout). 
+                    أي تعديل على صلاحيات الأدوار الأخرى يُطبق فورياً بفضل نظام تفريغ الكاش التلقائي المدمج.
+                </p>
             </div>
         </div>
-        <span class="material-symbols-outlined" style="font-size:60px; opacity:0.1; transform:rotate(-12deg);">encrypted</span>
+        <i class="fas fa-fingerprint text-8xl text-white opacity-5 absolute -left-4 -bottom-4 -rotate-12 pointer-events-none"></i>
     </div>
 }
