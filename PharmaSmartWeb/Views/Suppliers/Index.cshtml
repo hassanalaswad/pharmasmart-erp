@@ -2,154 +2,164 @@
 
 @{
     ViewData["Title"] = "إدارة الموردين والشركات";
+    int totalCount = Model.Count();
+    int activeCount = Model.Count(s => s.IsActive == true);
+    int inactiveCount = Model.Count(s => s.IsActive != true);
+    int linkedCount = Model.Count(s => s.AccountId != null);
 }
 
-<style>
-    body { background-color: #f4f6f8; }
-    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
-    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
-    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; }
-    .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
-    .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
-    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
-    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
-    .enterprise-table tr:hover td { background: #f8fafc; }
-    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
-    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-    .status-danger  { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
-    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-    .btn-primary:hover { background: #0a4f72; color: white; }
-    .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 2px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-    .btn-edit { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-    .btn-edit:hover { background: #fef3c7; color: #d97706; }
-    .btn-ledger { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .btn-ledger:hover { background: #dbeafe; color: #1d4ed8; }
-    .search-input { border: 1px solid #d1d5db; border-radius: 2px; padding: 6px 10px; font-size: 12px; width: 260px; }
-    .search-input:focus { outline: none; border-color: #063955; }
-    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
-    .page-sub { font-size: 12px; color: #64748b; }
-</style>
+@if (TempData["Success"] != null)
+{
+    <div class="bg-emerald-50 border border-emerald-200 border-r-4 border-r-emerald-500 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm text-emerald-700">
+        <i class="fas fa-check-circle"></i> @TempData["Success"]
+    </div>
+}
 
-<!-- Page Header -->
-<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
-    <div>
-        <h1 class="page-title">إدارة الموردين والشركات</html>
-        <p class="page-sub">قم بإدارة سجلات الموردين، تتبع حساباتهم المالية، وتنظيم عمليات التوريد الطبي</p>
+<!-- ===== رأس الصفحة ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-600 to-cyan-700 flex items-center justify-center shadow-sm">
+            <i class="fas fa-truck text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black text-gray-800">إدارة الموردين والشركات</h1>
+            <p class="text-xs text-gray-500">سجلات الموردين، الحسابات المالية، وعمليات التوريد</p>
+        </div>
     </div>
     @if (User.HasClaim("Permission", "Suppliers.Add"))
     {
-        <a href="/Suppliers/Create" class="btn-primary">
-            <span class="material-symbols-outlined" style="font-size:16px;">add_business</span>
-            إضافة مورد جديد
+        <a href="/Suppliers/Create"
+           class="quick-action-btn px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
+            <i class="fas fa-plus-circle"></i> إضافة مورد جديد
         </a>
     }
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3 border-r-4 border-r-[#059669]">
-        <span class="material-symbols-outlined text-[#059669]" style="font-size:18px;">check_circle</span>
-        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+<!-- ===== بطاقات KPI ===== -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-teal-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">إجمالي الموردين</span>
+            <i class="fas fa-truck text-teal-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@totalCount</div>
+        <span class="text-xs text-gray-400">مورد مسجل</span>
     </div>
-}
-
-<!-- KPIs -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-    <div class="enterprise-kpi">
-        <div class="kpi-title">إجمالي الموردين</div>
-        <div class="kpi-value">@Model.Count()</div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-emerald-700 font-semibold">نشطون</span>
+            <i class="fas fa-check-circle text-emerald-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-emerald-600">@activeCount</div>
+        <span class="text-xs text-gray-400">مورد نشط</span>
     </div>
-    <div class="enterprise-kpi">
-        <div class="kpi-title">الموردون النشطون</div>
-        <div class="kpi-value" style="color:#059669;">@Model.Count(s => s.IsActive == true)</div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-amber-400">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-amber-700 font-semibold">موقوفون</span>
+            <i class="fas fa-pause-circle text-amber-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-amber-600">@inactiveCount</div>
+        <span class="text-xs text-gray-400">مورد موقوف</span>
     </div>
-    <div class="enterprise-kpi">
-        <div class="kpi-title">موردون موقوفون</div>
-        <div class="kpi-value" style="color:#d97706;">@Model.Count(s => s.IsActive != true)</div>
-    </div>
-    <div class="enterprise-kpi">
-        <div class="kpi-title">مرتبطون بحساب مالي</div>
-        <div class="kpi-value" style="color:#063955;">@Model.Count(s => s.AccountId != null)</div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-blue-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">مربوطون بحساب</span>
+            <i class="fas fa-link text-blue-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-blue-600">@linkedCount</div>
+        <span class="text-xs text-gray-400">مرتبط بمحاسبة</span>
     </div>
 </div>
 
-<!-- Data Table -->
-<div class="enterprise-panel">
-    <div class="enterprise-header flex justify-between items-center">
-        <span>قائمة الموردين المسجلين</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="البحث عن مورد..." onkeyup="filterTable()" />
+<!-- ===== جدول الموردين ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+    <div class="flex flex-wrap justify-between items-center px-5 py-4 border-b border-gray-100 gap-3">
+        <h3 class="font-bold text-gray-800 text-sm">
+            <i class="fas fa-list text-teal-500 ml-1.5"></i> قائمة الموردين المسجلين
+        </h3>
+        <div class="relative">
+            <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs"></i>
+            <input type="text" id="searchInput" onkeyup="filterTable()"
+                placeholder="البحث عن مورد..."
+                class="pr-8 pl-4 py-2 border border-gray-200 rounded-xl text-xs w-48 focus:outline-none focus:ring-2 focus:ring-teal-400" />
+        </div>
     </div>
-    <div style="overflow-x:auto;">
-        <table class="enterprise-table" id="suppliersTable">
-            <thead>
+    <div class="overflow-x-auto">
+        <table class="min-w-full data-table text-sm" id="suppliersTable">
+            <thead class="bg-gray-50">
                 <tr>
-                    <th>رقم المورد</th>
-                    <th>اسم المورد / الشركة</th>
-                    <th>المندوب والهاتف</th>
-                    <th>الحساب المالي</th>
-                    <th>الحالة</th>
-                    <th style="text-align:center;">إجراءات</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">رقم المورد</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">اسم المورد / الشركة</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">المندوب والهاتف</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الحساب المالي</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الحالة</th>
+                    <th class="px-5 py-3 text-center text-gray-600 font-semibold text-xs">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 @if (!Model.Any())
                 {
                     <tr>
-                        <td colspan="6" style="text-align:center; padding:40px; color:#94a3b8;">
-                            <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px;">deployed_code</span>
-                            لا يوجد موردون مسجلون بعد.
+                        <td colspan="6" class="text-center py-12 text-gray-400">
+                            <i class="fas fa-truck text-5xl mb-3 block text-gray-200"></i>
+                            لا يوجد موردون مسجلون بعد
                         </td>
                     </tr>
                 }
                 @foreach (var item in Model)
                 {
-                    <tr>
-                        <td><strong style="color:#063955; font-family:monospace;">#SUP-@item.SupplierId.ToString("D4")</strong></td>
-                        <td>
-                            <div>
-                                <div style="font-weight:700; font-size:13px;">@item.SupplierName</div>
-                                <div style="font-size:11px; color:#64748b;">@(string.IsNullOrEmpty(item.Address) ? "العنوان غير مسجل" : item.Address)</div>
+                    var initLetter = item.SupplierName?.Length > 0 ? item.SupplierName.Substring(0, 1) : "؟";
+                    <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td class="px-5 py-3 font-mono text-teal-700 font-bold">#SUP-@item.SupplierId.ToString("D4")</td>
+                        <td class="px-5 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    @initLetter
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-gray-800">@item.SupplierName</div>
+                                    <div class="text-[11px] text-gray-400">@(string.IsNullOrEmpty(item.Address) ? "العنوان غير مسجل" : item.Address)</div>
+                                </div>
                             </div>
                         </td>
-                        <td>
-                            <div style="font-size:12px; font-weight:600;">@(string.IsNullOrEmpty(item.ContactPerson) ? "---" : item.ContactPerson)</div>
-                            <div style="font-size:11px; color:#64748b; direction:ltr;">@(string.IsNullOrEmpty(item.Phone) ? "---" : item.Phone)</div>
+                        <td class="px-5 py-3">
+                            <div class="font-semibold text-gray-700 text-xs">@(string.IsNullOrEmpty(item.ContactPerson) ? "---" : item.ContactPerson)</div>
+                            <div class="text-[11px] text-gray-400 font-mono" dir="ltr">@(string.IsNullOrEmpty(item.Phone) ? "---" : item.Phone)</div>
                         </td>
-                        <td>
+                        <td class="px-5 py-3">
                             @if (item.Account != null)
                             {
-                                <span class="status-badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-family:monospace;">@item.Account.AccountCode</span>
+                                <span class="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full font-mono font-bold">@item.Account.AccountCode</span>
                             }
                             else
                             {
-                                <span class="status-badge status-danger">غير مربوط</span>
+                                <span class="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-400 border border-gray-200 rounded-full font-bold">غير مربوط</span>
                             }
                         </td>
-                        <td>
+                        <td class="px-5 py-3">
                             @if (item.IsActive == true)
                             {
-                                <span class="status-badge status-success">نشط</span>
+                                <span class="text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full font-bold">نشط</span>
                             }
                             else
                             {
-                                <span class="status-badge status-danger">موقوف</span>
+                                <span class="text-[11px] px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full font-bold">موقوف</span>
                             }
                         </td>
-                        <td style="text-align:center;">
-                            <div style="display:flex; justify-content:center; gap:6px;">
+                        <td class="px-5 py-3 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
                                 @if (User.HasClaim("Permission", "Suppliers.Edit"))
                                 {
-                                    <a href="/Suppliers/Edit/@item.SupplierId" class="btn-sm btn-edit">
-                                        <span class="material-symbols-outlined" style="font-size:13px;">edit</span>
-                                        تعديل
+                                    <a href="/Suppliers/Edit/@item.SupplierId"
+                                       class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+                                        <i class="fas fa-pen text-[10px]"></i> تعديل
                                     </a>
                                 }
                                 @if (item.AccountId != null && User.HasClaim("Permission", "Accounting.View"))
                                 {
-                                    <a href="/Accounting/Ledger?accountId=@item.AccountId" class="btn-sm btn-ledger">
-                                        <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span>
-                                        كشف الحساب
+                                    <a href="/Accounting/Ledger?accountId=@item.AccountId"
+                                       class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1">
+                                        <i class="fas fa-receipt text-[10px]"></i> كشف
                                     </a>
                                 }
                             </div>
@@ -159,25 +169,20 @@
             </tbody>
         </table>
     </div>
-    <div style="padding:8px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:11px; color:#64748b;">
-        إجمالي: @Model.Count() مورد مسجل في النظام
+    <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+        <span class="text-xs text-gray-500">إجمالي: <strong class="text-gray-700">@totalCount</strong> مورد مسجل</span>
     </div>
 </div>
 
 @section Scripts {
 <script>
-    function filterTable() {
-        var input = document.getElementById("searchInput").value.toUpperCase();
-        var table = document.getElementById("suppliersTable");
-        var rows = table.getElementsByTagName("tr");
-        for (var i = 1; i < rows.length; i++) {
-            var cells = rows[i].getElementsByTagName("td");
-            var show = false;
-            for (var j = 0; j < cells.length; j++) {
-                if (cells[j].textContent.toUpperCase().indexOf(input) > -1) { show = true; break; }
-            }
-            rows[i].style.display = show ? "" : "none";
-        }
-    }
+function filterTable() {
+    const q = document.getElementById("searchInput").value.toUpperCase();
+    const rows = document.querySelectorAll("#suppliersTable tbody tr");
+    rows.forEach(row => {
+        const txt = row.innerText.toUpperCase();
+        row.style.display = txt.includes(q) ? "" : "none";
+    });
+}
 </script>
 }

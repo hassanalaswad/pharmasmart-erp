@@ -10,117 +10,113 @@
     var availabilityRatio = totalDrugs > 0 ? (activeDrugs * 100 / totalDrugs) : 0;
 }
 
-<style>
-    body { background-color: #f4f6f8; }
-    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
-    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
-    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; }
-    .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
-    .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
-    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
-    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
-    .enterprise-table tr:hover td { background: #f8fafc; }
-    .status-active { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
-    .status-inactive { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; }
-    .btn-primary { background: #063955; color: white; border: none; padding: 7px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-    .btn-primary:hover { background: #0a4f72; color: white; }
-    .btn-secondary { background: #475569; color: white; border: none; padding: 7px 14px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
-    .btn-sm { padding: 4px 8px; font-size: 11px; border-radius: 2px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; }
-    .btn-edit { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-    .btn-del { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
-    .search-input { border: 1px solid #d1d5db; border-radius: 2px; padding: 6px 10px; font-size: 12px; width: 260px; }
-    .search-input:focus { outline: none; border-color: #063955; }
-    .filter-select { border: 1px solid #d1d5db; border-radius: 2px; padding: 6px 10px; font-size: 12px; background: white; }
-    .drug-icon { width: 32px; height: 32px; border-radius: 4px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; flex-shrink:0; }
-    .unit-badge { display: inline-block; background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 2px; font-size: 10px; font-weight: 700; border: 1px solid #e2e8f0; font-family: monospace; }
-    .page-title { font-size: 16px; font-weight: 700; color: #063955; }
-    .page-sub { font-size: 12px; color: #64748b; }
-</style>
-
 @if (TempData["Success"] != null)
 {
-    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #059669;">
-        <span class="material-symbols-outlined" style="color:#059669; font-size:18px;">check_circle</span>
-        <span style="font-size:13px; color:#059669; font-weight:600;">@TempData["Success"]</span>
+    <div class="bg-emerald-50 border border-emerald-200 border-r-4 border-r-emerald-500 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm text-emerald-700">
+        <i class="fas fa-check-circle"></i> @TempData["Success"]
     </div>
 }
 @if (ViewBag.Error != null)
 {
-    <div class="enterprise-panel mb-4 p-3 flex items-center gap-3" style="border-right: 4px solid #e11d48;">
-        <span class="material-symbols-outlined" style="color:#e11d48; font-size:18px;">error</span>
-        <span style="font-size:13px; color:#e11d48; font-weight:600;">@ViewBag.Error</span>
+    <div class="bg-red-50 border border-red-200 border-r-4 border-r-red-500 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm text-red-700">
+        <i class="fas fa-exclamation-circle"></i> @ViewBag.Error
     </div>
 }
 
-<!-- Page Header -->
-<div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
-    <div>
-        <h1 class="page-title">دليل الأدوية المركزي</h1>
-        <p class="page-sub">إدارة وتحليل المخزون الدوائي بدقة إكلينيكية.</p>
+<!-- ===== رأس الصفحة ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-700 flex items-center justify-center shadow-sm">
+            <i class="fas fa-capsules text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black text-gray-800">دليل الأدوية المركزي</h1>
+            <p class="text-xs text-gray-500">إدارة وتحليل المخزون الدوائي بدقة وشمولية</p>
+        </div>
     </div>
-    <div style="display:flex; gap:8px; align-items:center;">
-        <button onclick="exportTableToCSV('Drugs_Master_Data.csv')" class="btn-secondary">
-            <span class="material-symbols-outlined" style="font-size:15px;">file_download</span>
-            تصدير التقرير
+    <div class="flex gap-2 flex-wrap">
+        <button onclick="exportTableToCSV('Drugs_Master_Data.csv')"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors">
+            <i class="fas fa-file-download text-gray-500"></i> تصدير CSV
         </button>
         @if ((await AuthorizationService.AuthorizeAsync(User, "CanAddDrug")).Succeeded)
         {
-            <button onclick="openDrugModal('/Drugs/Create?isPopup=true', 'إضافة صنف جديد')" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
-                إضافة صنف جديد
+            <button onclick="openDrugModal('/Drugs/Create?isPopup=true', 'إضافة صنف جديد')"
+                class="quick-action-btn px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
+                <i class="fas fa-plus-circle"></i> إضافة صنف جديد
             </button>
         }
     </div>
 </div>
 
-<!-- KPIs -->
-<div class="grid grid-cols-3 gap-3 mb-4">
-    <div class="enterprise-kpi">
-        <div class="kpi-title">إجمالي الأصناف</div>
-        <div class="kpi-value" id="lblCount">@totalDrugs.ToString("N0")</div>
+<!-- ===== بطاقات KPI ===== -->
+<div class="grid grid-cols-3 gap-4 mb-5">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-teal-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">إجمالي الأصناف</span>
+            <i class="fas fa-pills text-teal-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800" id="lblCount">@totalDrugs.ToString("N0")</div>
+        <span class="text-xs text-teal-600 font-medium">صنف دوائي مسجل</span>
     </div>
-    <div class="enterprise-kpi">
-        <div class="kpi-title">أصناف موقوفة</div>
-        <div class="kpi-value" style="color:#e11d48;">@inactiveDrugs.ToString("N0")</div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-red-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">أصناف موقوفة</span>
+            <i class="fas fa-ban text-red-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-red-600">@inactiveDrugs.ToString("N0")</div>
+        <span class="text-xs text-gray-400 font-medium">صنف غير نشط</span>
     </div>
-    <div class="enterprise-kpi">
-        <div class="kpi-title">نسبة التوافر والنشاط</div>
-        <div class="kpi-value" style="color:#059669;">@availabilityRatio%</div>
-        <div style="height:4px; background:#e2e8f0; border-radius:2px; margin-top:6px;">
-            <div style="height:4px; background:#059669; border-radius:2px; width:@(availabilityRatio)%;"></div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">نسبة التوافر</span>
+            <i class="fas fa-chart-pie text-emerald-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-emerald-600">@availabilityRatio%</div>
+        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+            <div class="bg-emerald-500 h-1.5 rounded-full" style="width:@(availabilityRatio)%"></div>
         </div>
     </div>
 </div>
 
-<!-- Search & Filter Bar -->
-<div class="enterprise-panel mb-4 p-3 flex gap-3 items-center flex-wrap">
-    <input id="searchInput" onkeyup="filterTable()" class="search-input" placeholder="البحث باسم الدواء، المجموعة أو الباركود..." type="text" />
-    <select id="statusFilter" onchange="filterTable()" class="filter-select">
+<!-- ===== شريط البحث والفلاتر ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-3 mb-5 flex flex-wrap gap-3 items-center">
+    <div class="relative flex-1 min-w-[200px]">
+        <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-xs"></i>
+        <input id="searchInput" onkeyup="filterTable()" type="text"
+            placeholder="البحث باسم الدواء، المجموعة أو الباركود..."
+            class="w-full pr-8 pl-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all" />
+    </div>
+    <select id="statusFilter" onchange="filterTable()"
+        class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-teal-400">
         <option value="all">كل الحالات</option>
         <option value="active">نشط فقط</option>
         <option value="inactive">موقوف</option>
     </select>
     <button onclick="document.getElementById('searchInput').value=''; document.getElementById('statusFilter').value='all'; filterTable();"
-            class="btn-sm" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; padding:6px 12px;">
-        <span class="material-symbols-outlined" style="font-size:14px;">filter_alt_off</span>
-        إلغاء التصفية
+        class="px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors">
+        <i class="fas fa-times-circle text-gray-400 text-xs"></i> مسح الفلاتر
     </button>
 </div>
 
-<!-- Data Table -->
-<div class="enterprise-panel">
-    <div class="enterprise-header">قائمة الأصناف الدوائية المسجلة</div>
-    <div style="overflow-x:auto; min-height:300px;">
-        <table class="enterprise-table" id="drugsTable">
-            <thead>
+<!-- ===== جدول الأصناف ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+    <div class="px-5 py-4 border-b border-gray-100">
+        <h3 class="font-bold text-gray-800 text-sm">
+            <i class="fas fa-list text-teal-500 ml-1.5"></i>
+            قائمة الأصناف الدوائية المسجلة
+        </h3>
+    </div>
+    <div class="overflow-x-auto" style="min-height:300px;">
+        <table class="min-w-full data-table text-sm" id="drugsTable">
+            <thead class="bg-gray-50">
                 <tr>
-                    <th>الدواء والمجموعة</th>
-                    <th>الشركة المصنعة</th>
-                    <th>الباركود (SKU)</th>
-                    <th>الوحدات والتحويل</th>
-                    <th>الحالة</th>
-                    <th style="text-align:center;" class="export-ignore">الإجراءات</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الدواء والمجموعة</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الشركة المصنعة</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الباركود (SKU)</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الوحدات</th>
+                    <th class="px-5 py-3 text-right text-gray-600 font-semibold text-xs">الحالة</th>
+                    <th class="px-5 py-3 text-center text-gray-600 font-semibold text-xs export-ignore">الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
