@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تالين فارما - التقارير المالية والمركزية</title>
+    <style>
+        /* الأنماط العامة للشاشة */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #f0f2f5;
+            font-family: 'Tajawal', 'Segoe UI', system-ui, sans-serif;
+            padding: 20px;
+        }
+        /* شريط الأدوات */
+        .toolbar {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 60px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #1e293b;
+        }
+        .btn.active {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 2px 6px rgba(16,185,129,0.3);
+        }
+        .btn.print {
+            background: #1e293b;
+            color: white;
+        }
+        .btn.print:hover {
+            background: #0f172a;
+        }
+        /* حاوية التقارير */
+        .reports-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .report-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        /* أنماط التقرير (للكل) */
+        .report {
+            padding: 25px 30px 35px;
+            font-family: 'Tajawal', 'Segoe UI', Arial, sans-serif;
+            color: #0f172a;
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #10b981, #047857);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        .company-info h2 {
+            font-size: 20px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .company-info p {
+            font-size: 11px;
+            color: #475569;
+        }
+        .print-date {
+            font-size: 12px;
+            color: #475569;
+        }
+        .report-title {
+            text-align: center;
+            margin: 20px 0 10px;
+        }
+        .report-title h3 {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+        }
+        .report-meta {
+            background: #f8fafc;
+            padding: 10px 18px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        th {
+            background-color: #f1f5f9;
+            padding: 10px 8px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+            font-weight: 700;
+        }
+        td {
+            padding: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .text-left {
+            text-align: left;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .summary-box {
+            margin-top: 25px;
+            padding: 14px 20px;
+            background: #f8fafc;
+            border-radius: 14px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 30px;
+            font-weight: bold;
+            flex-wrap: wrap;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 15px;
+        }
+        /* أنماط خاصة لكشف الحساب التفصيلي */
+        .account-statement .transaction-detail {
+            font-size: 12px;
+        }
+        /* ألوان الطباعة */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .toolbar {
+                display: none;
+            }
+            .reports-wrapper {
+                margin: 0;
+            }
+            .report-card {
+                box-shadow: none;
+                border-radius: 0;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .report {
+                padding: 0.3cm;
+            }
+            @page {
+                size: A4;
+                margin: 1.2cm;
+            }
+            th, td {
+                border-color: #aaa !important;
+            }
+            table {
+                break-inside: avoid;
+            }
+            tr {
+                break-inside: avoid;
+            }
+        }
+    </style>
+    <!-- Font Awesome (للشاشة) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="btn-group">
+        <button class="btn active" data-report="income">💰 قائمة الدخل (أرباح وخسائر)</button>
+        <button class="btn" data-report="account">📒 كشف حساب تفصيلي</button>
+        <button class="btn" data-report="sales">📊 تقرير المبيعات</button>
+        <button class="btn" data-report="inventory">📦 تقرير المخزون</button>
+        <button class="btn" data-report="expiry">⚠️ تقرير الصلاحية</button>
+    </div>
+    <button class="btn print" onclick="window.print();"><i class="fas fa-print"></i> طباعة التقرير الحالي</button>
+</div>
+
+<div class="reports-wrapper">
+    <!-- 1. قائمة الدخل (الأرباح والخسائر) -->
+    <div id="incomeReport" class="report-card" style="display: block;">
+        <div class="report">
+            <div class="report-header">
+                <div class="logo-area">
+                    <div class="logo-icon"><i class="fas fa-prescription-bottle"></i></div>
+                    <div class="company-info"><h2>تالين فارما</h2><p>شريكك الموثوق في الرعاية الصحية</p></div>
+                </div>
+                <div class="print-date">تاريخ الطباعة: <span id="printDateIncome"></span></div>
+            </div>
+            <div class="report-title"><h3>قائمة الدخل (أرباح وخسائر)</h3></div>
+            <div class="report-meta"><span>الفترة: من 1 يناير 2025 إلى 31 مارس 2025</span><span>العملة: دولار أمريكي ($)</span></div>
+            <table>
+                <thead><tr><th>البيان</th><th>المبلغ ($)</th></tr></thead>
+                <tbody>
+                    <tr style="background:#f9f9f9;"><td class="text-right"><strong>الإيرادات</strong></td><td></td></tr>
+                    <tr><td class="text-right">مبيعات الأدوية</td><td>128,500</td></tr>
+                    <tr><td class="text-right">مبيعات المستلزمات الطبية</td><td>22,300</td></tr>
+                    <tr><td class="text-right">إيرادات خدمات (فحص ضغط/سكر)</td><td>4,200</td></tr>
+                    <tr style="border-top:1px solid #ccc;"><td class="text-right"><strong>إجمالي الإيرادات</strong></td><td><strong>155,000</strong></td></tr>
+                    <tr style="background:#f9f9f9;"><td class="text-right"><strong>تكلفة البضاعة المباعة (COGS)</strong></td><td></td></tr>
+                    <tr><td class="text-right">مخزون أول المدة</td><td>42,000</td></tr>
+                    <tr><td class="text-right">المشتريات</td><td>98,000</td></tr>
+                    <tr><td class="text-right">مخزون آخر المدة</td><td>(45,000)</td></tr>
+                    <tr><td class="text-right"><strong>إجمالي تكلفة البضاعة</strong></td><td><strong>95,000</strong></td></tr>
+                    <tr style="border-top:1px solid #ccc;"><td class="text-right"><strong>مجمل الربح (الإيرادات - COGS)</strong></td><td><strong>60,000</strong></td></tr>
+                    <tr style="background:#f9f9f9;"><td class="text-right"><strong>المصروفات التشغيلية</strong></td><td></td></tr>
+                    <tr><td class="text-right">إيجار المحل</td><td>6,000</td></tr>
+                    <tr><td class="text-right">رواتب الموظفين</td><td>18,000</td></tr>
+                    <tr><td class="text-right">فواتير كهرباء وماء</td><td>2,500</td></tr>
+                    <tr><td class="text-right">مصروفات تسويق</td><td>1,200</td></tr>
+                    <tr><td class="text-right">صيانة وتجديدات</td><td>800</td></tr>
+                    <tr><td class="text-right">مصروفات إدارية متنوعة</td><td>1,500</td></tr>
+                    <tr><td class="text-right"><strong>إجمالي المصروفات</strong></td><td><strong>30,000</strong></td></tr>
+                    <tr style="border-top:2px solid #10b981;"><td class="text-right"><strong>صافي الربح (قبل الضريبة)</strong></td><td><strong>30,000</strong></td></tr>
+                    <tr><td class="text-right">ضريبة الدخل المقدرة (10%)</td><td>3,000</td></tr>
+                    <tr style="border-top:1px solid #ccc;"><td class="text-right"><strong>صافي الربح بعد الضريبة</strong></td><td><strong>27,000</strong></td></tr>
+                </tbody>
+            </table>
+            <div class="summary-box">
+                <span>هامش الربح الإجمالي: 38.7%</span>
+                <span>صافي هامش الربح: 17.4%</span>
+            </div>
+            <div class="footer">تم إعداد هذا التقرير بناءً على البيانات المالية للربع الأول 2025</div>
+        </div>
+    </div>
+
+    <!-- 2. كشف حساب تفصيلي (مثال: حساب عميل) -->
+    <div id="accountReport" class="report-card" style="display: none;">
+        <div class="report account-statement">
+            <div class="report-header">
+                <div class="logo-area"><div class="logo-icon"><i class="fas fa-prescription-bottle"></i></div><div class="company-info"><h2>تالين فارما</h2><p>شريكك الموثوق</p></div></div>
+                <div class="print-date">تاريخ الطباعة: <span id="printDateAccount"></span></div>
+            </div>
+            <div class="report-title"><h3>كشف حساب تفصيلي</h3></div>
+            <div class="report-meta"><span>الحساب: عميل - شركة النهضة الطبية</span><span>رقم الحساب: 4001-001</span><span>الفترة: 1 يناير 2025 – 31 مارس 2025</span></div>
+            <table>
+                <thead><tr><th>التاريخ</th><th>البيان</th><th>مرجع</th><th>مدين ($)</th><th>دائن ($)</th><th>الرصيد ($)</th></tr></thead>
+                <tbody>
+                    <tr><td>01/01/2025</td><td>رصيد أول المدة</td><td>-</td><td>-</td><td>-</td><td>4,500</td></tr>
+                    <tr><td>15/01/2025</td><td>فاتورة مبيعات</td><td>INV-201</td><td>2,300</td><td>-</td><td>6,800</td></tr>
+                    <tr><td>28/01/2025</td><td>دفعة مستلمة</td><td>REC-045</td><td>-</td><td>1,500</td><td>5,300</td></tr>
+                    <tr><td>10/02/2025</td><td>فاتورة مبيعات</td><td>INV-215</td><td>3,750</td><td>-</td><td>9,050</td></tr>
+                    <tr><td>25/02/2025</td><td>دفعة مستلمة</td><td>REC-067</td><td>-</td><td>2,000</td><td>7,050</td></tr>
+                    <tr><td>05/03/2025</td><td>مرتجع مبيعات</td><td>RET-003</td><td>-</td><td>250</td><td>6,800</td></tr>
+                    <tr><td>20/03/2025</td><td>فاتورة مبيعات</td><td>INV-245</td><td>1,800</td><td>-</td><td>8,600</td></tr>
+                </tbody>
+            </table>
+            <div class="summary-box">
+                <span>إجمالي المبيعات (مدين): 7,850 $</span>
+                <span>إجمالي المدفوعات والمرتجعات (دائن): 3,750 $</span>
+                <span>الرصيد الحالي (مدين): 8,600 $</span>
+            </div>
+            <div class="footer">هذا الكشف يوضح حركة الحساب التفصيلية. يمكن إضافة أي حساب آخر (مورد، بنك) بنفس الهيكل.</div>
+        </div>
+    </div>
+
+    <!-- 3. تقرير المبيعات (مبسط) -->
+    <div id="salesFullReport" class="report-card" style="display: none;">
+        <div class="report">
+            <div class="report-header"><div class="logo-area"><div class="logo-icon"><i class="fas fa-prescription-bottle"></i></div><div class="company-info"><h2>تالين فارما</h2><p>شريكك الموثوق</p></div></div><div class="print-date"><span id="printDateSales"></span></div></div>
+            <div class="report-title"><h3>تقرير المبيعات - مارس 2025</h3></div>
+            <div class="report-meta"><span>الفرع: جميع الفروع</span><span>العملة: دولار</span></div>
+            <table><thead><tr><th>التاريخ</th><th>رقم الفاتورة</th><th>العميل</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody>
+                <tr><td>2025-03-01</td><td>INV-101</td><td>أحمد محمد</td><td>125.50</td><td>مدفوع</td></tr>
+                <tr><td>2025-03-05</td><td>INV-102</td><td>سعاد علي</td><td>230.00</td><td>آجل</td></tr>
+                <tr><td>2025-03-10</td><td>INV-103</td><td>محمد صلاح</td><td>98.75</td><td>مدفوع</td></tr>
+                <tr><td>2025-03-15</td><td>INV-104</td><td>نور الهدى</td><td>450.00</td><td>مدفوع</td></tr>
+                <tr><td>2025-03-20</td><td>INV-105</td><td>خالد السعيدي</td><td>310.25</td><td>آجل</td></tr>
+            </tbody></table>
+            <div class="summary-box"><span>إجمالي المبيعات: 1,214.50 $</span><span>المبيعات الآجلة: 540.25 $</span></div>
+            <div class="footer">تقرير المبيعات اليومية</div>
+        </div>
+    </div>
+
+    <!-- 4. تقرير المخزون -->
+    <div id="inventoryFullReport" class="report-card" style="display: none;">
+        <div class="report">
+            <div class="report-header"><div class="logo-area"><div class="logo-icon"><i class="fas fa-prescription-bottle"></i></div><div class="company-info"><h2>تالين فارما</h2></div></div><div class="print-date"><span id="printDateInv"></span></div></div>
+            <div class="report-title"><h3>تقرير المخزون وتصنيف ABC</h3></div>
+            <table><thead><tr><th>الدواء</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>تصنيف ABC</th><th>دوران المخزون</th></tr></thead><tbody>
+                <tr><td>بنادول 500mg</td><td>67</td><td>20</td><td>A</td><td>2.2</td></tr>
+                <tr><td>أموكسيسيلين</td><td>38</td><td>15</td><td>B</td><td>2.0</td></tr>
+                <tr><td>فنتولين بخاخ</td><td>7</td><td>8</td><td>A</td><td>1.6</td></tr>
+            </tbody></table>
+            <div class="footer">تاريخ التقرير: مارس 2025</div>
+        </div>
+    </div>
+
+    <!-- 5. تقرير الصلاحية -->
+    <div id="expiryFullReport" class="report-card" style="display: none;">
+        <div class="report">
+            <div class="report-header"><div class="logo-area"><div class="logo-icon"><i class="fas fa-prescription-bottle"></i></div><div class="company-info"><h2>تالين فارما</h2></div></div><div class="print-date"><span id="printDateExp"></span></div></div>
+            <div class="report-title"><h3>تقرير مراقبة الصلاحية</h3></div>
+            <table><thead><tr><th>الدواء</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الكمية</th><th>القيمة ($)</th></tr></thead><tbody>
+                <tr><td>باراسيتامول شراب</td><td>2025-04-10</td><td>24</td><td>15</td><td>75</td></tr>
+                <tr><td>فيتامين سي</td><td>2025-05-01</td><td>45</td><td>30</td><td>90</td></tr>
+                <tr class="expired"><td>مضاد حيوي (منتهي)</td><td>2025-02-28</td><td>منتهي</td><td>10</td><td>120</td></tr>
+            </tbody></table>
+            <div class="summary-box"><span>قيمة الهدر المتوقعة: 120 $</span><span>أدوية منتهية: صنف واحد</span></div>
+            <div class="footer">ينصح باتخاذ إجراء سريع للأدوية منتهية الصلاحية</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // تعيين تواريخ الطباعة
+    const now = new Date().toLocaleString('ar-EG');
+    document.getElementById('printDateIncome') && (document.getElementById('printDateIncome').innerText = now);
+    document.getElementById('printDateAccount') && (document.getElementById('printDateAccount').innerText = now);
+    document.getElementById('printDateSales') && (document.getElementById('printDateSales').innerText = now);
+    document.getElementById('printDateInv') && (document.getElementById('printDateInv').innerText = now);
+    document.getElementById('printDateExp') && (document.getElementById('printDateExp').innerText = now);
+
+    // التبديل بين التقارير
+    const reports = {
+        income: document.getElementById('incomeReport'),
+        account: document.getElementById('accountReport'),
+        sales: document.getElementById('salesFullReport'),
+        inventory: document.getElementById('inventoryFullReport'),
+        expiry: document.getElementById('expiryFullReport')
+    };
+    const btns = document.querySelectorAll('.btn[data-report]');
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const reportName = btn.getAttribute('data-report');
+            // إخفاء الكل
+            Object.values(reports).forEach(r => r.style.display = 'none');
+            // إظهار المختار
+            if (reports[reportName]) reports[reportName].style.display = 'block';
+            // تحديث النشاط
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+</script>
+</body>
+</html>

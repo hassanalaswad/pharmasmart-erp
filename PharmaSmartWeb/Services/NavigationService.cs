@@ -165,6 +165,21 @@ namespace PharmaSmartWeb.Services
 
                 if (group.Items.Any()) allowedGroups.Add(group);
             }
+            else if (activeUnit == "Planning")
+            {
+                var group = new MenuGroup { Title = "التخطيط والتنبؤ", Icon = "auto_graph", Items = new List<MenuItem>() };
+
+                if (user.IsInRole("SuperAdmin") || user.IsInRole("BranchManager") || user.IsInRole("Accountant") || user.HasClaim("Permission", "System.ChangeBranch"))
+                {
+                    group.Items.Add(new MenuItem { Title = "لوحة تحكم التخطيط", Url = "/Home/PlanningHub", Icon = "dashboard" });
+                    group.Items.Add(new MenuItem { Title = "خطة المشتريات (Prophet AI)", Url = "/Planning/ForecastPlan", Icon = "smart_toy" });
+                    group.Items.Add(new MenuItem { Title = "العوامل الموسمية", Url = "/Planning/SeasonalFactors", Icon = "wb_sunny" });
+                    group.Items.Add(new MenuItem { Title = "توقعات الطلب (Vertex AI)", Url = "/Planning/CloudForecast", Icon = "cloud" });
+                    group.Items.Add(new MenuItem { Title = "تحليل ABC للمخزون", Url = "/InventoryIntelligence/Index", Icon = "pie_chart" });
+                }
+
+                if (group.Items.Any()) allowedGroups.Add(group);
+            }
             else if (activeUnit == "SystemSettings")
             {
                 var group = new MenuGroup { Title = "إعدادات النظام", Icon = "admin_panel_settings", Items = new List<MenuItem>() };
@@ -200,6 +215,7 @@ namespace PharmaSmartWeb.Services
                 if (string.Equals(action, "FinanceHub", StringComparison.OrdinalIgnoreCase)) return "Finance";
                 if (string.Equals(action, "ReportsHub", StringComparison.OrdinalIgnoreCase)) return "Reports";
                 if (string.Equals(action, "AdminHub", StringComparison.OrdinalIgnoreCase) || string.Equals(action, "SettingsHub", StringComparison.OrdinalIgnoreCase)) return "SystemSettings";
+                if (string.Equals(action, "PlanningHub", StringComparison.OrdinalIgnoreCase)) return "Planning";
                 return "Main";
             }
 
@@ -219,6 +235,9 @@ namespace PharmaSmartWeb.Services
                 // We map generically to Reports unless they pass a flag. Let's map it to Reports for now.
                 return "Reports";
             }
+
+            var planningControllers = new[] { "Planning", "ForecastPlan" };
+            if (planningControllers.Contains(controller, StringComparer.OrdinalIgnoreCase)) return "Planning";
 
             var settingsControllers = new[] { "Admin", "Branches", "Users", "Roles", "Currencies", "FinancialSettings" };
             if (settingsControllers.Contains(controller, StringComparer.OrdinalIgnoreCase)) return "SystemSettings";

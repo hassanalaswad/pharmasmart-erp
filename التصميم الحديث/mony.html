@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - المالية والحسابات | نظام إدارة صيدليات ذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: #f1f5f9; font-family: system-ui, 'Segoe UI', 'Tajawal', sans-serif; }
+        .sidebar-group-btn { transition: all 0.2s; }
+        .sidebar-group-btn:hover { background-color: #f1f5f9; }
+        .submenu-item { transition: all 0.15s; }
+        .submenu-item:hover { background-color: #f1f5f9; padding-right: 0.75rem; }
+        .kpi-card, .action-btn { transition: all 0.2s; }
+        .kpi-card:hover, .action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        @media (max-width: 768px) { .sidebar-mobile-hidden { transform: translateX(100%); } .sidebar-mobile-visible { transform: translateX(0); } }
+        .data-table tbody tr:hover { background-color: #f8fafc; }
+        .tab-active { border-bottom: 3px solid #10b981; color: #065f46; font-weight: 600; }
+        .tab-inactive { color: #6b7280; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #374151; border-bottom-color: #d1d5db; }
+        /* شجرة الحسابات */
+        .tree-node { cursor: pointer; }
+        .tree-children { margin-right: 1.5rem; display: none; }
+        .tree-children.open { display: block; }
+        .tree-leaf { padding: 0.3rem 0.5rem; border-radius: 0.375rem; }
+        .tree-leaf:hover { background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+<div class="flex h-screen overflow-hidden">
+    <!-- القائمة الجانبية الثابتة (نفس الهيكل السابق) -->
+    <aside id="sidebar" class="w-72 bg-white shadow-xl border-l border-gray-100 flex-shrink-0 overflow-y-auto z-20 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible">
+        <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+            <i class="fas fa-hospital-user text-2xl text-emerald-600"></i>
+            <span class="font-bold text-xl text-gray-800">تالين فارما</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mr-auto">v3.0</span>
+        </div>
+        <div class="p-4">
+            <div class="relative">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400">
+            </div>
+        </div>
+        <nav id="sidebarNavContainer" class="px-3 pb-6 space-y-1"></nav>
+        <div class="p-4 border-t border-gray-100 text-xs text-gray-400 mt-6">
+            <i class="fas fa-shield-alt"></i> عزل بيانات الفروع • RBAC • تنبؤ Prophet/Vertex AI
+        </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي: وحدة المالية والحسابات -->
+    <main class="flex-1 overflow-y-auto bg-slate-50">
+        <!-- الهيدر العلوي -->
+        <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button id="toggleSidebarMobile" class="md:hidden text-gray-600 text-xl"><i class="fas fa-bars"></i></button>
+                    <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-store"></i> <span id="currentBranchDisplay">فرع صنعاء</span></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-user-tag text-gray-500"></i>
+                        <select id="roleSelector" class="bg-transparent text-sm font-semibold outline-none cursor-pointer">
+                            <option value="branch_manager">👨‍💼 مدير فرع (صنعاء)</option>
+                            <option value="super_admin">🌐 مدير النظام</option>
+                        </select>
+                    </div>
+                    <button class="relative text-gray-600 hover:text-emerald-600"><i class="fas fa-bell text-xl"></i><span class="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] rounded-full px-1">3</span></button>
+                    <div class="flex items-center gap-2 border-r border-gray-200 pr-3">
+                        <i class="fas fa-user-circle text-2xl text-gray-500"></i>
+                        <span id="userNameDisplay" class="text-sm font-medium hidden md:inline">أحمد العسيري</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- محتوى وحدة المالية والحسابات -->
+        <div class="p-5 md:p-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">المالية والحسابات</h1>
+                    <div class="text-sm text-gray-500 mt-1"><i class="fas fa-home"></i> الرئيسية / المالية والحسابات</div>
+                </div>
+            </div>
+
+            <!-- تبويبات الوحدة -->
+            <div class="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
+                <nav class="flex flex-wrap gap-1 px-4 pt-2" id="financeTabsNav">
+                    <button data-tab="financeDashboard" class="tab-active px-4 py-2 text-sm font-medium"><i class="fas fa-chart-pie ml-1"></i> لوحة تحكم المالية</button>
+                    <button data-tab="chartOfAccounts" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-book ml-1"></i> الدليل المحاسبي</button>
+                    <button data-tab="journalEntries" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-journal-whills ml-1"></i> القيود اليومية</button>
+                    <button data-tab="fundTransfers" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-exchange-alt ml-1"></i> التحويلات المالية</button>
+                    <button data-tab="accountStatement" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-receipt ml-1"></i> كشف الحساب</button>
+                    <button data-tab="financialReports" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-chart-line ml-1"></i> التقارير المالية</button>
+                </nav>
+            </div>
+
+            <div class="bg-white rounded-b-xl shadow-lg p-5">
+                <!-- 1. لوحة تحكم المالية -->
+                <div id="financeDashboardTab" class="tab-content">
+                    <!-- بطاقات -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="kpi-card bg-white rounded-xl shadow p-4 border-r-4 border-blue-500"><div class="flex justify-between"><span class="text-gray-500">رصيد الخزنة</span><i class="fas fa-money-bill-wave text-blue-500"></i></div><div class="text-2xl font-bold mt-1">3,250 $</div><button class="mt-2 text-xs text-blue-600">تسجيل دفعة</button></div>
+                        <div class="kpi-card bg-white rounded-xl shadow p-4 border-r-4 border-emerald-500"><div class="flex justify-between"><span class="text-gray-500">البنك</span><i class="fas fa-university text-emerald-500"></i></div><div class="text-2xl font-bold mt-1">8,400 $</div><button class="mt-2 text-xs text-emerald-600">كشف حساب</button></div>
+                        <div class="kpi-card bg-white rounded-xl shadow p-4 border-r-4 border-amber-500"><div class="flex justify-between"><span class="text-gray-500">الذمم المدينة (عملاء)</span><i class="fas fa-users text-amber-500"></i></div><div class="text-2xl font-bold mt-1">4,520 $</div><button class="mt-2 text-xs text-amber-600">إرسال تذكير</button></div>
+                        <div class="kpi-card bg-white rounded-xl shadow p-4 border-r-4 border-red-500"><div class="flex justify-between"><span class="text-gray-500">الذمم الدائنة (موردين)</span><i class="fas fa-truck text-red-500"></i></div><div class="text-2xl font-bold mt-1">3,150 $</div><button class="mt-2 text-xs text-red-600">تسوية</button></div>
+                    </div>
+                    <!-- رسم بياني للتدفق النقدي -->
+                    <div class="mb-6"><h3 class="font-semibold mb-2">التدفق النقدي (فعلي + متوقع)</h3><canvas id="cashFlowChart" height="100" style="max-height:250px"></canvas><div class="text-xs text-center text-gray-400 mt-2">الخط الأزرق: فعلي | الخط المتقطع: متوقع (Prophet)</div></div>
+                    <!-- جداول فواتير آجلة مستحقة -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div><h4 class="font-semibold mb-2">🧾 فواتير عملاء آجلة مستحقة</h4><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th class="px-2 py-1">العميل</th><th>المبلغ</th><th>تاريخ الاستحقاق</th><th></th></tr></thead><tbody><tr><td>سعاد علي</td><td>120 $</td><td>2025-03-20</td><td><button class="text-blue-600 text-xs remind-customer">تذكير</button></td></tr><tr><td>محمد صلاح</td><td>250 $</td><td>2025-03-18</td><td><button class="text-blue-600 text-xs remind-customer">تذكير</button></td></tr></tbody></table></div>
+                        <div><h4 class="font-semibold mb-2">🚚 فواتير موردين مستحقة</h4><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>المورد</th><th>المبلغ</th><th>تاريخ الاستحقاق</th><th></th></tr></thead><tbody><tr><td>المدينة للأدوية</td><td>1,200 $</td><td>2025-03-25</td><td><button class="text-red-600 text-xs pay-supplier">تسجيل دفعة</button></td></tr></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- 2. الدليل المحاسبي (شجرة حسابات قابلة للطي) -->
+                <div id="chartOfAccountsTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">📚 شجرة الحسابات</h3><div><button id="addAccountBtn" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-sm"><i class="fas fa-plus"></i> إضافة حساب</button><button class="bg-gray-100 px-3 py-1 rounded text-sm mr-2"><i class="fas fa-print"></i> طباعة</button></div></div>
+                    <div id="accountsTree" class="border rounded-lg p-3 bg-gray-50">
+                        <!-- شجرة الحسابات (سيتم إنشاؤها ديناميكيًا) -->
+                    </div>
+                </div>
+
+                <!-- 3. القيود اليومية -->
+                <div id="journalEntriesTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">📜 القيود اليومية</h3><div><button id="addJournalBtn" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm"><i class="fas fa-plus"></i> إضافة قيد يدوي</button><button id="postAllBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-sm"><i class="fas fa-check-double"></i> ترحيل الكل</button><button class="bg-gray-100 px-3 py-1 rounded text-sm"><i class="fas fa-print"></i> طباعة</button></div></div>
+                    <div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>التاريخ</th><th>البيان</th><th>الحساب المدين</th><th>المدين</th><th>الحساب الدائن</th><th>الدائن</th></tr></thead><tbody><tr><td>2025-03-15</td><td>مبيعات نقدية</td><td>الصندوق</td><td>450 $</td><td>إيرادات المبيعات</td><td>450 $</td></tr><tr><td>2025-03-16</td><td>شراء أدوية</td><td>المخزون</td><td>1,200 $</td><td>المورد</td><td>1,200 $</td></tr><tr><td>2025-03-17</td><td>دفع إيجار</td><td>مصروف الإيجار</td><td>300 $</td><td>الصندوق</td><td>300 $</td></tr></tbody></table></div>
+                </div>
+
+                <!-- 4. التحويلات المالية -->
+                <div id="fundTransfersTab" class="tab-content hidden">
+                    <h3 class="text-lg font-semibold mb-4">🔄 تحويل بين الحسابات</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg max-w-md">
+                        <div class="mb-3"><label class="block text-sm">من حساب</label><select id="fromAccount" class="w-full border rounded p-2"><option value="cash">الخزنة</option><option value="bank">البنك</option></select></div>
+                        <div class="mb-3"><label class="block text-sm">إلى حساب</label><select id="toAccount" class="w-full border rounded p-2"><option value="bank">البنك</option><option value="cash">الخزنة</option></select></div>
+                        <div class="mb-3"><label class="block text-sm">المبلغ</label><input type="number" id="transferAmount" placeholder="0.00" class="w-full border rounded p-2"></div>
+                        <div class="flex gap-2"><button id="doTransferBtn" class="bg-emerald-600 text-white px-4 py-2 rounded">تحويل</button><button id="printTransferBtn" class="bg-gray-200 px-4 py-2 rounded">طباعة إيصال</button></div>
+                    </div>
+                    <div class="mt-6"><h4 class="font-semibold">آخر التحويلات</h4><table class="min-w-full text-sm border mt-2"><thead><tr><th>التاريخ</th><th>من</th><th>إلى</th><th>المبلغ</th></tr></thead><tbody><tr><td>2025-03-10</td><td>الخزنة</td><td>البنك</td><td>500 $</td></tr></tbody></table></div>
+                </div>
+
+                <!-- 5. كشف الحساب -->
+                <div id="accountStatementTab" class="tab-content hidden">
+                    <div class="flex flex-wrap gap-3 items-end mb-4"><div><label class="block text-sm">اختر الحساب</label><select id="statementAccount" class="border rounded p-2"><option value="cash">الخزنة</option><option value="bank">البنك</option><option value="receivable">الذمم المدينة</option></select></div><div><button id="showStatementBtn" class="bg-blue-600 text-white px-4 py-2 rounded">عرض</button><button id="exportPdfBtn" class="bg-gray-200 px-4 py-2 rounded">تصدير PDF</button><button id="printStatementBtn" class="bg-gray-200 px-4 py-2 rounded">طباعة</button></div></div>
+                    <div id="statementResult" class="border rounded-lg p-3 bg-gray-50"><p class="text-gray-500">اختر حساباً لعرض الحركة</p></div>
+                </div>
+
+                <!-- 6. التقارير المالية -->
+                <div id="financialReportsTab" class="tab-content hidden">
+                    <div class="flex gap-2 mb-4"><button id="incomeStatementBtn" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded">قائمة الدخل</button><button id="trialBalanceBtn" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded">ميزان المراجعة</button><button id="cashFlowReportBtn" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded">التدفق النقدي</button><div class="mr-auto"><button id="exportExcelBtn" class="bg-green-100 text-green-700 px-3 py-1 rounded">تصدير Excel</button><button id="printReportsBtn" class="bg-gray-100 px-3 py-1 rounded">طباعة</button></div></div>
+                    <div id="reportDisplay" class="border rounded-lg p-4 bg-gray-50">
+                        <h3 class="font-bold">قائمة الدخل (فترة: مارس 2025)</h3>
+                        <table class="min-w-full text-sm mt-2"><tr><td>إيرادات المبيعات</td><td class="text-left">12,500 $</td></tr><tr><td>تكلفة البضاعة المباعة</td><td class="text-left">-6,200 $</td></tr><tr><td class="font-bold">صافي الربح</td><td class="text-left font-bold">6,300 $</td></tr></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // ---------- القائمة الجانبية (محاكاة سريعة) ----------
+    function buildSidebar(role) {
+        const container = document.getElementById('sidebarNavContainer');
+        container.innerHTML = `
+            <div class="group-item mb-1"><button class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100"><div class="flex items-center gap-3"><i class="fas fa-tachometer-alt w-5"></i><span>الرئيسية</span></div><i class="fas fa-chevron-down text-xs"></i></button></div>
+            <div class="group-item mb-1"><button class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100"><div class="flex items-center gap-3"><i class="fas fa-chart-pie w-5"></i><span>المالية والحسابات</span></div><i class="fas fa-chevron-down text-xs rotate-180"></i></button><div class="submenu space-y-1 pr-6 mt-1"><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">لوحة تحكم المالية</a><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">الدليل المحاسبي</a><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">القيود اليومية</a><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">التحويلات المالية</a><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">كشف الحساب</a><a href="#" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">التقارير المالية</a></div></div>
+        `;
+    }
+    function updateSidebarAndHeader(role) {
+        buildSidebar(role);
+        const userSpan = document.getElementById('userNameDisplay'); const branchSpan = document.getElementById('currentBranchDisplay');
+        if (role === 'branch_manager') { userSpan.innerText = 'أحمد العسيري (مدير فرع)'; branchSpan.innerText = 'فرع صنعاء'; }
+        else { userSpan.innerText = 'سليمان الرئيس (مدير النظام)'; branchSpan.innerText = 'جميع الفروع'; }
+    }
+    document.getElementById('roleSelector').addEventListener('change', (e) => updateSidebarAndHeader(e.target.value));
+    updateSidebarAndHeader('branch_manager');
+
+    // ---------- تبويبات المالية والحسابات ----------
+    const tabs = {
+        financeDashboard: document.getElementById('financeDashboardTab'),
+        chartOfAccounts: document.getElementById('chartOfAccountsTab'),
+        journalEntries: document.getElementById('journalEntriesTab'),
+        fundTransfers: document.getElementById('fundTransfersTab'),
+        accountStatement: document.getElementById('accountStatementTab'),
+        financialReports: document.getElementById('financialReportsTab')
+    };
+    const tabBtns = document.querySelectorAll('#financeTabsNav button');
+    function activateTab(tabId) {
+        Object.keys(tabs).forEach(id => tabs[id].classList.add('hidden'));
+        tabs[tabId].classList.remove('hidden');
+        tabBtns.forEach(btn => {
+            if (btn.dataset.tab === tabId) { btn.classList.remove('tab-inactive'); btn.classList.add('tab-active'); }
+            else { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); }
+        });
+    }
+    tabBtns.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
+    // رسم بياني للتدفق النقدي
+    const ctx = document.getElementById('cashFlowChart')?.getContext('2d');
+    if (ctx) new Chart(ctx, {
+        type: 'line', data: { labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو'], datasets: [{ label: 'فعلي', data: [5200, 6100, 7800, 0, 0], borderColor: '#3b82f6', tension: 0.2 }, { label: 'متوقع', data: [5400, 6300, 8000, 8500, 9000], borderColor: '#f59e0b', borderDash: [5, 5] }] },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
+
+    // شجرة الحسابات (دليل محاسبي قابل للطي)
+    const accountsData = [
+        { name: "الأصول", children: [{ name: "الأصول المتداولة", children: [{ name: "الخزنة", code: "1001" }, { name: "البنك", code: "1002" }, { name: "المخزون", code: "1003" }] }, { name: "الأصول الثابتة", children: [{ name: "الأثاث", code: "1101" }] }] },
+        { name: "الخصوم", children: [{ name: "الذمم الدائنة (موردين)", code: "2001" }] },
+        { name: "حقوق الملكية", children: [{ name: "رأس المال", code: "3001" }] },
+        { name: "الإيرادات", children: [{ name: "إيرادات المبيعات", code: "4001" }] },
+        { name: "المصروفات", children: [{ name: "مصروف الإيجار", code: "5001" }, { name: "مصروف الرواتب", code: "5002" }] }
+    ];
+    function renderTree(container, nodes, level = 0) {
+        nodes.forEach(node => {
+            const div = document.createElement('div');
+            div.className = 'tree-node';
+            const hasChildren = node.children && node.children.length;
+            const content = document.createElement('div');
+            content.className = `tree-leaf flex items-center justify-between ${hasChildren ? 'font-medium' : ''}`;
+            content.innerHTML = `<div><i class="fas ${hasChildren ? 'fa-folder-open' : 'fa-file-alt'} ml-2 text-gray-500"></i>${node.name} ${node.code ? `(${node.code})` : ''}</div><div><button class="edit-account text-xs text-blue-500 ml-2">تعديل</button><button class="delete-account text-xs text-red-500">حذف</button></div>`;
+            div.appendChild(content);
+            if (hasChildren) {
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'tree-children';
+                renderTree(childrenDiv, node.children, level + 1);
+                div.appendChild(childrenDiv);
+                content.style.cursor = 'pointer';
+                content.addEventListener('click', (e) => { if (!e.target.classList.contains('edit-account') && !e.target.classList.contains('delete-account')) childrenDiv.classList.toggle('open'); });
+            }
+            container.appendChild(div);
+        });
+    }
+    const treeContainer = document.getElementById('accountsTree');
+    if (treeContainer) renderTree(treeContainer, accountsData);
+    document.getElementById('addAccountBtn')?.addEventListener('click', () => alert("فتح نموذج إضافة حساب جديد (محاكاة)"));
+    document.querySelectorAll('.edit-account, .delete-account').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); alert("تعديل/حذف حساب (محاكاة)"); }));
+
+    // محاكاة الأزرار الأخرى
+    document.getElementById('addJournalBtn')?.addEventListener('click', () => alert("إضافة قيد يدوي: نافذة إدخال القيد المزدوج."));
+    document.getElementById('postAllBtn')?.addEventListener('click', () => alert("تم ترحيل جميع القيود غير المرحلة إلى دفتر الأستاذ العام."));
+    document.getElementById('doTransferBtn')?.addEventListener('click', () => { const amt = document.getElementById('transferAmount').value; if(amt) alert(`تم تحويل ${amt} $ بنجاح وإنشاء القيد المحاسبي.`); else alert("أدخل المبلغ"); });
+    document.getElementById('printTransferBtn')?.addEventListener('click', () => alert("طباعة إيصال التحويل."));
+    document.getElementById('showStatementBtn')?.addEventListener('click', () => { const acc = document.getElementById('statementAccount').value; document.getElementById('statementResult').innerHTML = `<div class="space-y-2"><p><strong>حساب ${acc === 'cash' ? 'الخزنة' : acc === 'bank' ? 'البنك' : 'الذمم المدينة'}</strong></p><table class="min-w-full text-sm"><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr><tr><td>01/03</td><td>رصيد أول المدة</td><td>-</td><td>-</td><td>3,200 $</td></tr><tr><td>15/03</td><td>مبيعات</td><td>450 $</td><td>-</td><td>3,650 $</td></tr></table></div>`; });
+    document.getElementById('exportPdfBtn')?.addEventListener('click', () => alert("تصدير PDF لكشف الحساب."));
+    document.getElementById('incomeStatementBtn')?.addEventListener('click', () => document.getElementById('reportDisplay').innerHTML = `<h3 class="font-bold">قائمة الدخل (مارس 2025)</h3><table class="min-w-full text-sm mt-2"><tr><td>الإيرادات</td><td class="text-left">12,500 $</td></tr><tr><td>تكلفة البضاعة</td><td class="text-left">-6,200 $</td></tr><tr><td class="font-bold">صافي الربح</td><td class="text-left font-bold">6,300 $</td></tr></table>`);
+    document.getElementById('trialBalanceBtn')?.addEventListener('click', () => document.getElementById('reportDisplay').innerHTML = `<h3 class="font-bold">ميزان المراجعة (31 مارس 2025)</h3><table class="min-w-full text-sm mt-2"><tr><th>الحساب</th><th>مدين</th><th>دائن</th></tr><tr><td>الخزنة</td><td>3,250 $</td><td></td></tr><tr><td>البنك</td><td>8,400 $</td><td></td></tr><tr><td>الموردين</td><td></td><td>3,150 $</td></tr><tr><td>رأس المال</td><td></td><td>10,000 $</td></tr></table>`);
+    document.getElementById('cashFlowReportBtn')?.addEventListener('click', () => document.getElementById('reportDisplay').innerHTML = `<h3 class="font-bold">قائمة التدفقات النقدية (مارس 2025)</h3><table class="min-w-full text-sm mt-2"><tr><td>التدفق من العمليات التشغيلية</td><td class="text-left">4,200 $</td></tr><tr><td>التدفق من الاستثمار</td><td class="text-left">-500 $</td></tr><tr><td>صافي التدفق</td><td class="text-left">3,700 $</td></tr></table>`);
+    document.getElementById('exportExcelBtn')?.addEventListener('click', () => alert("تصدير التقرير إلى Excel"));
+    document.getElementById('printReportsBtn')?.addEventListener('click', () => alert("طباعة التقرير"));
+    document.querySelectorAll('.remind-customer, .pay-supplier').forEach(btn => btn.addEventListener('click', () => alert("تم إرسال تذكير / تسجيل دفعة (محاكاة)")));
+
+    // البحث في القائمة الجانبية
+    const searchInput = document.getElementById('sidebarSearch');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('#sidebarNavContainer .submenu-item').forEach(link => {
+            const text = link.innerText.toLowerCase();
+            link.style.display = (term === '' || text.includes(term)) ? 'flex' : 'none';
+        });
+    });
+    const toggleBtn = document.getElementById('toggleSidebarMobile');
+    const sidebar = document.getElementById('sidebar');
+    toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('sidebar-mobile-hidden'); sidebar.classList.toggle('sidebar-mobile-visible'); });
+</script>
+</body>
+</html>

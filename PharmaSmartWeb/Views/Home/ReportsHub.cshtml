@@ -1,327 +1,244 @@
 @model PharmaSmartWeb.Models.ReportsHubViewModel
 @using PharmaSmartWeb.Infrastructure
 @{
-    ViewData["Title"] = "مركز التقارير والإدارة العليا";
-    ViewData["PageDescription"] = "تحليلات ذكية، قوائم ختامية، ومؤشرات الأداء (KPIs)";
+    ViewData["Title"] = "مركز التقارير والتحليلات";
+    string currency = ViewBag.CurrencySymbol?.ToString() ?? "ر.ي";
 }
 
-<style>
-    body { background-color: #f4f6f8; }
-    .enterprise-panel { border: 1px solid #d1d5db; border-radius: 2px; background: white; margin-bottom: 16px; }
-    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .enterprise-body { padding: 16px; }
-    .page-title { font-size: 18px; font-weight: 800; color: #063955; margin-bottom: 4px; }
-    .page-sub { font-size: 12px; color: #64748b; }
-    .kpi-box { padding: 16px; background: white; border-radius: 2px; border: 1px solid #d1d5db; border-right-width: 4px; display: flex; flex-direction: column; justify-content: space-between; }
-    .kpi-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; flex-grow: 1; }
-    .kpi-value { font-size: 24px; font-weight: 800; color: #063955; }
-    .kpi-sub { font-size: 11px; color: #94a3b8; font-weight: normal; margin-top: 4px; display: block; }
-    .form-input { border: 1px solid #cbd5e1; border-radius: 2px; padding: 6px 10px; font-size: 12px; font-weight: 700; background-color: #f8fafc; outline: none; width: 100%; }
-    .form-input:focus { border-color: #063955; background-color: white; }
-    .form-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 2px; display: block; }
-    .btn-primary { background: #063955; color: white; border: none; padding: 6.5px 16px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; text-decoration: none; }
-    .btn-primary:hover { background: #0a4f72; color: white; border-color: transparent; }
-</style>
-
-<div class="max-w-7xl mx-auto p-6 space-y-4">
-
-    <!-- Header Panel & Filters -->
-    <div class="enterprise-panel p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+<!-- ===== رأس الوحدة + فلاتر ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-sm">
+            <i class="fas fa-chart-line text-white"></i>
+        </div>
         <div>
-            <h1 class="page-title">مؤشرات الأداء المالي والتشغيلي</h1>
-            <p class="page-sub">تحليلات ذكية، قوائم ختامية، ومؤشرات الأداء لمعرفة مسار العمل.</p>
+            <h1 class="text-xl font-black text-gray-800">مركز التقارير والتحليلات</h1>
+            <p class="text-xs text-gray-500">مؤشرات الأداء · القوائم المالية · مقارنة الفروع</p>
         </div>
-
-        <form method="get" action="/Home/ReportsHub" class="flex flex-wrap md:flex-nowrap gap-3 items-end w-full lg:w-auto">
-            @if (Model.IsSuperAdmin)
-            {
-                <div class="flex-1 min-w-[150px]">
-                    <label class="form-label">الفرع</label>
-                    <select name="branchId" class="form-input">
-                        <option value="0" selected="@(Model.SelectedBranchId == 0)">كافة الفروع</option>
-                        @if (ViewBag.BranchesDropdown != null)
+    </div>
+    <!-- فلاتر الفترة -->
+    <form method="get" action="/Home/ReportsHub" class="flex flex-wrap gap-2 items-end">
+        @if (Model.IsSuperAdmin)
+        {
+            <div class="flex flex-col">
+                <label class="text-xs text-gray-500 mb-1 font-semibold">الفرع</label>
+                <select name="branchId" class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="0" selected="@(Model.SelectedBranchId == 0)">كافة الفروع</option>
+                    @if (ViewBag.BranchesDropdown != null)
+                    {
+                        foreach (var b in ViewBag.BranchesDropdown)
                         {
-                            foreach (var b in ViewBag.BranchesDropdown)
-                            {
-                                <!option value="@b.BranchId" @(Model.SelectedBranchId == b.BranchId ? "selected" : "")>@b.BranchName</!option>
-                            }
+                            @:<option value="@b.BranchId" @(Model.SelectedBranchId == b.BranchId ? "selected" : "")>@b.BranchName</option>
                         }
-                    </select>
-                </div>
-            }
-            <div class="flex-1 min-w-[120px]">
-                <label class="form-label">من تاريخ</label>
-                <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")" class="form-input" />
+                    }
+                </select>
             </div>
-            <div class="flex-1 min-w-[120px]">
-                <label class="form-label">إلى تاريخ</label>
-                <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")" class="form-input" />
-            </div>
-            <div>
-                <button type="submit" class="btn-primary" style="height: 29px;">
-                    تحديث
-                </button>
-            </div>
-        </form>
+        }
+        <div class="flex flex-col">
+            <label class="text-xs text-gray-500 mb-1 font-semibold">من</label>
+            <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")"
+                class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="flex flex-col">
+            <label class="text-xs text-gray-500 mb-1 font-semibold">إلى</label>
+            <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")"
+                class="border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors self-end">
+            <i class="fas fa-sync-alt ml-1"></i> تحديث
+        </button>
+    </form>
+</div>
+
+<!-- ===== بطاقات KPI الرئيسية ===== -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-blue-700">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">إجمالي الإيرادات</span>
+            <i class="fas fa-chart-line text-blue-600 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TotalRevenuesYTD.ToString("N0")</div>
+        <span class="text-xs text-blue-600 font-medium">@Model.StartDate.ToString("dd/MM") — @Model.EndDate.ToString("dd/MM") · @currency</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">صافي الأرباح</span>
+            <i class="fas fa-coins text-emerald-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black @(Model.NetProfit >= 0 ? "text-emerald-700" : "text-red-700")">@Model.NetProfit.ToString("N0")</div>
+        <span class="text-xs @(Model.ProfitMargin >= 0 ? "text-emerald-600" : "text-red-600") font-semibold">هامش الربح @Model.ProfitMargin%</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-slate-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">قيمة الأصول والمخزون</span>
+            <i class="fas fa-warehouse text-slate-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TotalAssetsValue.ToString("N0")</div>
+        <span class="text-xs text-gray-500">
+            @(Model.SelectedBranchId == 0 ? $"موزعة على {Model.BranchesCount} فروع" : "الفرع المحدد")
+        </span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-sky-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">السيولة النقدية</span>
+            <i class="fas fa-money-bill text-sky-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-sky-700">@Model.TotalLiquidity.ToString("N0")</div>
+        <span class="text-xs text-sky-600 font-medium">رصيد الصناديق والبنوك</span>
+    </div>
+</div>
+
+<!-- ===== روابط التقارير السريعة ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-3 mb-5">
+    <div class="flex flex-wrap gap-2 items-center">
+        <span class="text-xs text-gray-400 font-semibold ml-2">التقارير المتاحة:</span>
+        @foreach (var rpt in new[] {
+            new { Href="/Report/SalesSummary", Icon="fa-chart-bar", Text="تقرير المبيعات", Color="text-blue-400 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700" },
+            new { Href="/Report/PurchaseSummary", Icon="fa-shopping-basket", Text="تقرير المشتريات", Color="text-emerald-400 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700" },
+            new { Href="/Report/StockExpiry", Icon="fa-calendar-times", Text="الصلاحية والنواقص", Color="text-amber-400 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700" },
+            new { Href="/Report/IncomeStatement", Icon="fa-file-chart-line", Text="قائمة الدخل", Color="text-violet-400 hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700" },
+            new { Href="/Report/DailyCashFlow", Icon="fa-hand-holding-usd", Text="التدفق النقدي", Color="text-sky-400 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700" },
+            new { Href="/InventoryIntelligence/Index", Icon="fa-robot", Text="تحليل ABC", Color="text-rose-400 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700" },
+            new { Href="/Report/CustomerStatement", Icon="fa-users", Text="كشف حساب عميل", Color="text-indigo-400 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700" },
+            new { Href="/Report/SupplierStatement", Icon="fa-truck", Text="كشف حساب مورد", Color="text-teal-400 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-700" },
+        })
+        {
+            <a href="@rpt.Href" class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 @rpt.Color">
+                <i class="fas @rpt.Icon text-[10px]"></i> @rpt.Text
+            </a>
+        }
+    </div>
+</div>
+
+<!-- ===== الرسوم البيانية ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+    <!-- الأرباح والخسائر -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-blue-700">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-chart-area text-blue-600 ml-1.5"></i> تقرير الأرباح والخسائر (P&L)
+            </h3>
+            <a href="/Report/IncomeStatement" class="text-xs text-blue-600 hover:underline font-semibold">عرض كامل</a>
+        </div>
+        <div class="p-5"><canvas id="profitAndLossChart" style="height:230px; max-height:230px;"></canvas></div>
     </div>
 
-    <!-- 1. Executive KPIs (Top Level) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div class="kpi-box" style="border-right-color: #063955;">
-            <div class="kpi-title">إجمالي الإيرادات للفترة</div>
-            <div>
-                <span class="kpi-value">@Model.TotalRevenuesYTD.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
-            </div>
-            <span class="kpi-sub">من @Model.StartDate.ToString("dd-MM") إلى @Model.EndDate.ToString("dd-MM")</span>
+    <!-- مقارنة الفروع -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-sky-500">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-code-branch text-sky-500 ml-1.5"></i> مبيعات الفروع والمرتجعات
+            </h3>
         </div>
-        
-        <div class="kpi-box" style="border-right-color: #059669;">
-            <div class="kpi-title text-[#059669]">صافي الأرباح</div>
-            <div>
-                <span class="kpi-value text-[#059669]">@Model.NetProfit.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
-            </div>
-            <span class="kpi-sub font-bold @((Model.ProfitMargin >= 0) ? "text-[#059669]" : "text-[#e11d48]")">هامش الربح @Model.ProfitMargin%</span>
-        </div>
+        <div class="p-5"><canvas id="branchComparisonChart" style="height:230px; max-height:230px;"></canvas></div>
+    </div>
 
-        <div class="kpi-box" style="border-right-color: #64748b;">
-            <div class="kpi-title">قيمة الأصول والمخزون</div>
-            <div>
-                <span class="kpi-value">@Model.TotalAssetsValue.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
-            </div>
-            <span class="kpi-sub">
-                @if(Model.SelectedBranchId == 0){ <text>موزعة على @Model.BranchesCount فروع</text> } else { <text>الفرع المحدد فقط</text> }
-            </span>
+    <!-- تحليل ABC -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-emerald-500">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-robot text-emerald-500 ml-1.5"></i> الذكاء المخزني — تحليل ABC
+            </h3>
+            <a href="/InventoryIntelligence/Index" class="text-xs text-blue-600 hover:underline font-semibold">تفاصيل</a>
         </div>
-
-        <div class="kpi-box" style="border-right-color: #0284c7;">
-            <div class="kpi-title text-[#0284c7]">السيولة النقدية المتاحة</div>
-            <div>
-                <span class="kpi-value text-[#0284c7]">@Model.TotalLiquidity.ToString("N0")</span> <span class="text-[12px] text-slate-500 font-normal">@ViewBag.CurrencySymbol</span>
+        <div class="p-5 flex flex-col sm:flex-row gap-4 items-center">
+            <div class="flex-shrink-0 w-40 h-40">
+                <canvas id="abcAnalysisChart"></canvas>
             </div>
-            <span class="kpi-sub text-[#0284c7]">رصيد الصناديق والبنوك الفعلي</span>
+            <div class="flex-1 space-y-3 w-full">
+                @foreach (var (cat, pct, color, label) in new[] {
+                    ("A", Model.AbcCategoryA, "#059669", "الفئة A — الأهم (70% من القيمة)"),
+                    ("B", Model.AbcCategoryB, "#0284c7", "الفئة B — متوسطة (20% من القيمة)"),
+                    ("C", Model.AbcCategoryC, "#64748b", "الفئة C — الأقل (10% من القيمة)")
+                })
+                {
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                        <span class="font-bold text-gray-700 text-xs">@label</span>
+                        <span class="font-black text-sm" style="color:@color">@pct%</span>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 
-    <!-- 2. Main Dashboard Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Chart 1: Profit & Loss Trend -->
-        <div class="enterprise-panel mb-0 border-t-4 border-t-[#063955]">
-            <div class="enterprise-header">
-                <div>تقرير الأرباح والخسائر (P&L)</div>
-                <span class="text-[10px] text-slate-500 font-bold">تطور الإيرادات والمصروفات</span>
-            </div>
-            <div class="enterprise-body">
-                <div class="h-[250px] w-full">
-                    <canvas id="profitAndLossChart"></canvas>
-                </div>
-            </div>
+    <!-- التدفق النقدي -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 border-t-amber-500">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-money-bill-trend-up text-amber-500 ml-1.5"></i> حركة التدفق النقدي الشامل
+            </h3>
+            <a href="/Report/DailyCashFlow" class="text-xs text-blue-600 hover:underline font-semibold">تقرير كامل</a>
         </div>
-
-        <!-- Chart 2: Branch Comparison -->
-        <div class="enterprise-panel mb-0 border-t-4 border-t-[#0284c7]">
-            <div class="enterprise-header">
-                <div>المبيعات والمرتجعات</div>
-                <span class="text-[10px] text-slate-500 font-bold">مقارنة أداء المبيعات</span>
-            </div>
-            <div class="enterprise-body">
-                <div class="h-[250px] w-full">
-                    <canvas id="branchComparisonChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chart 3: Inventory Intelligence (ABC Analysis) -->
-        <div class="enterprise-panel mb-0 border-t-4 border-t-[#059669]">
-            <div class="enterprise-header">
-                <div>الذكاء المخزني (تحليل ABC)</div>
-                <span class="text-[10px] text-slate-500 font-bold">تصنيف المواد حسب قيمة الاستثمار</span>
-            </div>
-            <div class="enterprise-body">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-6 h-[250px]">
-                    <div class="w-full sm:w-1/2 h-full">
-                        <canvas id="abcAnalysisChart"></canvas>
-                    </div>
-                    <div class="w-full sm:w-1/2 space-y-3">
-                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#059669] rounded-sm flex justify-between items-center">
-                            <span class="font-bold text-[12px] text-[#063955]">الفئة A (الأهم)</span>
-                            <span class="text-[#059669] font-black font-mono">@Model.AbcCategoryA%</span>
-                        </div>
-                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#0284c7] rounded-sm flex justify-between items-center">
-                            <span class="font-bold text-[12px] text-[#063955]">الفئة B (متوسطة)</span>
-                            <span class="text-[#0284c7] font-black font-mono">@Model.AbcCategoryB%</span>
-                        </div>
-                        <div class="p-3 bg-slate-50 border border-slate-200 border-r-4 border-r-[#64748b] rounded-sm flex justify-between items-center">
-                            <span class="font-bold text-[12px] text-[#063955]">الفئة C (الأقل)</span>
-                            <span class="text-slate-500 font-black font-mono">@Model.AbcCategoryC%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chart 4: Cash Flow & Liquidity -->
-        <div class="enterprise-panel mb-0 border-t-4 border-t-[#d97706]">
-            <div class="enterprise-header">
-                <div>حركة التدفق النقدي الشامل</div>
-                <span class="text-[10px] text-slate-500 font-bold">تحليل المقبوضات والمدفوعات</span>
-            </div>
-            <div class="enterprise-body">
-                <div class="h-[250px] w-full">
-                    <canvas id="cashFlowChart"></canvas>
-                </div>
-            </div>
-        </div>
+        <div class="p-5"><canvas id="cashFlowChart" style="height:230px; max-height:230px;"></canvas></div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="~/lib/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            Chart.defaults.font.family = "tahoma, sans-serif";
-            Chart.defaults.font.size = 11; 
-            Chart.defaults.color = '#475569'; 
-            Chart.defaults.rtl = true;
+<script>
+    Chart.defaults.font.family = "'system-ui', sans-serif";
+    Chart.defaults.color = '#475569';
+    Chart.defaults.rtl = true;
 
-            const commonScales = {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#f1f5f9', drawBorder: false }, 
-                    ticks: { color: '#64748b' }
-                },
-                x: {
-                    grid: { display: false },
-                    border: { display: false },
-                    ticks: { color: '#64748b' }
-                }
-            };
+    const commonOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', align: 'end', labels: { usePointStyle: true, font: { size: 11 } } },
+            tooltip: { backgroundColor: '#0f172a', rtl: true, titleFont: { size: 12 }, bodyFont: { size: 11 } }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        },
+        interaction: { mode: 'index', intersect: false }
+    };
 
-            const commonPlugins = {
-                legend: { position: 'top', align: 'end', labels: { boxWidth: 10, color: '#1e293b', font: { size: 11, weight: 'bold' } } },
-                tooltip: { backgroundColor: '#0f172a', titleFont: { size: 12 }, bodyFont: { size: 11 }, padding: 10, rtl: true, cornerRadius: 2 }
-            };
+    // P&L
+    new Chart(document.getElementById('profitAndLossChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: @Html.Raw(Json.Serialize(Model.PnlLabels)),
+            datasets: [
+                { label: 'الإيرادات', data: @Html.Raw(Json.Serialize(Model.PnlRevenues)), borderColor: '#1d4ed8', backgroundColor: '#1d4ed81a', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3 },
+                { label: 'المصروفات', data: @Html.Raw(Json.Serialize(Model.PnlExpenses)), borderColor: '#e11d48', backgroundColor: '#e11d481a', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3 }
+            ]
+        },
+        options: { ...commonOpts, elements: { point: { hoverRadius: 5 } } }
+    });
 
-            // 1. Profit & Loss Trend (Line Chart with Fill)
-            const ctxPnl = document.getElementById('profitAndLossChart').getContext('2d');
-            new Chart(ctxPnl, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.PnlLabels)),
-                    datasets: [
-                        {
-                            label: 'الإيرادات',
-                            data: @Html.Raw(Json.Serialize(Model.PnlRevenues)),
-                            borderColor: '#063955',
-                            backgroundColor: '#0639551a',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0
-                        },
-                        {
-                            label: 'المصروفات',
-                            data: @Html.Raw(Json.Serialize(Model.PnlExpenses)),
-                            borderColor: '#e11d48',
-                            backgroundColor: '#e11d481a',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: commonPlugins,
-                    scales: commonScales,
-                    interaction: { mode: 'index', intersect: false },
-                    elements: { point: { radius: 0, hitRadius: 10, hoverRadius: 4 } }
-                }
-            });
+    // Branch
+    new Chart(document.getElementById('branchComparisonChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: @Html.Raw(Json.Serialize(Model.BranchLabels)),
+            datasets: [
+                { label: 'المبيعات', data: @Html.Raw(Json.Serialize(Model.BranchSales)), backgroundColor: '#0ea5e9', borderRadius: 3 },
+                { label: 'المرتجعات', data: @Html.Raw(Json.Serialize(Model.BranchReturns)), backgroundColor: '#f97316', borderRadius: 3 }
+            ]
+        },
+        options: { ...commonOpts, barPercentage: 0.6, categoryPercentage: 0.8 }
+    });
 
-            // 2. Branch Comparison (Grouped Bar Chart)
-            const ctxBranch = document.getElementById('branchComparisonChart').getContext('2d');
-            new Chart(ctxBranch, {
-                type: 'bar',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.BranchLabels)),
-                    datasets: [
-                        {
-                            label: 'المبيعات',
-                            data: @Html.Raw(Json.Serialize(Model.BranchSales)),
-                            backgroundColor: '#063955',
-                            borderWidth: 0
-                        },
-                        {
-                            label: 'المرتجعات',
-                            data: @Html.Raw(Json.Serialize(Model.BranchReturns)),
-                            backgroundColor: '#d97706',
-                            borderWidth: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: commonPlugins,
-                    scales: commonScales,
-                    interaction: { mode: 'index', intersect: false },
-                    barPercentage: 0.6,
-                    categoryPercentage: 0.8
-                }
-            });
+    // ABC
+    new Chart(document.getElementById('abcAnalysisChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['الفئة A', 'الفئة B', 'الفئة C'],
+            datasets: [{ data: [@Model.AbcCategoryA, @Model.AbcCategoryB, @Model.AbcCategoryC], backgroundColor: ['#059669', '#0284c7', '#64748b'], borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', rtl: true } } }
+    });
 
-            // 3. ABC Analysis (Doughnut Chart)
-            const ctxABC = document.getElementById('abcAnalysisChart').getContext('2d');
-            new Chart(ctxABC, {
-                type: 'doughnut',
-                data: {
-                    labels: ['الفئة A', 'الفئة B', 'الفئة C'],
-                    datasets: [{
-                        data: [@Model.AbcCategoryA, @Model.AbcCategoryB, @Model.AbcCategoryC],
-                        backgroundColor: ['#059669', '#0284c7', '#64748b'], 
-                        borderWidth: 1,
-                        borderColor: '#ffffff',
-                        hoverOffset: 2
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: commonPlugins.tooltip
-                    }
-                }
-            });
-
-            // 4. Cash Flow Trend (Bar Chart)
-            const ctxCash = document.getElementById('cashFlowChart').getContext('2d');
-            new Chart(ctxCash, {
-                type: 'bar',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.CashFlowLabels)),
-                    datasets: [
-                        {
-                            label: 'مقبوضات',
-                            data: @Html.Raw(Json.Serialize(Model.CashInflows)),
-                            backgroundColor: '#059669', 
-                            borderWidth: 0
-                        },
-                        {
-                            label: 'مدفوعات',
-                            data: @Html.Raw(Json.Serialize(Model.CashOutflows)),
-                            backgroundColor: '#e11d48',
-                            borderWidth: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: commonPlugins,
-                    scales: commonScales,
-                    interaction: { mode: 'index', intersect: false },
-                    barPercentage: 0.6,
-                    categoryPercentage: 0.8
-                }
-            });
-        });
-    </script>
+    // Cash Flow
+    new Chart(document.getElementById('cashFlowChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: @Html.Raw(Json.Serialize(Model.CashFlowLabels)),
+            datasets: [
+                { label: 'مقبوضات', data: @Html.Raw(Json.Serialize(Model.CashInflows)), backgroundColor: '#10b981', borderRadius: 3 },
+                { label: 'مدفوعات', data: @Html.Raw(Json.Serialize(Model.CashOutflows)), backgroundColor: '#e11d48', borderRadius: 3 }
+            ]
+        },
+        options: { ...commonOpts, barPercentage: 0.6, categoryPercentage: 0.8 }
+    });
+</script>
 }

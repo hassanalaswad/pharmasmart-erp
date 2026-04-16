@@ -669,6 +669,38 @@ namespace PharmaSmartWeb.Controllers
             return View(model);
         }
 
+        // ============================================================
+        // 🧠 لوحة التخطيط والتنبؤ
+        // ============================================================
+        public async Task<IActionResult> PlanningHub()
+        {
+            ViewData["Title"] = "وحدة التخطيط والتنبؤ";
+            ViewData["PageDescription"] = "خطة المشتريات الذكية مدعومة بـ Prophet AI / Vertex AI";
+
+            int scopeId = ReportScopeId;
+            bool isGlobal = (scopeId == 0);
+            var today = DateTime.Today;
+            var twoMonthsAgo = today.AddMonths(-2);
+
+            // إحصائيات سريعة
+            var invQuery = _context.Branchinventory.AsQueryable();
+            if (!isGlobal) invQuery = invQuery.Where(bi => bi.BranchId == scopeId);
+
+            ViewBag.TotalDrugs = await _context.Drugs.CountAsync();
+            ViewBag.ShortagesCount = await invQuery.CountAsync(bi => bi.StockQuantity <= bi.MinimumStockLevel);
+            ViewBag.ExpiringSoonCount = await _context.DrugBatches
+                .CountAsync(b => b.ExpiryDate <= today.AddMonths(2) && b.ExpiryDate >= today);
+
+            // آخر نقطة تنبؤ مُنفَّذة
+            ViewBag.LastForecastDate = await _context.Systemlogs
+                .Where(l => l.Action == "PlanApproved")
+                .OrderByDescending(l => l.CreatedAt)
+                .Select(l => l.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            return View();
+        }
+
         public IActionResult SettingsHub()
         {
             var model = new SettingsHubViewModel();

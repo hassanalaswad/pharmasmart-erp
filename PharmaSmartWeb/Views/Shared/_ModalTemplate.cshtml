@@ -1,0 +1,203 @@
+@*
+    القالب الموحد للشاشات المنبثقة (Add/Edit Modal)
+    الاستخدام: @await Html.PartialAsync("_ModalTemplate")
+    ثم من JS: openModal(title, bodyHtml, saveCallback)
+*@
+
+<!-- ========== القالب العام للنافذة المنبثقة ========== -->
+<div id="pharmaModal"
+    class="hidden fixed inset-0 z-[999] flex items-center justify-center"
+    style="background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);">
+    <div id="pharmaModalContainer"
+        class="bg-white rounded-2xl shadow-2xl w-full mx-4 transform transition-all duration-200"
+        style="max-width:520px; max-height:90vh; display:flex; flex-direction:column;">
+
+        <!-- رأس النافذة -->
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div id="pharmaModalIcon"
+                    class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <i id="pharmaModalIconClass" class="fas fa-plus text-emerald-600 text-sm"></i>
+                </div>
+                <h3 id="pharmaModalTitle" class="text-lg font-bold text-gray-800">عنوان النافذة</h3>
+            </div>
+            <button onclick="closePharmaModal()"
+                class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition-colors text-lg font-bold">&times;</button>
+        </div>
+
+        <!-- محتوى النموذج (ديناميكي) -->
+        <div id="pharmaModalBody" class="px-6 py-5 overflow-y-auto flex-1 custom-scrollbar">
+            <!-- سيُملأ ديناميكياً عبر JS -->
+        </div>
+
+        <!-- أزرار الإجراءات في أسفل النافذة -->
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
+            <button id="pharmaModalCancelBtn"
+                onclick="closePharmaModal()"
+                class="px-5 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors text-sm font-semibold">
+                إلغاء
+            </button>
+            <button id="pharmaModalSaveBtn"
+                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors text-sm font-semibold flex items-center gap-2 active:scale-95">
+                <i id="pharmaModalSaveIcon" class="fas fa-save"></i>
+                <span id="pharmaModalSaveText">حفظ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// 🪟 نظام النوافذ المنبثقة الموحد (PharmaSmart Modal System)
+// ============================================================
+
+let _pharmaModalSaveCallback = null;
+
+/**
+ * فتح نافذة منبثقة
+ * title: عنوان النافذة (string)
+ * bodyHtml: محتوى النموذج بصيغة HTML (string)
+ * saveCallback: دالة الحفظ (function)
+ * options: خيارات اختيارية { iconClass, saveText, saveIcon, maxWidth, iconBgColor, iconTextColor }
+ */
+function openPharmaModal(title, bodyHtml, saveCallback, options = {}) {
+    const modal = document.getElementById('pharmaModal');
+    const container = document.getElementById('pharmaModalContainer');
+    const titleEl = document.getElementById('pharmaModalTitle');
+    const bodyEl = document.getElementById('pharmaModalBody');
+    const iconEl = document.getElementById('pharmaModalIconClass');
+    const saveTextEl = document.getElementById('pharmaModalSaveText');
+    const saveIconEl = document.getElementById('pharmaModalSaveIcon');
+    const modalIconDiv = document.getElementById('pharmaModalIcon');
+
+    if (!modal) return;
+
+    // تعيين المحتوى
+    titleEl.textContent = title;
+    bodyEl.innerHTML = bodyHtml;
+
+    // أيقونة النافذة
+    iconEl.className = `fas ${options.iconClass || 'fa-plus'} text-sm`;
+    if (options.iconBgColor) modalIconDiv.style.backgroundColor = options.iconBgColor;
+    else modalIconDiv.className = 'w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center';
+    if (options.iconTextColor) iconEl.style.color = options.iconTextColor;
+    else iconEl.className += ' text-emerald-600';
+
+    // نص ورمز زر الحفظ
+    saveTextEl.textContent = options.saveText || 'حفظ';
+    saveIconEl.className = `fas ${options.saveIcon || 'fa-save'}`;
+
+    // العرض الأقصى
+    if (options.maxWidth) container.style.maxWidth = options.maxWidth;
+    else container.style.maxWidth = '520px';
+
+    // دالة الحفظ
+    _pharmaModalSaveCallback = saveCallback;
+    const saveBtn = document.getElementById('pharmaModalSaveBtn');
+    if (saveBtn) {
+        // إزالة أحداث سابقة
+        const newSaveBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+        document.getElementById('pharmaModalSaveBtn').addEventListener('click', async () => {
+            if (_pharmaModalSaveCallback) {
+                const btn = document.getElementById('pharmaModalSaveBtn');
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري الحفظ...'; }
+                try { await _pharmaModalSaveCallback(); }
+                finally { if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas ${options.saveIcon || 'fa-save'}"></i> <span>${options.saveText || 'حفظ'}</span>`; } }
+            }
+        });
+    }
+
+    // إظهار النافذة
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // المصيدة: إغلاق عند النقر على الخلفية
+    modal.onclick = (e) => { if (e.target === modal) closePharmaModal(); };
+}
+
+/** إغلاق النافذة المنبثقة */
+function closePharmaModal() {
+    const modal = document.getElementById('pharmaModal');
+    if (modal) modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    _pharmaModalSaveCallback = null;
+}
+
+// مفتاح Escape لإغلاق النافذة
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePharmaModal();
+});
+
+// ============================================================
+// 🧩 دوال مساعدة لبناء حقول النموذج
+// ============================================================
+
+/** إنشاء حقل إدخال نصي */
+function pharmaField(label, id, type = 'text', placeholder = '', required = false, value = '') {
+    return `
+    <div>
+        <label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">
+            ${label} ${required ? '<span class="text-red-500">*</span>' : ''}
+        </label>
+        <input type="${type}" id="${id}" name="${id}"
+            placeholder="${placeholder}"
+            value="${value}"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all"
+            ${required ? 'required' : ''} />
+    </div>`;
+}
+
+/** إنشاء حقل قائمة منسدلة */
+function pharmaSelect(label, id, options = [], required = false, selectedValue = '') {
+    const opts = options.map(o => {
+        const val = typeof o === 'string' ? o : o.value;
+        const text = typeof o === 'string' ? o : o.text;
+        return `<option value="${val}" ${val == selectedValue ? 'selected' : ''}>${text}</option>`;
+    }).join('');
+    return `
+    <div>
+        <label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">
+            ${label} ${required ? '<span class="text-red-500">*</span>' : ''}
+        </label>
+        <select id="${id}" name="${id}"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all bg-white"
+            ${required ? 'required' : ''}>
+            <option value="">— اختر —</option>
+            ${opts}
+        </select>
+    </div>`;
+}
+
+/** إنشاء حقل textarea */
+function pharmaTextarea(label, id, placeholder = '', rows = 3, value = '') {
+    return `
+    <div>
+        <label for="${id}" class="block text-sm font-medium text-gray-700 mb-1">${label}</label>
+        <textarea id="${id}" name="${id}" rows="${rows}"
+            placeholder="${placeholder}"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all resize-none">${value}</textarea>
+    </div>`;
+}
+
+/** مجموعة حقول في صفين */
+function pharmaFieldGrid(...fields) {
+    return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${fields.join('')}</div>`;
+}
+
+/** شريط تنبيه داخل النموذج */
+function pharmaAlert(message, type = 'info') {
+    const styles = {
+        info: 'bg-blue-50 border-blue-200 text-blue-700',
+        warning: 'bg-amber-50 border-amber-200 text-amber-700',
+        error: 'bg-red-50 border-red-200 text-red-700',
+        success: 'bg-emerald-50 border-emerald-200 text-emerald-700'
+    };
+    const icons = { info: 'fa-info-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', success: 'fa-check-circle' };
+    return `
+    <div class="flex items-center gap-2 border rounded-xl p-3 text-sm ${styles[type] || styles.info}">
+        <i class="fas ${icons[type] || icons.info}"></i>
+        <span>${message}</span>
+    </div>`;
+}
+</script>

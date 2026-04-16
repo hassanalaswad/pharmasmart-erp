@@ -1,308 +1,289 @@
 @model PharmaSmartWeb.Models.CommercialHubViewModel
 @{
     Layout = "_Layout";
+    ViewData["Title"] = "وحدة العمليات التجارية";
+    string currency = ViewBag.CurrencySymbol?.ToString() ?? "ر.ي";
 }
 
-<style>
-    body { background-color: #f4f6f8; }
-    .enterprise-panel { background-color: white; border: 1px solid #d1d5db; border-radius: 2px; }
-    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; align-items: center; justify-content: space-between; }
-    .enterprise-body { padding: 16px; }
-    .enterprise-kpi { background: white; border: 1px solid #d1d5db; border-radius: 2px; padding: 12px 16px; }
-    .kpi-title { font-size: 12px; color: #64748b; margin-bottom: 4px; font-weight: 600; }
-    .kpi-value { font-size: 20px; font-weight: 700; color: #01172a; display: flex; align-items: baseline; gap: 4px; }
-    .kpi-sub { font-size: 11px; color: #94a3b8; font-weight: normal; }
-    .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
-    .enterprise-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
-    .status-badge { display: inline-block; padding: 2px 6px; border-radius: 2px; font-size: 10px; font-weight: 700; }
-    .status-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-    .status-danger { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
-    .status-neutral { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
-    .status-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-    /* Shortcut Buttons */
-    .hub-section { padding: 12px 16px; }
-    .hub-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 0; width: auto; white-space: nowrap; }
-    .shortcut-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 2px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.15s; border: 1px solid transparent; }
-    .shortcut-primary { background: #063955; color: white; }
-    .shortcut-primary:hover { background: #0a4f72; color: white; }
-    .shortcut-green { background: #065f46; color: white; border-color: #047857; }
-    .shortcut-green:hover { background: #047857; color: white; }
-    .shortcut-secondary { background: white; color: #475569; border-color: #d1d5db; }
-    .shortcut-secondary:hover { background: #f8fafc; color: #1e293b; border-color: #94a3b8; }
-    .shortcut-danger { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
-    .shortcut-danger:hover { background: #fecaca; color: #991b1b; }
-    .shortcut-amber { background: #fffbeb; color: #92400e; border-color: #fde68a; }
-    .shortcut-amber:hover { background: #fef3c7; }
-</style>
+<!-- ===== رأس الوحدة ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
+            <i class="fas fa-shopping-cart text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black text-gray-800">وحدة العمليات التجارية</h1>
+            <p class="text-xs text-gray-500">المبيعات · المشتريات · المرتجعات · العملاء · الموردين</p>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="/Sales/Create"
+           class="quick-action-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
+            <i class="fas fa-plus-circle"></i> فاتورة مبيعات POS
+        </a>
+        <a href="/Purchases/Create"
+           class="quick-action-btn bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5 active:scale-95">
+            <i class="fas fa-truck-loading"></i> تسجيل توريد
+        </a>
+        <a href="/Sales/CloseShift"
+           class="quick-action-btn bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95">
+            <i class="fas fa-lock"></i> إغلاق الوردية
+        </a>
+    </div>
+</div>
 
-<div class="space-y-4 pb-10">
+<!-- ===== بطاقات KPI ===== -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-blue-600">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">المبيعات اليوم</span>
+            <i class="fas fa-cash-register text-blue-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TodaySales.ToString("N0")</div>
+        <span class="text-xs text-blue-600 font-medium">@Model.TodayInvoicesCount فاتورة · @currency</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-rose-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">المرتجعات اليوم</span>
+            <i class="fas fa-undo text-rose-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TodayReturns.ToString("N0")</div>
+        <span class="text-xs text-rose-500 font-medium">@Model.TodayReturnsCount فاتورة مرتجعة</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">المشتريات المنجزة</span>
+            <i class="fas fa-truck text-emerald-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TotalPurchasesOperations</div>
+        <span class="text-xs text-emerald-600 font-medium">عملية شراء اليوم</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-violet-500">
+        <div class="flex justify-between items-start mb-1">
+            <span class="text-xs text-gray-500">إجمالي العمليات</span>
+            <i class="fas fa-chart-bar text-violet-500 text-sm"></i>
+        </div>
+        <div class="text-xl font-black text-gray-800">@Model.TotalOperationsToday</div>
+        <span class="text-xs text-violet-600 font-medium">عملية تشغيلية اليوم</span>
+    </div>
+</div>
 
-    <!-- 0. Quick Actions Bar -->
-    <div class="enterprise-panel" style="border-top: 3px solid #063955;">
-        <div class="hub-section">
-            <!-- Sales Shortcuts Row -->
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-bottom:10px; border-bottom:1px solid #f1f5f9; margin-bottom:10px;">
-                <span class="hub-section-title" style="color:#063955; font-size:11px;">
-                    اختصارات المبيعات
-                </span>
-                <a href="/Sales/Create" class="shortcut-btn shortcut-primary">
-                    <span class="material-symbols-outlined" style="font-size:14px;">point_of_sale</span>
-                    إنشاء فاتورة POS
-                </a>
-                <a href="/Sales/CloseShift" class="shortcut-btn shortcut-amber">
-                    <span class="material-symbols-outlined" style="font-size:14px;">lock_clock</span>
-                    إغلاق الوردية
-                </a>
-            </div>
-            <!-- Purchases Shortcuts Row -->
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span class="hub-section-title" style="color:#10b981; font-size:11px;">
-                    اختصارات المشتريات
-                </span>
-                <a href="/Purchases/Create" class="shortcut-btn shortcut-green">
-                    <span class="material-symbols-outlined" style="font-size:14px;">add_shopping_cart</span>
-                    تسجيل توريد جديد
-                </a>
-            </div>
+<!-- ===== قائمة اختصارات سريعة ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-3 mb-5 flex flex-wrap gap-2 items-center">
+    <span class="text-xs text-gray-400 font-semibold ml-2">اختصارات:</span>
+    <a href="/Sales/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-file-invoice text-blue-400 text-[10px]"></i> سجل المبيعات
+    </a>
+    <a href="/SaleReturns/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-rose-50 border border-gray-200 hover:border-rose-300 text-gray-700 hover:text-rose-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-undo text-rose-400 text-[10px]"></i> مرتجعات مبيعات
+    </a>
+    <a href="/Purchases/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-emerald-50 border border-gray-200 hover:border-emerald-300 text-gray-700 hover:text-emerald-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-shopping-basket text-emerald-400 text-[10px]"></i> المشتريات
+    </a>
+    <a href="/PurchaseReturns/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-amber-50 border border-gray-200 hover:border-amber-300 text-gray-700 hover:text-amber-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-box-open text-amber-400 text-[10px]"></i> مرتجعات مشتريات
+    </a>
+    <a href="/Customers/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 text-gray-700 hover:text-indigo-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-users text-indigo-400 text-[10px]"></i> العملاء
+    </a>
+    <a href="/Suppliers/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-teal-50 border border-gray-200 hover:border-teal-300 text-gray-700 hover:text-teal-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-truck text-teal-400 text-[10px]"></i> الموردين
+    </a>
+    <a href="/Report/SalesSummary" class="px-3 py-1.5 bg-gray-50 hover:bg-violet-50 border border-gray-200 hover:border-violet-300 text-gray-700 hover:text-violet-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+        <i class="fas fa-chart-line text-violet-400 text-[10px]"></i> تقرير المبيعات
+    </a>
+</div>
+
+<!-- ===== المحتوى الرئيسي: رسم بياني + جداول ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+    <!-- رسم بياني: المبيعات والمشتريات (7 أيام) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 lg:col-span-2">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-chart-bar text-blue-500 ml-1.5"></i> حركة المبيعات والمشتريات (7 أيام)
+            </h3>
+            <a href="/Sales/Index" class="text-xs text-blue-600 hover:underline font-semibold">عرض الكل</a>
+        </div>
+        <div class="p-5">
+            <canvas id="salesPurchasesChart" style="height:240px; max-height:240px;"></canvas>
         </div>
     </div>
 
-    <!-- 1. KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="enterprise-kpi border-t-2 border-t-[#063955]">
-            <div class="kpi-title">المبيعات اليوم</div>
-            <div class="kpi-value">
-                @Model.TodaySales.ToString("N2") <span class="kpi-sub">@ViewBag.CurrencySymbol</span>
-            </div>
-            <div class="text-[11px] text-slate-500 mt-2">@Model.TodayInvoicesCount فاتورة تم إصدارها</div>
+    <!-- دونات: ملخص العمليات -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-chart-pie text-violet-500 ml-1.5"></i> ملخص العمليات اليوم
+            </h3>
         </div>
-
-        <div class="enterprise-kpi border-t-2 border-t-rose-600">
-            <div class="kpi-title">المرتجعات اليوم</div>
-            <div class="kpi-value">
-                @Model.TodayReturns.ToString("N2") <span class="kpi-sub">@ViewBag.CurrencySymbol</span>
-            </div>
-            <div class="text-[11px] text-slate-500 mt-2">@Model.TodayReturnsCount فاتورة مرتجعة</div>
-        </div>
-        
-        <div class="enterprise-kpi">
-            <div class="kpi-title">المشتريات المنجزة</div>
-            <div class="kpi-value">
-                @Model.TotalPurchasesOperations <span class="kpi-sub">عملية</span>
-            </div>
-             <div class="text-[11px] text-slate-500 mt-2">إجمالي فواتير مشتريات اليوم</div>
-        </div>
-
-        <div class="enterprise-kpi">
-            <div class="kpi-title">إجمالي العمليات التشغيلية</div>
-            <div class="kpi-value">
-                @Model.TotalOperationsToday <span class="kpi-sub">عملية</span>
-            </div>
-            <div class="text-[11px] text-slate-500 mt-2">اليوم</div>
-        </div>
-    </div>
-
-    <!-- 2. Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="enterprise-panel lg:col-span-2">
-            <div class="enterprise-header">
-                حركة المبيعات والمشتريات (7 أيام)
-            </div>
-            <div class="enterprise-body">
-                <div class="h-[280px] w-full relative">
-                    <canvas id="salesPurchasesChart"></canvas>
+        <div class="p-5">
+            <div class="relative flex items-center justify-center" style="height:180px;">
+                <canvas id="operationsDoughnut"></canvas>
+                <div class="absolute text-center">
+                    <div class="text-2xl font-black text-gray-800">@Model.TotalOperationsToday</div>
+                    <div class="text-xs text-gray-500">عملية</div>
                 </div>
             </div>
-        </div>
-
-        <div class="enterprise-panel">
-            <div class="enterprise-header">
-                ملخص العمليات اليوم
-            </div>
-            <div class="enterprise-body h-full">
-                <div class="relative w-full h-[180px] flex items-center justify-center">
-                    <canvas id="operationsDoughnut"></canvas>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
-                        <span class="text-2xl font-bold text-slate-800">@Model.TotalOperationsToday</span>
-                        <span class="text-[10px] font-bold text-slate-500">عملية</span>
-                    </div>
+            <div class="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                <div class="flex justify-between text-xs text-gray-600">
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-blue-700 inline-block"></span>مبيعات</span>
+                    <span class="font-bold text-gray-800">@Model.TotalSalesOperations</span>
                 </div>
-                <div class="mt-4 space-y-2 border-t border-slate-100 pt-4">
-                    <div class="flex justify-between text-xs">
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-[#063955]"></span> مبيعات</span>
-                        <span class="font-bold text-slate-800">@Model.TotalSalesOperations</span>
-                    </div>
-                    <div class="flex justify-between text-xs">
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-emerald-600"></span> مشتريات</span>
-                        <span class="font-bold text-slate-800">@Model.TotalPurchasesOperations</span>
-                    </div>
-                    <div class="flex justify-between text-xs">
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-rose-600"></span> مرتجعات</span>
-                        <span class="font-bold text-slate-800">@Model.TotalReturnsOperations</span>
-                    </div>
+                <div class="flex justify-between text-xs text-gray-600">
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-600 inline-block"></span>مشتريات</span>
+                    <span class="font-bold text-gray-800">@Model.TotalPurchasesOperations</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Tables Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="enterprise-panel">
-            <div class="enterprise-header">
-                <span>أحدث المبيعات</span>
-                <a href="/Sales/Index" class="text-[11px] font-normal text-blue-600 hover:underline">عرض الكل</a>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="enterprise-table">
-                    <thead>
-                        <tr>
-                            <th>رقم الفاتورة</th>
-                            <th>العميل / الدفع</th>
-                            <th>المبلغ</th>
-                            <th>الوقت</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach(var sale in Model.RecentSales)
-                        {
-                            <tr class="hover:bg-slate-50">
-                                <td class="font-bold">@sale.InvoiceNumber</td>
-                                <td>
-                                    @sale.CustomerName
-                                    @if(sale.PaymentMethod == "كاش" || sale.PaymentMethod == "Cash")
-                                    {
-                                        <span class="status-badge status-success mr-2">@sale.PaymentMethod</span>
-                                    }
-                                    else if(sale.PaymentMethod == "شبكة" || sale.PaymentMethod == "Card" || sale.PaymentMethod == "Bank")
-                                    {
-                                        <span class="status-badge status-neutral mr-2">@sale.PaymentMethod</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="status-badge status-warning mr-2">@sale.PaymentMethod</span>
-                                    }
-                                </td>
-                                <td>@sale.TotalAmount.ToString("N2")</td>
-                                <td>@sale.SaleDate.ToString("HH:mm")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="enterprise-panel">
-            <div class="enterprise-header">
-                <span>أحدث المشتريات</span>
-                <a href="/Purchases/Index" class="text-[11px] font-normal text-blue-600 hover:underline">عرض الكل</a>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="enterprise-table">
-                    <thead>
-                        <tr>
-                            <th>رقم الفاتورة</th>
-                            <th>المورد</th>
-                            <th>المبلغ</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach(var pur in Model.RecentPurchases)
-                        {
-                            <tr class="hover:bg-slate-50">
-                                <td class="font-bold">@pur.InvoiceNumber</td>
-                                <td>@pur.SupplierName</td>
-                                <td>@pur.TotalAmount.ToString("N2")</td>
-                                <td>
-                                    @if(pur.IsPaid)
-                                    {
-                                        <span class="status-badge status-success">مدفوعة</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="status-badge status-danger">غير مدفوعة</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="flex justify-between text-xs text-gray-600">
+                    <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-rose-600 inline-block"></span>مرتجعات</span>
+                    <span class="font-bold text-gray-800">@Model.TotalReturnsOperations</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ===== جداول: أحدث المبيعات والمشتريات ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- أحدث المبيعات -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-file-invoice text-blue-500 ml-1.5"></i> أحدث المبيعات
+            </h3>
+            <a href="/Sales/Index" class="text-xs text-blue-600 hover:underline font-semibold">عرض الكل</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full data-table text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">رقم الفاتورة</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">العميل</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">المبلغ</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.RecentSales.Any())
+                    {
+                        <tr><td colspan="4" class="text-center py-8 text-gray-400 text-sm">لا توجد مبيعات اليوم</td></tr>
+                    }
+                    @foreach (var sale in Model.RecentSales)
+                    {
+                        <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 font-bold text-gray-800">@sale.InvoiceNumber</td>
+                            <td class="px-4 py-3 text-gray-600">
+                                @sale.CustomerName
+                                @{
+                                    var pmClass = (sale.PaymentMethod == "كاش" || sale.PaymentMethod == "Cash") ? "bg-emerald-50 text-emerald-700"
+                                        : (sale.PaymentMethod == "آجل" || sale.PaymentMethod == "Credit") ? "bg-amber-50 text-amber-700"
+                                        : "bg-gray-100 text-gray-600";
+                                }
+                                <span class="mr-1 text-[10px] px-1.5 py-0.5 rounded-full font-semibold @pmClass">@sale.PaymentMethod</span>
+                            </td>
+                            <td class="px-4 py-3 font-semibold text-blue-700">@sale.TotalAmount.ToString("N0")</td>
+                            <td class="px-4 py-3 text-gray-400 text-xs">@sale.SaleDate.ToString("HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- أحدث المشتريات -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div class="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">
+                <i class="fas fa-truck text-emerald-500 ml-1.5"></i> أحدث المشتريات
+            </h3>
+            <a href="/Purchases/Index" class="text-xs text-blue-600 hover:underline font-semibold">عرض الكل</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full data-table text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">رقم الفاتورة</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">المورد</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">المبلغ</th>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold text-xs">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.RecentPurchases.Any())
+                    {
+                        <tr><td colspan="4" class="text-center py-8 text-gray-400 text-sm">لا توجد مشتريات اليوم</td></tr>
+                    }
+                    @foreach (var pur in Model.RecentPurchases)
+                    {
+                        <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 font-bold text-gray-800">@pur.InvoiceNumber</td>
+                            <td class="px-4 py-3 text-gray-600">@pur.SupplierName</td>
+                            <td class="px-4 py-3 font-semibold text-emerald-700">@pur.TotalAmount.ToString("N0")</td>
+                            <td class="px-4 py-3">
+                                @if (pur.IsPaid)
+                                {
+                                    <span class="text-[11px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-100">مدفوع</span>
+                                }
+                                else
+                                {
+                                    <span class="text-[11px] bg-red-50 text-red-700 px-2.5 py-1 rounded-full font-semibold border border-red-100">آجل</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    <script src="~/lib/chart.js"></script>
-    <script>
-        Chart.defaults.font.family = "'Arial', sans-serif";
-        Chart.defaults.color = '#334155';
-        
-        const labelsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysLabels));
-        const salesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesLast7Days));
-        const purchasesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PurchasesLast7Days));
+<script>
+    Chart.defaults.font.family = "'system-ui', 'Segoe UI', sans-serif";
+    Chart.defaults.color = '#475569';
+    Chart.defaults.rtl = true;
 
-        const ctxLine = document.getElementById('salesPurchasesChart');
-        if (ctxLine) {
-            new Chart(ctxLine.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: labelsData,
-                    datasets: [
-                        {
-                            label: 'المبيعات',
-                            data: salesData,
-                            backgroundColor: '#063955',
-                            borderWidth: 0
-                        },
-                        {
-                            label: 'المشتريات',
-                            data: purchasesData,
-                            backgroundColor: '#10b981',
-                            borderWidth: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 12 } } },
-                        tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13 }, bodyFont: { size: 12 }, rtl: true }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#e2e8f0', drawBorder: false }, ticks: { font: { size: 11 } } },
-                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
-                    }
-                }
-            });
-        }
+    const labelsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysLabels));
+    const salesData  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SalesLast7Days));
+    const purchData  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PurchasesLast7Days));
 
-        const ctxDoughnut = document.getElementById('operationsDoughnut');
-        if (ctxDoughnut) {
-            new Chart(ctxDoughnut.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['مبيعات', 'مشتريات', 'مرتجعات'],
-                    datasets: [{
-                        data: [@Model.TotalSalesOperations, @Model.TotalPurchasesOperations, @Model.TotalReturnsOperations],
-                        backgroundColor: ['#063955', '#10b981', '#e11d48'],
-                        borderWidth: 1,
-                        borderColor: '#ffffff',
-                        hoverOffset: 2
-                    }]
+    const ctxBar = document.getElementById('salesPurchasesChart');
+    if (ctxBar) {
+        new Chart(ctxBar.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labelsData,
+                datasets: [
+                    { label: 'المبيعات', data: salesData, backgroundColor: '#2563eb', borderRadius: 4, borderWidth: 0 },
+                    { label: 'المشتريات', data: purchData, backgroundColor: '#10b981', borderRadius: 4, borderWidth: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { font: { size: 11 }, usePointStyle: true } },
+                    tooltip: { backgroundColor: '#1e293b', rtl: true, titleFont: { size: 12 }, bodyFont: { size: 11 } }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: {
-                        legend: { display: false }, 
-                        tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13 }, bodyFont: { size: 12 }, rtl: true }
-                    }
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
                 }
-            });
-        }
-    </script>
+            }
+        });
+    }
+
+    const ctxDoughnut = document.getElementById('operationsDoughnut');
+    if (ctxDoughnut) {
+        new Chart(ctxDoughnut.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['مبيعات', 'مشتريات', 'مرتجعات'],
+                datasets: [{ data: [@Model.TotalSalesOperations, @Model.TotalPurchasesOperations, @Model.TotalReturnsOperations], backgroundColor: ['#1d4ed8', '#059669', '#e11d48'], borderWidth: 2, borderColor: '#fff', hoverOffset: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '72%',
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', rtl: true } }
+            }
+        });
+    }
+</script>
 }

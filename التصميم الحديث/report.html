@@ -1,0 +1,241 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - التقارير المركزية | نظام إدارة صيدليات ذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: #f1f5f9; font-family: system-ui, 'Segoe UI', 'Tajawal', sans-serif; }
+        .sidebar-group-btn { transition: all 0.2s; }
+        .sidebar-group-btn:hover { background-color: #f1f5f9; }
+        .submenu-item { transition: all 0.15s; }
+        .submenu-item:hover { background-color: #f1f5f9; padding-right: 0.75rem; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        @media (max-width: 768px) { .sidebar-mobile-hidden { transform: translateX(100%); } .sidebar-mobile-visible { transform: translateX(0); } }
+        .data-table tbody tr:hover { background-color: #f8fafc; }
+        .tab-active { border-bottom: 3px solid #10b981; color: #065f46; font-weight: 600; }
+        .tab-inactive { color: #6b7280; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #374151; border-bottom-color: #d1d5db; }
+        .report-preview { transition: all 0.2s; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+<div class="flex h-screen overflow-hidden">
+    <!-- القائمة الجانبية (وحدة التقارير المركزية) -->
+    <aside id="sidebar" class="w-72 bg-white shadow-xl border-l border-gray-100 flex-shrink-0 overflow-y-auto z-20 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible">
+        <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+            <i class="fas fa-hospital-user text-2xl text-emerald-600"></i>
+            <span class="font-bold text-xl text-gray-800">تالين فارما</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mr-auto">v3.0</span>
+        </div>
+        <div class="p-4">
+            <div class="relative">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400">
+            </div>
+        </div>
+        <nav id="sidebarNavContainer" class="px-3 pb-6 space-y-1">
+            <div class="group-item mb-1">
+                <button class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100">
+                    <div class="flex items-center gap-3"><i class="fas fa-chart-line w-5"></i><span>التقارير المركزية</span></div>
+                    <i class="fas fa-chevron-down text-xs rotate-180"></i>
+                </button>
+                <div class="submenu space-y-1 pr-6 mt-1">
+                    <a href="#" id="sidebarReportsCenter" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-sliders-h w-5"></i>مركز التقارير</a>
+                    <a href="#" id="sidebarSalesReports" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-chart-line w-5"></i>تقارير المبيعات</a>
+                    <a href="#" id="sidebarInventoryReports" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-boxes w-5"></i>تقارير المخزون</a>
+                    <a href="#" id="sidebarExpiryReports" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-calendar-times w-5"></i>تقارير الصلاحية</a>
+                    <a href="#" id="sidebarBranchReports" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-store w-5"></i>تقارير إنتاجية الفروع</a>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-gray-400 pr-3">عزل بيانات الفروع • RBAC • تصدير PDF/Excel</div>
+        </nav>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 overflow-y-auto bg-slate-50">
+        <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button id="toggleSidebarMobile" class="md:hidden text-gray-600 text-xl"><i class="fas fa-bars"></i></button>
+                    <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-store"></i> فرع صنعاء (مدير فرع)</div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <i class="fas fa-bell text-gray-500"></i>
+                    <div class="flex items-center gap-2"><i class="fas fa-user-circle text-2xl text-gray-500"></i><span class="text-sm font-medium hidden md:inline">أحمد العسيري</span></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-5 md:p-6 space-y-6">
+            <div><h1 class="text-2xl font-bold text-gray-800">التقارير المركزية</h1><div class="text-sm text-gray-500 mt-1"><i class="fas fa-home"></i> الرئيسية / التقارير</div></div>
+
+            <!-- تبويبات رئيسية للتقارير (مركز التقارير - المبيعات - المخزون - الصلاحية - إنتاجية الفروع) -->
+            <div class="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
+                <nav class="flex flex-wrap gap-1 px-4 pt-2" id="reportsTabsNav">
+                    <button data-tab="reportCenter" class="tab-active px-4 py-2 text-sm font-medium"><i class="fas fa-sliders-h ml-1"></i> مركز التقارير</button>
+                    <button data-tab="salesReport" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-chart-line ml-1"></i> تقارير المبيعات</button>
+                    <button data-tab="inventoryReport" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-boxes ml-1"></i> تقارير المخزون</button>
+                    <button data-tab="expiryReport" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-calendar-times ml-1"></i> تقارير الصلاحية</button>
+                    <button data-tab="branchReport" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-store ml-1"></i> إنتاجية الفروع</button>
+                </nav>
+            </div>
+
+            <div class="bg-white rounded-b-xl shadow-lg p-5">
+                <!-- 1. مركز التقارير (معالج التقارير) -->
+                <div id="reportCenterTab" class="tab-content">
+                    <h3 class="text-lg font-semibold mb-4">⚙️ معالج التقارير</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-medium mb-1">نوع التقرير</label><select id="reportType" class="w-full border rounded p-2"><option value="sales">المبيعات</option><option value="inventory">المخزون</option><option value="expiry">الصلاحية</option><option value="branch_performance">إنتاجية الفروع</option></select></div>
+                            <div><label class="block text-sm font-medium mb-1">الفترة من</label><input type="date" id="fromDate" class="w-full border rounded p-2" value="2025-03-01"></div>
+                            <div><label class="block text-sm font-medium mb-1">إلى</label><input type="date" id="toDate" class="w-full border rounded p-2" value="2025-03-31"></div>
+                            <div><label class="block text-sm font-medium mb-1">الفرع (للمدير العام)</label><select id="branchSelect" class="w-full border rounded p-2"><option value="all">جميع الفروع</option><option value="sanaa">صنعاء</option><option value="aden">عدن</option></select></div>
+                        </div>
+                        <div class="flex gap-3 justify-end"><button id="previewReportBtn" class="bg-blue-600 text-white px-4 py-2 rounded"><i class="fas fa-eye"></i> معاينة</button><button id="exportPdfBtn" class="bg-red-600 text-white px-4 py-2 rounded"><i class="fas fa-file-pdf"></i> PDF</button><button id="exportExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded"><i class="fas fa-file-excel"></i> Excel</button><button id="printReportBtn" class="bg-gray-600 text-white px-4 py-2 rounded"><i class="fas fa-print"></i> طباعة</button></div>
+                    </div>
+                    <div id="reportPreviewArea" class="mt-6 border rounded-lg p-4 bg-gray-50 report-preview">
+                        <p class="text-gray-500">اختر معايير التقرير ثم اضغط "معاينة"</p>
+                    </div>
+                </div>
+
+                <!-- 2. تقارير المبيعات -->
+                <div id="salesReportTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-4 flex-wrap"><h3 class="text-lg font-semibold">📊 تقارير المبيعات</h3><div><button class="export-sales-excel bg-green-100 text-green-700 px-3 py-1 rounded text-sm">تصدير Excel</button><button class="print-sales bg-gray-100 px-3 py-1 rounded text-sm">طباعة</button></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><canvas id="salesChart" height="200"></canvas><div class="text-center text-sm mt-2">المبيعات اليومية (مارس 2025)</div></div>
+                        <div><canvas id="salesComparisonChart" height="200"></canvas><div class="text-center text-sm mt-2">مقارنة بين الفروع (شهري)</div></div>
+                    </div>
+                    <div class="mt-4 overflow-x-auto"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>التاريخ</th><th>المبيعات ($)</th><th>المبيعات الآجلة</th><th>عدد الفواتير</th></tr></thead><tbody id="salesTableBody"></tbody></table></div>
+                </div>
+
+                <!-- 3. تقارير المخزون -->
+                <div id="inventoryReportTab" class="tab-content hidden">
+                    <h3 class="text-lg font-semibold mb-3">📦 حركة المخزون + تصنيف ABC + الأدوية بطيئة الحركة</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                        <div><canvas id="abcChart" height="180"></canvas><p class="text-center text-sm">تصنيف ABC حسب القيمة</p></div>
+                        <div><canvas id="slowMovingChart" height="180"></canvas><p class="text-center text-sm">أكثر 5 أدوية بطيئة الحركة (أيام)</p></div>
+                    </div>
+                    <div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>الدواء</th><th>مخزون أول</th><th>وارد</th><th>منصرف</th><th>مخزون آخر</th><th>دوران المخزون</th></tr></thead><tbody id="inventoryTableBody"></tbody></table></div>
+                </div>
+
+                <!-- 4. تقارير الصلاحية -->
+                <div id="expiryReportTab" class="tab-content hidden">
+                    <h3 class="text-lg font-semibold mb-3">⚠️ أدوية منتهية الصلاحية وقريبة من الانتهاء</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div><canvas id="expiryChart" height="180"></canvas></div>
+                        <div class="bg-red-50 p-3 rounded"><p class="font-bold">قيمة الهدر المتوقعة: <span id="wasteValue">1,250 $</span></p><p>الأدوية المنتهية فعليًا: 3 أصناف</p></div>
+                    </div>
+                    <div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>الدواء</th><th>تاريخ الانتهاء</th><th>الأيام المتبقية</th><th>الكمية</th><th>القيمة ($)</th><th>الإجراء</th></tr></thead><tbody id="expiryTableBody"></tbody></table></div>
+                </div>
+
+                <!-- 5. تقارير إنتاجية الفروع -->
+                <div id="branchReportTab" class="tab-content hidden">
+                    <h3 class="text-lg font-semibold mb-3">🏢 مقارنة أداء الفروع</h3>
+                    <div><canvas id="branchPerformanceChart" height="250"></canvas></div>
+                    <div class="overflow-x-auto mt-4"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>الفرع</th><th>المبيعات ($)</th><th>الأرباح ($)</th><th>النواقص (عدد)</th><th>دوران المخزون</th></tr></thead><tbody id="branchTableBody"></tbody></table></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // ----- بيانات المحاكاة -----
+    const salesDaily = [1250, 1320, 1180, 1450, 1600, 1420, 1380, 1550, 1700, 1620, 1490, 1580, 1720, 1680, 1750, 1890, 1950, 2010, 2100, 2050, 1980, 2200, 2300, 2250, 2400, 2500, 2600, 2700, 2800, 2900, 3100];
+    const labelsMarch = Array.from({length: 31}, (_,i) => `${i+1} مارس`);
+    const branchesData = { sanaa: { sales: 45200, profit: 11800, shortages: 8, turnover: 4.2 }, aden: { sales: 32800, profit: 7200, shortages: 12, turnover: 3.1 }, taiz: { sales: 38900, profit: 9100, shortages: 6, turnover: 3.8 } };
+    const inventoryMovements = [
+        { name: "بنادول 500mg", opening: 45, incoming: 120, outgoing: 98, closing: 67, turnover: 2.2 },
+        { name: "أموكسيسيلين", opening: 30, incoming: 80, outgoing: 72, closing: 38, turnover: 2.0 },
+        { name: "فنتولين بخاخ", opening: 15, incoming: 40, outgoing: 48, closing: 7, turnover: 1.6 },
+        { name: "سيتريزين", opening: 60, incoming: 100, outgoing: 95, closing: 65, turnover: 1.9 }
+    ];
+    const expiryDrugs = [
+        { name: "باراسيتامول شراب", expiry: "2025-04-10", days: 24, qty: 15, value: 75 },
+        { name: "فيتامين سي", expiry: "2025-05-01", days: 45, qty: 30, value: 90 },
+        { name: "مضاد حيوي (منتهي)", expiry: "2025-02-28", days: -48, qty: 10, value: 120 }
+    ];
+    const abcData = { A: 65, B: 25, C: 10 };
+    const slowMoving = [{ name: "كريم الجلد", days: 180 }, { name: "شراب سعال", days: 150 }, { name: "قطرة أذن", days: 120 }, { name: "مرهم", days: 110 }, { name: "مكمل غذائي", days: 95 }];
+
+    // رسم بياني المبيعات
+    const salesCtx = document.getElementById('salesChart')?.getContext('2d');
+    if(salesCtx) new Chart(salesCtx, { type: 'line', data: { labels: labelsMarch.slice(0,15), datasets: [{ label: 'المبيعات ($)', data: salesDaily.slice(0,15), borderColor: '#3b82f6' }] } });
+    const compCtx = document.getElementById('salesComparisonChart')?.getContext('2d');
+    if(compCtx) new Chart(compCtx, { type: 'bar', data: { labels: ['صنعاء', 'عدن', 'تعز'], datasets: [{ label: 'المبيعات (ألف $)', data: [45.2, 32.8, 38.9], backgroundColor: '#10b981' }] } });
+    const abcCtx = document.getElementById('abcChart')?.getContext('2d');
+    if(abcCtx) new Chart(abcCtx, { type: 'pie', data: { labels: ['فئة A', 'فئة B', 'فئة C'], datasets: [{ data: [abcData.A, abcData.B, abcData.C], backgroundColor: ['#f59e0b','#3b82f6','#10b981'] }] } });
+    const slowCtx = document.getElementById('slowMovingChart')?.getContext('2d');
+    if(slowCtx) new Chart(slowCtx, { type: 'bar', data: { labels: slowMoving.map(i=>i.name), datasets: [{ label: 'أيام بدون حركة', data: slowMoving.map(i=>i.days), backgroundColor: '#ef4444' }] } });
+    const expiryCtx = document.getElementById('expiryChart')?.getContext('2d');
+    if(expiryCtx) new Chart(expiryCtx, { type: 'doughnut', data: { labels: ['منتهي', 'خلال 30 يوم', '31-60 يوم', 'أكثر من 60'], datasets: [{ data: [3, 8, 12, 45], backgroundColor: ['#dc2626','#f97316','#eab308','#22c55e'] }] } });
+    const branchPerfCtx = document.getElementById('branchPerformanceChart')?.getContext('2d');
+    if(branchPerfCtx) new Chart(branchPerfCtx, { type: 'radar', data: { labels: ['المبيعات', 'الأرباح', 'دوران المخزون'], datasets: [{ label: 'صنعاء', data: [90, 85, 80] }, { label: 'عدن', data: [65, 55, 60] }, { label: 'تعز', data: [75, 70, 75] }] } });
+
+    // تعبئة الجداول
+    function fillSalesTable() { const tbody = document.getElementById('salesTableBody'); if(!tbody) return; tbody.innerHTML = salesDaily.slice(0,10).map((val,i)=>`<tr><td>${i+1} مارس 2025</td><td>${val} $</td><td>${Math.round(val*0.2)} $</td><td>${Math.floor(val/50)}</td></tr>`).join(''); }
+    function fillInventoryTable() { const tbody = document.getElementById('inventoryTableBody'); if(tbody) tbody.innerHTML = inventoryMovements.map(m=>`<tr><td>${m.name}</td><td>${m.opening}</td><td>${m.incoming}</td><td>${m.outgoing}</td><td>${m.closing}</td><td>${m.turnover}</td></tr>`).join(''); }
+    function fillExpiryTable() { const tbody = document.getElementById('expiryTableBody'); if(tbody) tbody.innerHTML = expiryDrugs.map(d=>`<tr class="${d.days<0?'bg-red-100':''}"><td>${d.name}</td><td>${d.expiry}</td><td>${d.days<0?'منتهي':d.days+' يوم'}</td><td>${d.qty}</td><td>${d.value}$</td><td><button class="text-blue-600 text-xs">تسعير/ترويج</button></td></tr>`).join(''); document.getElementById('wasteValue').innerText = expiryDrugs.filter(d=>d.days<0).reduce((a,b)=>a+b.value,0)+" $"; }
+    function fillBranchTable() { const tbody = document.getElementById('branchTableBody'); if(tbody) tbody.innerHTML = Object.entries(branchesData).map(([k,v])=>`<tr><td>${k==='sanaa'?'صنعاء':k==='aden'?'عدن':'تعز'}</td><td>${v.sales}$</td><td>${v.profit}$</td><td>${v.shortages}</td><td>${v.turnover}</td></tr>`).join(''); }
+    fillSalesTable(); fillInventoryTable(); fillExpiryTable(); fillBranchTable();
+
+    // معالج التقارير: معاينة
+    document.getElementById('previewReportBtn')?.addEventListener('click', () => {
+        const type = document.getElementById('reportType').value;
+        const from = document.getElementById('fromDate').value;
+        const to = document.getElementById('toDate').value;
+        const branch = document.getElementById('branchSelect').value;
+        let html = `<div class="p-3"><h4 class="font-bold">تقرير ${type==='sales'?'المبيعات':type==='inventory'?'المخزون':type==='expiry'?'الصلاحية':'إنتاجية الفروع'}</h4><p>الفترة: ${from} إلى ${to} | الفرع: ${branch==='all'?'جميع الفروع':branch}</p><hr class="my-2"><div class="text-sm">${type==='sales'?'إجمالي المبيعات: 45,200 $ | عدد الفواتير: 342':type==='inventory'?'إجمالي قيمة المخزون: 128,500 $ | دوران المخزون: 3.2':type==='expiry'?'قيمة الهدر المتوقعة: 1,250 $ | أدوية منتهية: 3 أصناف':'أفضل فرع: صنعاء (مبيعات 45,200 $)'}</div></div>`;
+        document.getElementById('reportPreviewArea').innerHTML = html;
+    });
+    document.getElementById('exportPdfBtn')?.addEventListener('click', () => alert("تصدير PDF للتقرير المعروض (محاكاة)"));
+    document.getElementById('exportExcelBtn')?.addEventListener('click', () => alert("تصدير Excel للتقرير الحالي"));
+    document.getElementById('printReportBtn')?.addEventListener('click', () => alert("طباعة التقرير"));
+    document.querySelectorAll('.export-sales-excel, .print-sales, .bg-green-100, .bg-gray-100').forEach(btn => btn.addEventListener('click', () => alert("تصدير / طباعة هذا التقرير")));
+
+    // التبويبات الرئيسية
+    const tabs = {
+        reportCenter: document.getElementById('reportCenterTab'),
+        salesReport: document.getElementById('salesReportTab'),
+        inventoryReport: document.getElementById('inventoryReportTab'),
+        expiryReport: document.getElementById('expiryReportTab'),
+        branchReport: document.getElementById('branchReportTab')
+    };
+    const tabBtns = document.querySelectorAll('#reportsTabsNav button');
+    function activateReportsTab(tabId) {
+        Object.keys(tabs).forEach(id => tabs[id].classList.add('hidden'));
+        tabs[tabId].classList.remove('hidden');
+        tabBtns.forEach(btn => { if(btn.dataset.tab === tabId) { btn.classList.add('tab-active'); btn.classList.remove('tab-inactive'); } else { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); } });
+    }
+    tabBtns.forEach(btn => btn.addEventListener('click', () => activateReportsTab(btn.dataset.tab)));
+    // ربط القائمة الجانبية
+    document.getElementById('sidebarReportsCenter')?.addEventListener('click', (e) => { e.preventDefault(); activateReportsTab('reportCenter'); });
+    document.getElementById('sidebarSalesReports')?.addEventListener('click', (e) => { e.preventDefault(); activateReportsTab('salesReport'); });
+    document.getElementById('sidebarInventoryReports')?.addEventListener('click', (e) => { e.preventDefault(); activateReportsTab('inventoryReport'); });
+    document.getElementById('sidebarExpiryReports')?.addEventListener('click', (e) => { e.preventDefault(); activateReportsTab('expiryReport'); });
+    document.getElementById('sidebarBranchReports')?.addEventListener('click', (e) => { e.preventDefault(); activateReportsTab('branchReport'); });
+
+    // البحث في القائمة الجانبية
+    const searchInput = document.getElementById('sidebarSearch');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('#sidebarNavContainer .submenu-item').forEach(link => {
+            const text = link.innerText.toLowerCase();
+            link.style.display = (term === '' || text.includes(term)) ? 'flex' : 'none';
+        });
+    });
+    const toggleBtn = document.getElementById('toggleSidebarMobile');
+    const sidebar = document.getElementById('sidebar');
+    toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('sidebar-mobile-hidden'); sidebar.classList.toggle('sidebar-mobile-visible'); });
+</script>
+</body>
+</html>
+```

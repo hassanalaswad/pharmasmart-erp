@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - التخطيط والتنبؤ | نظام إدارة صيدليات ذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: #f1f5f9; font-family: system-ui, 'Segoe UI', 'Tajawal', sans-serif; }
+        .sidebar-group-btn { transition: all 0.2s; }
+        .sidebar-group-btn:hover { background-color: #f1f5f9; }
+        .submenu-item { transition: all 0.15s; }
+        .submenu-item:hover { background-color: #f1f5f9; padding-right: 0.75rem; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        @media (max-width: 768px) { .sidebar-mobile-hidden { transform: translateX(100%); } .sidebar-mobile-visible { transform: translateX(0); } }
+        .data-table tbody tr:hover { background-color: #f8fafc; }
+        .tab-active { border-bottom: 3px solid #10b981; color: #065f46; font-weight: 600; }
+        .tab-inactive { color: #6b7280; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #374151; border-bottom-color: #d1d5db; }
+        /* تخصيص المطابقة الذكية */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .mapping-row { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+<div class="flex h-screen overflow-hidden">
+    <!-- القائمة الجانبية (خاصة بوحدة التخطيط والتنبؤ) -->
+    <aside id="sidebar" class="w-72 bg-white shadow-xl border-l border-gray-100 flex-shrink-0 overflow-y-auto z-20 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible">
+        <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+            <i class="fas fa-hospital-user text-2xl text-emerald-600"></i>
+            <span class="font-bold text-xl text-gray-800">تالين فارما</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mr-auto">v3.0</span>
+        </div>
+        <div class="p-4">
+            <div class="relative">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400">
+            </div>
+        </div>
+        <nav id="sidebarNavContainer" class="px-3 pb-6 space-y-1">
+            <!-- سيتم إنشاؤها عبر JS لكن نضع هيكل ثابت للوحدة -->
+            <div class="group-item mb-1">
+                <button class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100">
+                    <div class="flex items-center gap-3"><i class="fas fa-chart-line w-5"></i><span>التخطيط والتنبؤ</span></div>
+                    <i class="fas fa-chevron-down text-xs rotate-180"></i>
+                </button>
+                <div class="submenu space-y-1 pr-6 mt-1">
+                    <a href="#" id="sidebarForecastLink" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-robot w-5"></i>التنبؤ بخطة المشتريات</a>
+                    <a href="#" id="sidebarSeasonalLink" class="submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm"><i class="fas fa-cloud-sun w-5"></i>العوامل الموسمية</a>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-gray-400 pr-3">عزل بيانات الفروع • RBAC • Prophet / Vertex AI</div>
+        </nav>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 overflow-y-auto bg-slate-50">
+        <!-- الهيدر -->
+        <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button id="toggleSidebarMobile" class="md:hidden text-gray-600 text-xl"><i class="fas fa-bars"></i></button>
+                    <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-store"></i> فرع صنعاء</div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-user-tag text-gray-500"></i>
+                        <span class="text-sm font-semibold">مدير فرع</span>
+                    </div>
+                    <i class="fas fa-bell text-gray-500"></i>
+                    <div class="flex items-center gap-2"><i class="fas fa-user-circle text-2xl text-gray-500"></i><span class="text-sm font-medium hidden md:inline">أحمد العسيري</span></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- وحدة التخطيط والتنبؤ (تبويبان داخليان) -->
+        <div class="p-5 md:p-6 space-y-6">
+            <div class="flex justify-between items-center">
+                <div><h1 class="text-2xl font-bold text-gray-800">التخطيط والتنبؤ</h1><div class="text-sm text-gray-500 mt-1"><i class="fas fa-home"></i> الرئيسية / التخطيط والتنبؤ</div></div>
+            </div>
+
+            <!-- تبويبات داخلية للواجهتين -->
+            <div class="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
+                <nav class="flex flex-wrap gap-1 px-4 pt-2" id="planTabsNav">
+                    <button data-tab="forecast" class="tab-active px-4 py-2 text-sm font-medium"><i class="fas fa-chart-line ml-1"></i> التنبؤ بخطة المشتريات</button>
+                    <button data-tab="seasonal" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-calendar-alt ml-1"></i> العوامل الموسمية</button>
+                </nav>
+            </div>
+
+            <div class="bg-white rounded-b-xl shadow-lg p-5">
+                <!-- 1. التنبؤ بخطة المشتريات -->
+                <div id="forecastTab" class="tab-content">
+                    <!-- مفتاح التبديل -->
+                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg mb-5">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-medium">مصدر التنبؤ:</span>
+                            <div class="flex gap-2">
+                                <button id="localBtn" class="px-3 py-1 rounded-full text-sm bg-emerald-600 text-white">محلي (Prophet)</button>
+                                <button id="cloudBtn" class="px-3 py-1 rounded-full text-sm bg-gray-200 text-gray-700">سحابي (Vertex AI)</button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500"><i class="fas fa-database"></i> بيانات المبيعات التاريخية</div>
+                    </div>
+
+                    <!-- منطقة السحابي: رفع ملف (تظهر فقط عند اختيار سحابي) -->
+                    <div id="cloudUploadArea" class="hidden bg-blue-50 p-4 rounded-lg mb-5 flex justify-between items-center">
+                        <div><i class="fas fa-cloud-upload-alt text-blue-600"></i> <span class="text-sm">رفع ملف Excel/CSV للتنبؤ الخارجي</span></div>
+                        <button id="openMappingModalBtn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">مطابقة ذكية (Data Mapping)</button>
+                    </div>
+
+                    <!-- رسم بياني للمقارنة -->
+                    <div class="mb-6"><h3 class="font-semibold mb-2">المبيعات التاريخية vs توقعات الذكاء الاصطناعي</h3><canvas id="forecastChart" height="100" style="max-height:250px"></canvas><div class="text-xs text-gray-400 text-center mt-1">الخط الأزرق: فعلي | الخط البرتقالي: متوقع</div></div>
+
+                    <!-- جدول تفاعلي -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm border data-table">
+                            <thead class="bg-gray-100">
+                                <tr><th class="p-2">الدواء</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الكمية المتوقعة</th><th>EOQ</th><th>الكمية المقترحة</th><th>الكمية المعتمدة</th><th>الحالة</th><th></th></tr>
+                            </thead>
+                            <tbody id="forecastTableBody">
+                                <!-- سيتم ملؤها ديناميكيًا -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- أزرار الإجراءات -->
+                    <div class="flex flex-wrap gap-3 mt-5 justify-end">
+                        <button id="approvePlanBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-check-circle"></i> اعتماد الخطة</button>
+                        <button id="exportPlanBtn" class="bg-gray-200 px-4 py-2 rounded-lg text-sm"><i class="fas fa-file-excel"></i> تصدير الخطة</button>
+                        <button id="sendOrdersBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-paper-plane"></i> إرسال طلبات للموردين</button>
+                    </div>
+                </div>
+
+                <!-- 2. العوامل الموسمية -->
+                <div id="seasonalTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                        <h3 class="text-lg font-semibold">📅 العوامل الموسمية للأدوية والفئات العلاجية</h3>
+                        <div class="flex gap-2">
+                            <button id="editSeasonalBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-sm"><i class="fas fa-edit"></i> تعديل عامل موسمي</button>
+                            <button id="recalcForecastBtn" class="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm"><i class="fas fa-sync-alt"></i> إعادة حساب التنبؤ</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm border">
+                            <thead class="bg-gray-100">
+                                <tr><th>الدواء / الفئة</th><th>يناير</th><th>فبراير</th><th>مارس</th><th>أبريل</th><th>مايو</th><th>يونيو</th><th>يوليو</th><th>أغسطس</th><th>سبتمبر</th><th>أكتوبر</th><th>نوفمبر</th><th>ديسمبر</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="font-medium">بنادول 500mg</td><td class="text-center">1.2</td><td>1.1</td><td>1.0</td><td>0.9</td><td>0.8</td><td>0.7</td><td>0.8</td><td>0.9</td><td>1.1</td><td>1.3</td><td>1.4</td><td>1.5</td></tr>
+                                <tr><td class="font-medium">أموكسيسيلين</td><td>1.0</td><td>1.0</td><td>1.2</td><td>1.3</td><td>1.1</td><td>0.9</td><td>0.8</td><td>0.9</td><td>1.0</td><td>1.1</td><td>1.2</td><td>1.2</td></tr>
+                                <tr><td class="font-medium">سيتريزين (حساسية)</td><td>0.7</td><td>0.8</td><td>1.4</td><td>1.8</td><td>1.9</td><td>1.5</td><td>1.2</td><td>1.3</td><td>1.5</td><td>1.4</td><td>1.0</td><td>0.8</td></tr>
+                                <tr><td class="font-medium">فنتولين بخاخ</td><td>1.3</td><td>1.2</td><td>1.1</td><td>1.0</td><td>0.9</td><td>0.8</td><td>0.9</td><td>1.0</td><td>1.1</td><td>1.2</td><td>1.3</td><td>1.4</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- نافذة المطابقة الذكية (مخفية) -->
+<div id="mappingModal" class="modal">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
+        <h3 class="font-bold text-lg mb-3">مطابقة الأعمدة الذكية (Data Mapping)</h3>
+        <div class="space-y-3">
+            <div class="mapping-row"><label class="w-32">عمود التاريخ:</label><select class="border rounded p-1 flex-1"><option>تاريخ الفاتورة</option><option>التاريخ</option></select></div>
+            <div class="mapping-row"><label class="w-32">عمود الدواء:</label><select class="border rounded p-1 flex-1"><option>اسم المنتج</option><option>الدواء</option></select></div>
+            <div class="mapping-row"><label class="w-32">عمود الكمية:</label><select class="border rounded p-1 flex-1"><option>الكمية المباعة</option><option>العدد</option></select></div>
+            <div class="mapping-row"><label class="w-32">عمود السعر:</label><select class="border rounded p-1 flex-1"><option>الإجمالي</option><option>السعر</option></select></div>
+        </div>
+        <div class="flex justify-between mt-4">
+            <button id="confirmMappingBtn" class="bg-emerald-600 text-white px-4 py-2 rounded">تأكيد ورفع</button>
+            <button id="closeModalBtn" class="bg-gray-200 px-4 py-2 rounded">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ----- البيانات للجدول التفاعلي -----
+    let forecastData = [
+        { drug: "بنادول 500mg", stock: 23, minStock: 20, expectedQty: 45, eoq: 60, proposed: 55, approved: 55, status: "ضمن الميزانية" },
+        { drug: "أموكسيسيلين", stock: 12, minStock: 15, expectedQty: 50, eoq: 70, proposed: 65, approved: 65, status: "ضمن الميزانية" },
+        { drug: "فنتولين بخاخ", stock: 5, minStock: 8, expectedQty: 35, eoq: 40, proposed: 40, approved: 40, status: "تأجيل (نقص سيولة)" },
+        { drug: "سيتريزين 10mg", stock: 30, minStock: 25, expectedQty: 80, eoq: 100, proposed: 90, approved: 90, status: "ضمن الميزانية" }
+    ];
+
+    function renderForecastTable() {
+        const tbody = document.getElementById('forecastTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        forecastData.forEach((item, idx) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = item.drug;
+            row.insertCell(1).innerText = item.stock;
+            row.insertCell(2).innerText = item.minStock;
+            row.insertCell(3).innerText = item.expectedQty;
+            row.insertCell(4).innerText = item.eoq;
+            row.insertCell(5).innerText = item.proposed;
+            // خلية editable للكمية المعتمدة
+            const approvedCell = row.insertCell(6);
+            const approvedInput = document.createElement('input');
+            approvedInput.type = 'number';
+            approvedInput.value = item.approved;
+            approvedInput.className = 'w-20 border rounded px-1 py-0.5 text-center approved-qty';
+            approvedInput.dataset.idx = idx;
+            approvedInput.addEventListener('change', (e) => { forecastData[idx].approved = parseFloat(e.target.value) || 0; updateStatus(); });
+            approvedCell.appendChild(approvedInput);
+            // حالة
+            const statusCell = row.insertCell(7);
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `px-2 py-0.5 rounded-full text-xs ${item.status === 'ضمن الميزانية' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            statusSpan.innerText = item.status;
+            statusCell.appendChild(statusSpan);
+            // زر إجراء سريع (تحديث)
+            const actionCell = row.insertCell(8);
+            const updateBtn = document.createElement('button');
+            updateBtn.innerText = 'تحديث';
+            updateBtn.className = 'text-blue-600 text-xs';
+            updateBtn.addEventListener('click', () => { updateStatus(); alert(`تم تحديث الحالة للدواء: ${item.drug}`); });
+            actionCell.appendChild(updateBtn);
+        });
+    }
+    function updateStatus() {
+        // تحديث حالة الصفوف بناءً على الميزانية (محاكاة)
+        // نعتمد على قيمة معتمدة > 500$ افتراضية
+        forecastData.forEach(item => {
+            if (item.approved * 2 > 200) item.status = 'تأجيل (نقص سيولة)';
+            else item.status = 'ضمن الميزانية';
+        });
+        renderForecastTable(); // إعادة رسم
+    }
+    renderForecastTable();
+
+    // ----- الرسم البياني -----
+    const chartCtx = document.getElementById('forecastChart').getContext('2d');
+    let forecastChart = new Chart(chartCtx, {
+        type: 'line',
+        data: {
+            labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+            datasets: [
+                { label: 'المبيعات الفعلية', data: [3200, 4100, 4800, 5300, 6200, 5800], borderColor: '#3b82f6', tension: 0.2 },
+                { label: 'التوقعات (Prophet)', data: [3400, 4300, 5000, 5600, 6500, 6100], borderColor: '#f59e0b', borderDash: [5, 5] }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
+
+    // ----- مفتاح التبديل بين محلي / سحابي -----
+    const localBtn = document.getElementById('localBtn');
+    const cloudBtn = document.getElementById('cloudBtn');
+    const cloudArea = document.getElementById('cloudUploadArea');
+    localBtn.addEventListener('click', () => {
+        localBtn.classList.remove('bg-gray-200', 'text-gray-700'); localBtn.classList.add('bg-emerald-600', 'text-white');
+        cloudBtn.classList.remove('bg-emerald-600', 'text-white'); cloudBtn.classList.add('bg-gray-200', 'text-gray-700');
+        cloudArea.classList.add('hidden');
+        alert("تم التبديل إلى نموذج Prophet المحلي (يعتمد على بيانات المبيعات الداخلية)");
+        // تحديث الرسم البياني لقيم مختلفة (محاكاة)
+        forecastChart.data.datasets[1].data = [3400, 4300, 5000, 5600, 6500, 6100];
+        forecastChart.update();
+    });
+    cloudBtn.addEventListener('click', () => {
+        cloudBtn.classList.remove('bg-gray-200', 'text-gray-700'); cloudBtn.classList.add('bg-emerald-600', 'text-white');
+        localBtn.classList.remove('bg-emerald-600', 'text-white'); localBtn.classList.add('bg-gray-200', 'text-gray-700');
+        cloudArea.classList.remove('hidden');
+        alert("التبديل إلى Vertex AI السحابي - سيتم استخدام نماذج Google المتقدمة.");
+        // تغيير بيانات الرسم البياني إلى تنبؤات مختلفة (محاكاة سحابية)
+        forecastChart.data.datasets[1].data = [3600, 4500, 5200, 5900, 6800, 6400];
+        forecastChart.update();
+    });
+
+    // نافذة المطابقة الذكية
+    const modal = document.getElementById('mappingModal');
+    const openModalBtn = document.getElementById('openMappingModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const confirmMapping = document.getElementById('confirmMappingBtn');
+    openModalBtn.addEventListener('click', () => modal.classList.add('active'));
+    closeModalBtn.addEventListener('click', () => modal.classList.remove('active'));
+    confirmMapping.addEventListener('click', () => {
+        modal.classList.remove('active');
+        alert("تم رفع الملف ومطابقة الأعمدة بنجاح. سيتم معالجة البيانات عبر Vertex AI.");
+    });
+
+    // أزرار الخطة
+    document.getElementById('approvePlanBtn').addEventListener('click', () => alert("تم اعتماد خطة المشتريات وسيتم تحويل الكميات المعتمدة إلى أوامر شراء (محاكاة)."));
+    document.getElementById('exportPlanBtn').addEventListener('click', () => alert("تصدير خطة المشتريات إلى ملف Excel/PDF."));
+    document.getElementById('sendOrdersBtn').addEventListener('click', () => alert("إرسال طلبات الشراء إلى الموردين المسجلين (تكامل مستقبلي)."));
+
+    // العوامل الموسمية
+    document.getElementById('editSeasonalBtn').addEventListener('click', () => alert("فتح واجهة تعديل العامل الموسمي لكل دواء/فئة (جدول قابل للتحرير)."));
+    document.getElementById('recalcForecastBtn').addEventListener('click', () => alert("إعادة حساب التنبؤ بناءً على العوامل الموسمية المعدلة."));
+
+    // ----- القائمة الجانبية (تنقل بين التبويبين) -----
+    const forecastTab = document.getElementById('forecastTab');
+    const seasonalTab = document.getElementById('seasonalTab');
+    const tabBtns = document.querySelectorAll('#planTabsNav button');
+    const sidebarForecast = document.getElementById('sidebarForecastLink');
+    const sidebarSeasonal = document.getElementById('sidebarSeasonalLink');
+
+    function activatePlanTab(tabId) {
+        if (tabId === 'forecast') {
+            forecastTab.classList.remove('hidden');
+            seasonalTab.classList.add('hidden');
+            tabBtns.forEach(btn => { if (btn.dataset.tab === 'forecast') { btn.classList.add('tab-active'); btn.classList.remove('tab-inactive'); } else { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); } });
+        } else {
+            forecastTab.classList.add('hidden');
+            seasonalTab.classList.remove('hidden');
+            tabBtns.forEach(btn => { if (btn.dataset.tab === 'seasonal') { btn.classList.add('tab-active'); btn.classList.remove('tab-inactive'); } else { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); } });
+        }
+    }
+    tabBtns.forEach(btn => btn.addEventListener('click', () => activatePlanTab(btn.dataset.tab)));
+    sidebarForecast.addEventListener('click', (e) => { e.preventDefault(); activatePlanTab('forecast'); });
+    sidebarSeasonal.addEventListener('click', (e) => { e.preventDefault(); activatePlanTab('seasonal'); });
+
+    // البحث في القائمة الجانبية
+    const searchInput = document.getElementById('sidebarSearch');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('#sidebarNavContainer .submenu-item').forEach(link => {
+            const text = link.innerText.toLowerCase();
+            link.style.display = (term === '' || text.includes(term)) ? 'flex' : 'none';
+        });
+    });
+    const toggleBtn = document.getElementById('toggleSidebarMobile');
+    const sidebar = document.getElementById('sidebar');
+    toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('sidebar-mobile-hidden'); sidebar.classList.toggle('sidebar-mobile-visible'); });
+</script>
+</body>
+</html>

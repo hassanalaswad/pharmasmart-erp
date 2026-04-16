@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - القوالب المنبثقة (إضافة عميل/مورد)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تخصيصات النوافذ المنبثقة */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+            transition: opacity 0.2s ease;
+        }
+        .modal-container {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        /* تخصيص الحقول */
+        input, select, textarea {
+            transition: all 0.15s;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: #10b981;
+            ring: 2px solid #10b981;
+            outline: none;
+        }
+        /* أزرار */
+        .btn-primary {
+            background-color: #10b981;
+        }
+        .btn-primary:hover {
+            background-color: #059669;
+        }
+        /* تأثيرات الهوفر على البطاقات */
+        .demo-card {
+            transition: all 0.2s;
+        }
+        .demo-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px -12px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+
+<div class="max-w-6xl mx-auto">
+    <!-- عنوان توضيحي وأزرار لفتح النماذج -->
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">📋 القالب الموحد للشاشات المنبثقة</h1>
+        <p class="text-gray-500 mt-1">إضافة عميل / مورد / أي كيان بسهولة</p>
+        <div class="flex justify-center gap-4 mt-6">
+            <button id="openCustomerModalBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl shadow transition"><i class="fas fa-user-plus ml-1"></i> إضافة عميل جديد</button>
+            <button id="openSupplierModalBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl shadow transition"><i class="fas fa-truck ml-1"></i> إضافة مورد جديد</button>
+        </div>
+    </div>
+
+    <!-- بطاقات عرض سريع للعملاء والموردين (محاكاة) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-sm p-5 demo-card">
+            <div class="flex justify-between items-center mb-3"><h2 class="text-xl font-bold text-gray-700"><i class="fas fa-users text-emerald-600 ml-2"></i> أحدث العملاء</h2><span class="text-xs text-gray-400">آخر 3</span></div>
+            <div class="space-y-2" id="customersListDemo">
+                <div class="flex justify-between p-2 border-b"><span>أحمد محمد</span><span class="text-gray-500">+967 712345678</span></div>
+                <div class="flex justify-between p-2 border-b"><span>سعاد علي</span><span class="text-gray-500">+967 733456789</span></div>
+                <div class="flex justify-between p-2"><span>محمد صلاح</span><span class="text-gray-500">+967 777123456</span></div>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm p-5 demo-card">
+            <div class="flex justify-between items-center mb-3"><h2 class="text-xl font-bold text-gray-700"><i class="fas fa-truck text-blue-600 ml-2"></i> أحدث الموردين</h2><span class="text-xs text-gray-400">آخر 3</span></div>
+            <div class="space-y-2" id="suppliersListDemo">
+                <div class="flex justify-between p-2 border-b"><span>المدينة للأدوية</span><span class="text-gray-500">+966 123456789</span></div>
+                <div class="flex justify-between p-2 border-b"><span>الرازي فارما</span><span class="text-gray-500">+971 987654321</span></div>
+                <div class="flex justify-between p-2"><span>الحكمة للأدوية</span><span class="text-gray-500">+962 555666777</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== القالب العام للشاشة المنبثقة (Modal) ========== -->
+<div id="genericModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay" style="display: none;">
+    <div class="modal-container bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all">
+        <!-- رأس النافذة -->
+        <div class="flex justify-between items-center p-5 border-b border-gray-100">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-800">عنوان النافذة</h3>
+            <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 transition text-xl">&times;</button>
+        </div>
+        <!-- محتوى النموذج (ديناميكي) -->
+        <div id="modalBody" class="p-5">
+            <!-- سيتم ملؤه بواسطة JS -->
+        </div>
+        <!-- أزرار الإجراءات -->
+        <div class="flex justify-end gap-3 p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+            <button id="modalCancelBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition">إلغاء</button>
+            <button id="modalSaveBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition">حفظ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // بيانات محاكاة للقوائم
+    let customers = [
+        { name: "أحمد محمد", phone: "+967 712345678" },
+        { name: "سعاد علي", phone: "+967 733456789" },
+        { name: "محمد صلاح", phone: "+967 777123456" }
+    ];
+    let suppliers = [
+        { name: "المدينة للأدوية", phone: "+966 123456789" },
+        { name: "الرازي فارما", phone: "+971 987654321" },
+        { name: "الحكمة للأدوية", phone: "+962 555666777" }
+    ];
+
+    // تحديث واجهة العرض
+    function refreshCustomersList() {
+        const container = document.getElementById('customersListDemo');
+        if(container) {
+            container.innerHTML = customers.slice(-3).reverse().map(c => `<div class="flex justify-between p-2 border-b"><span>${c.name}</span><span class="text-gray-500">${c.phone}</span></div>`).join('');
+            if(customers.length === 0) container.innerHTML = '<div class="text-gray-400 text-center p-2">لا يوجد عملاء</div>';
+        }
+    }
+    function refreshSuppliersList() {
+        const container = document.getElementById('suppliersListDemo');
+        if(container) {
+            container.innerHTML = suppliers.slice(-3).reverse().map(s => `<div class="flex justify-between p-2 border-b"><span>${s.name}</span><span class="text-gray-500">${s.phone}</span></div>`).join('');
+            if(suppliers.length === 0) container.innerHTML = '<div class="text-gray-400 text-center p-2">لا يوجد موردين</div>';
+        }
+    }
+
+    // عناصر النافذة
+    const modal = document.getElementById('genericModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalSaveBtn = document.getElementById('modalSaveBtn');
+
+    let currentModalType = null; // 'customer' or 'supplier'
+    let onSaveCallback = null;
+
+    function openModal(title, bodyHtml, saveCallback, type) {
+        modalTitle.innerText = title;
+        modalBody.innerHTML = bodyHtml;
+        currentModalType = type;
+        onSaveCallback = saveCallback;
+        modal.style.display = 'flex';
+        // منع التمرير خلف النافذة
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        currentModalType = null;
+        onSaveCallback = null;
+    }
+
+    // إغلاق النافذة بالأزرار
+    closeModalBtn.addEventListener('click', closeModal);
+    modalCancelBtn.addEventListener('click', closeModal);
+    // إغلاق عند النقر على الخلفية
+    modal.addEventListener('click', (e) => {
+        if(e.target === modal) closeModal();
+    });
+
+    // حفظ البيانات
+    modalSaveBtn.addEventListener('click', () => {
+        if(onSaveCallback) onSaveCallback();
+    });
+
+    // نموذج إضافة عميل
+    function getCustomerFormHtml() {
+        return `
+            <div class="space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل *</label><input type="text" id="customerName" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="مثال: أحمد محمد"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف *</label><input type="tel" id="customerPhone" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="+967 712345678"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني (اختياري)</label><input type="email" id="customerEmail" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="example@mail.com"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">عنوان السكن</label><textarea id="customerAddress" rows="2" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="صنعاء - شارع حدة"></textarea></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">الحد الائتماني ($)</label><input type="number" id="customerCredit" class="w-full border border-gray-300 rounded-lg p-2.5" value="0" step="50"></div>
+            </div>
+        `;
+    }
+
+    function saveCustomer() {
+        const name = document.getElementById('customerName')?.value.trim();
+        const phone = document.getElementById('customerPhone')?.value.trim();
+        if(!name) { alert('يرجى إدخال اسم العميل'); return; }
+        if(!phone) { alert('يرجى إدخال رقم الهاتف'); return; }
+        // إضافة العميل
+        customers.push({ name: name, phone: phone });
+        refreshCustomersList();
+        alert(`تمت إضافة العميل "${name}" بنجاح.`);
+        closeModal();
+    }
+
+    // نموذج إضافة مورد
+    function getSupplierFormHtml() {
+        return `
+            <div class="space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">اسم المورد *</label><input type="text" id="supplierName" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="مثال: المدينة للأدوية"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف *</label><input type="tel" id="supplierPhone" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="+966 123456789"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="supplierEmail" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="supplier@example.com"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">عنوان المورد</label><textarea id="supplierAddress" rows="2" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="الرياض - الصناعية القديمة"></textarea></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">رقم السجل الضريبي</label><input type="text" id="supplierTax" class="w-full border border-gray-300 rounded-lg p-2.5" placeholder="123456789"></div>
+            </div>
+        `;
+    }
+
+    function saveSupplier() {
+        const name = document.getElementById('supplierName')?.value.trim();
+        const phone = document.getElementById('supplierPhone')?.value.trim();
+        if(!name) { alert('يرجى إدخال اسم المورد'); return; }
+        if(!phone) { alert('يرجى إدخال رقم الهاتف'); return; }
+        suppliers.push({ name: name, phone: phone });
+        refreshSuppliersList();
+        alert(`تمت إضافة المورد "${name}" بنجاح.`);
+        closeModal();
+    }
+
+    // ربط الأزرار الرئيسية
+    document.getElementById('openCustomerModalBtn').addEventListener('click', () => {
+        openModal('إضافة عميل جديد', getCustomerFormHtml(), saveCustomer, 'customer');
+    });
+    document.getElementById('openSupplierModalBtn').addEventListener('click', () => {
+        openModal('إضافة مورد جديد', getSupplierFormHtml(), saveSupplier, 'supplier');
+    });
+
+    // تحديث القوائم عند التحميل
+    refreshCustomersList();
+    refreshSuppliersList();
+</script>
+</body>
+</html>

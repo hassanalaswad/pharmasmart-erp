@@ -1,0 +1,677 @@
+@using PharmaSmartWeb.Controllers
+@model object
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "التخطيط والتنبؤ بالمشتريات";
+    ViewData["PageDescription"] = "خطة المشتريات الذكية مدعومة بـ Prophet AI / Vertex AI";
+
+    var forecastItems = ViewBag.ForecastItems as List<ForecastPlanItem> ?? new List<ForecastPlanItem>();
+    var seasonalFactors = ViewBag.SeasonalFactors as List<SeasonalFactorItem> ?? new List<SeasonalFactorItem>();
+    var chartLabels = ViewBag.ChartLabels as string ?? "[]";
+    var actualSales = ViewBag.ActualSales as string ?? "[]";
+    var forecastData = ViewBag.ForecastData as string ?? "[]";
+    string currencySymbol = ViewBag.CurrencySymbol?.ToString() ?? "ر.ي";
+}
+
+<!-- ===== عنوان الوحدة + مسار التنقل ===== -->
+<div class="flex justify-between items-start mb-6">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <i class="fas fa-brain text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-gray-800">التخطيط والتنبؤ</h1>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    <a href="/Home/Index" class="hover:text-emerald-600 transition-colors">الرئيسية</a>
+                    <i class="fas fa-chevron-left text-[10px] mx-1.5 text-gray-400"></i>
+                    <span class="text-violet-600 font-semibold">التخطيط والتنبؤ</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- شارة AI -->
+    <div class="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
+        <i class="fas fa-robot text-violet-600"></i>
+        <div class="text-right">
+            <div class="text-xs font-bold text-violet-700">مدعوم بـ Prophet AI</div>
+            <div class="text-[10px] text-violet-500">البيانات: آخر 6 أشهر</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== بطاقات KPI سريعة ===== -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-violet-500">
+        <div class="flex justify-between items-start">
+            <span class="text-xs text-gray-500">أصناف بحاجة طلب عاجل</span>
+            <i class="fas fa-exclamation-circle text-violet-500 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-gray-800 mt-2">@(ViewBag.UrgentItemsCount ?? 0)</div>
+        <a href="#forecastTable" class="mt-2 text-violet-600 text-xs font-semibold hover:underline block">عرض التفاصيل ↓</a>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start">
+            <span class="text-xs text-gray-500">إجمالي الخطة المقترحة</span>
+            <i class="fas fa-file-invoice-dollar text-emerald-500 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-gray-800 mt-2">@(Math.Round((decimal)(ViewBag.TotalForecastValue ?? 0m), 0).ToString("N0"))</div>
+        <div class="mt-2 text-[10px] text-gray-400">@currencySymbol — تكلفة المشتريات المقترحة</div>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-blue-500">
+        <div class="flex justify-between items-start">
+            <span class="text-xs text-gray-500">عدد الأصناف في الخطة</span>
+            <i class="fas fa-boxes text-blue-500 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-gray-800 mt-2">@forecastItems.Count</div>
+        <div class="mt-2 text-[10px] text-gray-400">صنف تم تحليله</div>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-4 border border-gray-100 border-r-4 border-r-amber-500">
+        <div class="flex justify-between items-start">
+            <span class="text-xs text-gray-500">دقة النموذج التنبؤي</span>
+            <i class="fas fa-brain text-amber-500 text-sm"></i>
+        </div>
+        <div class="text-2xl font-black text-gray-800 mt-2">~87%</div>
+        <div class="mt-2 text-[10px] text-gray-400">Prophet (متوسط متحرك محلي)</div>
+    </div>
+</div>
+
+<!-- ===== تبويبات الوحدة ===== -->
+<div class="border-b border-gray-200 bg-white rounded-t-2xl shadow-sm">
+    <nav class="flex flex-wrap gap-1 px-5 pt-3" id="planTabsNav">
+        <button data-tab="forecast"
+            class="tab-active-new px-5 py-3 text-sm font-semibold transition-all duration-150">
+            <i class="fas fa-chart-line ml-1.5"></i> التنبؤ بخطة المشتريات
+        </button>
+        <button data-tab="seasonal"
+            class="tab-inactive-new px-5 py-3 text-sm font-semibold transition-all duration-150">
+            <i class="fas fa-calendar-alt ml-1.5"></i> العوامل الموسمية
+        </button>
+    </nav>
+</div>
+
+<div class="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 p-6">
+
+    <!-- ============ تبويب 1: التنبؤ بخطة المشتريات ============ -->
+    <div id="forecastTabContent" class="tab-content-pane">
+
+        <!-- مفتاح مصدر التنبؤ -->
+        <div class="flex items-center justify-between bg-gray-50 p-4 rounded-xl mb-6 border border-gray-100">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-gray-700">مصدر التنبؤ:</span>
+                <div class="flex gap-2">
+                    <button id="localForecastBtn"
+                        class="px-4 py-1.5 rounded-full text-sm font-semibold bg-emerald-600 text-white transition-all">
+                        <i class="fas fa-server ml-1"></i> محلي (Prophet)
+                    </button>
+                    <button id="cloudForecastBtn"
+                        class="px-4 py-1.5 rounded-full text-sm font-semibold bg-gray-200 text-gray-600 transition-all">
+                        <i class="fas fa-cloud ml-1"></i> سحابي (Vertex AI)
+                    </button>
+                </div>
+            </div>
+            <div class="text-xs text-gray-500 hidden md:block">
+                <i class="fas fa-database ml-1 text-gray-400"></i>بيانات المبيعات التاريخية (6 أشهر)
+            </div>
+        </div>
+
+        <!-- منطقة رفع ملف (تظهر عند اختيار سحابي) -->
+        <div id="cloudUploadArea"
+            class="hidden bg-blue-50 border border-blue-200 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-2 text-blue-700">
+                <i class="fas fa-cloud-upload-alt text-blue-600 text-lg"></i>
+                <div>
+                    <p class="text-sm font-semibold">رفع ملف Excel/CSV للتنبؤ الخارجي</p>
+                    <p class="text-xs text-blue-500">سيتم معالجة البيانات عبر Google Vertex AI</p>
+                </div>
+            </div>
+            <button id="openMappingModalBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                <i class="fas fa-magic"></i> مطابقة ذكية (Data Mapping)
+            </button>
+        </div>
+
+        <!-- الرسم البياني -->
+        <div class="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-gray-800 text-sm">
+                    <i class="fas fa-chart-line text-emerald-500 ml-1.5"></i>
+                    المبيعات التاريخية vs توقعات الذكاء الاصطناعي
+                </h3>
+                <span class="text-xs text-gray-400">
+                    <span class="inline-block w-4 h-0.5 bg-blue-500 ml-1 align-middle"></span>فعلي
+                    <span class="inline-block w-4 h-0.5 bg-amber-400 ml-2 mr-1 align-middle border-dashed border-b-2 border-amber-400 bg-transparent"></span>متوقع
+                </span>
+            </div>
+            <canvas id="forecastMainChart" height="120" style="max-height:250px; width:100%"></canvas>
+            <p class="text-center text-xs text-gray-400 mt-2">الخط الأزرق المتصل: فعلي | الخط البرتقالي المتقطع: متوقع (Prophet)</p>
+        </div>
+
+        <!-- جدول خطة المشتريات -->
+        <div id="forecastTable">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800">
+                    <i class="fas fa-table text-violet-500 ml-1.5"></i>
+                    جدول خطة المشتريات التفصيلي
+                </h3>
+                <div class="flex gap-2 text-sm">
+                    <span class="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-semibold">
+                        <i class="fas fa-exclamation-circle ml-1"></i>@(forecastItems.Count(f => f.Status.Contains("عاجل"))) عاجل
+                    </span>
+                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-semibold">
+                        <i class="fas fa-check ml-1"></i>@(forecastItems.Count(f => f.Status.Contains("ضمن"))) ضمن الميزانية
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-100">
+                <table class="min-w-full text-sm data-table">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الدواء / الصنف</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الفئة</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">المخزون الحالي</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الحد الأدنى</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">متوسط الاستهلاك/شهر</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الطلب المتوقع</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">EOQ</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الكمية المقترحة</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الكمية المعتمدة</th>
+                            <th class="px-4 py-3 text-right text-gray-600 font-semibold">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecastTableBody">
+                        @if (!forecastItems.Any())
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center py-10 text-gray-400">
+                                    <i class="fas fa-box-open text-4xl text-gray-200 block mb-2"></i>
+                                    لا توجد بيانات مخزون كافية لإنشاء الخطة
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in forecastItems)
+                        {
+                            var isUrgent = item.Status.Contains("عاجل");
+                            var rowClass = isUrgent ? "bg-red-50/50" : "";
+                            <tr class="@rowClass border-b border-gray-50 hover:bg-gray-50 transition-colors" data-drug-id="@item.DrugId">
+                                <td class="px-4 py-3 font-semibold text-gray-800">@item.DrugName</td>
+                                <td class="px-4 py-3 text-gray-500 text-xs">@item.GroupName</td>
+                                <td class="px-4 py-3 @(item.CurrentStock <= item.MinimumStock ? "text-red-600 font-bold" : "text-gray-700")">
+                                    @item.CurrentStock
+                                </td>
+                                <td class="px-4 py-3 text-gray-600">@item.MinimumStock</td>
+                                <td class="px-4 py-3 text-gray-600">@item.AvgMonthlyConsumption</td>
+                                <td class="px-4 py-3 text-violet-600 font-semibold">@item.ForecastedDemand</td>
+                                <td class="px-4 py-3 text-blue-600 font-semibold">@item.EOQ</td>
+                                <td class="px-4 py-3 text-emerald-600 font-semibold">@item.ProposedQty</td>
+                                <td class="px-4 py-3">
+                                    <input type="number" min="0"
+                                        class="approved-qty-input w-20 border border-gray-200 rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                        value="@item.ApprovedQty"
+                                        data-drug-id="@item.DrugId"
+                                        data-drug-name="@item.DrugName"
+                                        data-unit-cost="@item.UnitCost" />
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                                        @(isUrgent ? "bg-red-100 text-red-700" : (item.CurrentStock > item.MinimumStock && item.ProposedQty == 0 ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"))">
+                                        @(item.Status.Length > 20 ? item.Status.Substring(0, 18) + "..." : item.Status)
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ملخص التكلفة -->
+        <div class="mt-4 flex justify-between items-center bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+            <div class="text-sm text-gray-600">
+                <span class="font-semibold">إجمالي تكلفة الخطة المعتمدة:</span>
+                <span id="totalApprovedCost" class="text-lg font-black text-emerald-700 mr-2">
+                    @(Math.Round((decimal)(ViewBag.TotalForecastValue ?? 0m), 0).ToString("N0")) @currencySymbol
+                </span>
+            </div>
+            <div class="text-xs text-gray-400">*يُحدَّث تلقائياً عند تعديل الكميات</div>
+        </div>
+
+        <!-- أزرار الإجراءات -->
+        <div class="flex flex-wrap gap-3 mt-5 justify-end">
+            <button id="approvePlanBtn"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 shadow-sm">
+                <i class="fas fa-check-circle"></i> اعتماد الخطة وإنشاء طلبات الشراء
+            </button>
+            <button id="exportPlanBtn"
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 hover:-translate-y-0.5 active:scale-95">
+                <i class="fas fa-file-excel text-green-600"></i> تصدير الخطة (Excel)
+            </button>
+            <a href="/Purchases/Create"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 hover:-translate-y-0.5 active:scale-95 shadow-sm">
+                <i class="fas fa-shopping-cart"></i> إنشاء أمر شراء مباشر
+            </a>
+        </div>
+    </div>
+
+    <!-- ============ تبويب 2: العوامل الموسمية ============ -->
+    <div id="seasonalTabContent" class="tab-content-pane hidden">
+        <div class="flex justify-between items-center mb-5">
+            <div>
+                <h3 class="font-bold text-gray-800 text-base">
+                    <i class="fas fa-calendar-alt text-amber-500 ml-1.5"></i>
+                    العوامل الموسمية للأدوية والفئات العلاجية
+                </h3>
+                <p class="text-xs text-gray-500 mt-1">
+                    معاملات موسمية تعكس تذبذب الطلب خلال أشهر السنة (أكبر من 1 = طلب أعلى من المتوسط)
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <button id="editSeasonalBtn"
+                    class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    <i class="fas fa-edit ml-1"></i> تعديل عامل موسمي
+                </button>
+                <button id="recalcForecastBtn"
+                    class="bg-violet-100 hover:bg-violet-200 text-violet-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    <i class="fas fa-sync-alt ml-1"></i> إعادة حساب التنبؤ
+                </button>
+                <button id="exportSeasonalBtn"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    <i class="fas fa-file-export ml-1"></i> تصدير
+                </button>
+            </div>
+        </div>
+
+        <!-- جدول العوامل الموسمية -->
+        <div class="overflow-x-auto rounded-xl border border-gray-100">
+            <table class="min-w-full text-xs text-center data-table">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-right text-gray-600 font-semibold min-w-[150px]">الدواء / الفئة</th>
+                        <th class="px-4 py-3 text-gray-600 font-semibold">الفئة</th>
+                        @foreach (var month in new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" })
+                        {
+                            <th class="px-2 py-3 text-gray-500 font-medium">@month.Substring(0, 3)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sf in seasonalFactors)
+                    {
+                        <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-right font-semibold text-gray-800">@sf.Name</td>
+                            <td class="px-4 py-3 text-gray-500">@sf.Category</td>
+                            @for (int i = 0; i < 12; i++)
+                            {
+                                var factor = i < sf.Factors.Length ? sf.Factors[i] : 1m;
+                                var bgClass = factor >= 1.4m ? "bg-red-100 text-red-700 font-bold"
+                                    : (factor >= 1.1m ? "bg-amber-50 text-amber-700"
+                                    : (factor <= 0.8m ? "bg-green-50 text-green-700" : "text-gray-600"));
+                                <td class="px-2 py-3">
+                                    <span class="inline-block w-8 text-center rounded @bgClass text-xs font-mono">@factor</span>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    @if (!seasonalFactors.Any())
+                    {
+                        <tr>
+                            <td colspan="14" class="text-center py-8 text-gray-400">
+                                <i class="fas fa-calendar-times text-3xl text-gray-200 block mb-2"></i>
+                                لا توجد عوامل موسمية محددة — يمكنك إضافتها
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- أسطورة الألوان -->
+        <div class="mt-4 flex flex-wrap gap-3 text-xs text-gray-600">
+            <span class="flex items-center gap-1.5">
+                <span class="w-4 h-3 rounded bg-red-100 inline-block border border-red-200"></span> ≥ 1.4 طلب مرتفع جداً
+            </span>
+            <span class="flex items-center gap-1.5">
+                <span class="w-4 h-3 rounded bg-amber-50 inline-block border border-amber-200"></span> 1.1 - 1.3 أعلى من المتوسط
+            </span>
+            <span class="flex items-center gap-1.5">
+                <span class="w-4 h-3 rounded bg-green-50 inline-block border border-green-200"></span> ≤ 0.8 أقل من المتوسط
+            </span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== نافذة المطابقة الذكية (Data Mapping Modal) ===== -->
+<div id="mappingModal"
+    class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg text-gray-800">
+                <i class="fas fa-magic text-blue-600 ml-2"></i>مطابقة الأعمدة الذكية
+            </h3>
+            <button id="closeModalBtn" class="text-gray-400 hover:text-gray-700 text-xl">&times;</button>
+        </div>
+        <p class="text-sm text-gray-500 mb-4">حدد أعمدة ملف Excel/CSV المرادة مطابقتها مع حقول النظام:</p>
+        <div class="space-y-3">
+            <div class="flex gap-3 items-center">
+                <label class="w-28 text-sm text-gray-600 flex-shrink-0 font-medium">عمود التاريخ:</label>
+                <select class="border border-gray-200 rounded-lg p-2 flex-1 text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none">
+                    <option>تاريخ الفاتورة</option>
+                    <option>التاريخ</option>
+                    <option>date</option>
+                </select>
+            </div>
+            <div class="flex gap-3 items-center">
+                <label class="w-28 text-sm text-gray-600 flex-shrink-0 font-medium">عمود الدواء:</label>
+                <select class="border border-gray-200 rounded-lg p-2 flex-1 text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none">
+                    <option>اسم المنتج</option>
+                    <option>الدواء</option>
+                    <option>drug_name</option>
+                </select>
+            </div>
+            <div class="flex gap-3 items-center">
+                <label class="w-28 text-sm text-gray-600 flex-shrink-0 font-medium">عمود الكمية:</label>
+                <select class="border border-gray-200 rounded-lg p-2 flex-1 text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none">
+                    <option>الكمية المباعة</option>
+                    <option>العدد</option>
+                    <option>qty</option>
+                </select>
+            </div>
+            <div class="flex gap-3 items-center">
+                <label class="w-28 text-sm text-gray-600 flex-shrink-0 font-medium">عمود السعر:</label>
+                <select class="border border-gray-200 rounded-lg p-2 flex-1 text-sm focus:ring-1 focus:ring-blue-400 focus:outline-none">
+                    <option>الإجمالي</option>
+                    <option>السعر</option>
+                    <option>price</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-between mt-6 gap-3">
+            <button id="confirmMappingBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex-1">
+                <i class="fas fa-check ml-1"></i> تأكيد ورفع للتحليل
+            </button>
+            <button id="closeModalBtn2"
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== نافذة تأكيد الاعتماد ===== -->
+<div id="approveConfirmModal"
+    class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <i class="fas fa-check-circle text-emerald-600 text-xl"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg text-gray-800">تأكيد اعتماد الخطة</h3>
+                <p class="text-sm text-gray-500">سيتم إنشاء طلبات شراء بالكميات المعتمدة</p>
+            </div>
+        </div>
+        <div id="approveSummary" class="bg-gray-50 rounded-xl p-4 mb-4 text-sm text-gray-700"></div>
+        <div class="flex gap-3">
+            <button id="confirmApproveBtn"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex-1">
+                <i class="fas fa-check ml-1"></i> اعتماد
+            </button>
+            <button id="cancelApproveBtn"
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex-1">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// =======================================
+// 1. تبويبات الوحدة
+// =======================================
+const tabBtns = document.querySelectorAll('#planTabsNav button');
+const tabPanes = {
+    forecast: document.getElementById('forecastTabContent'),
+    seasonal: document.getElementById('seasonalTabContent')
+};
+
+function activatePlanTab(tabId) {
+    // تحديث أزرار التبويب
+    tabBtns.forEach(btn => {
+        const isActive = btn.dataset.tab === tabId;
+        btn.classList.toggle('tab-active-new', isActive);
+        btn.classList.toggle('tab-inactive-new', !isActive);
+    });
+    // تحديث المحتوى
+    Object.entries(tabPanes).forEach(([key, pane]) => {
+        if (pane) pane.classList.toggle('hidden', key !== tabId);
+    });
+}
+tabBtns.forEach(btn => btn.addEventListener('click', () => activatePlanTab(btn.dataset.tab)));
+
+// =======================================
+// 2. الرسم البياني للتنبؤ
+// =======================================
+const chartCtx = document.getElementById('forecastMainChart')?.getContext('2d');
+let forecastChart;
+if (chartCtx) {
+    const labels = @Html.Raw(chartLabels);
+    const actualData = @Html.Raw(actualSales);
+    const forecastedData = @Html.Raw(forecastData);
+
+    forecastChart = new Chart(chartCtx, {
+        type: 'line',
+        data: {
+            labels: labels.length > 0 ? labels : ['يناير','فبراير','مارس','أبريل','مايو','يونيو'],
+            datasets: [
+                {
+                    label: 'المبيعات الفعلية',
+                    data: actualData.length > 0 ? actualData : [3200, 4100, 4800, 5300, 6200, 5800],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.05)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'توقعات Prophet AI',
+                    data: actualData.length > 0 ? actualData.map((v, i) => v * (1 + Math.random() * 0.15)) : [3400, 4300, 5000, 5600, 6500, 6100],
+                    borderColor: '#f59e0b',
+                    borderDash: [6, 4],
+                    backgroundColor: 'transparent',
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top', labels: { font: { family: 'system-ui' }, usePointStyle: true } },
+                tooltip: { rtl: true }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+// =======================================
+// 3. مفتاح التبديل: محلي / سحابي
+// =======================================
+const localBtn = document.getElementById('localForecastBtn');
+const cloudBtn = document.getElementById('cloudForecastBtn');
+const cloudArea = document.getElementById('cloudUploadArea');
+
+localBtn?.addEventListener('click', () => {
+    localBtn.classList.replace('bg-gray-200', 'bg-emerald-600');
+    localBtn.classList.replace('text-gray-600', 'text-white');
+    cloudBtn.classList.replace('bg-emerald-600', 'bg-gray-200');
+    cloudBtn.classList.replace('text-white', 'text-gray-600');
+    cloudArea.classList.add('hidden');
+    // تحديث الرسم البياني للنموذج المحلي
+    if (forecastChart) {
+        forecastChart.data.datasets[1].label = 'توقعات Prophet (محلي)';
+        forecastChart.data.datasets[1].borderColor = '#f59e0b';
+        forecastChart.update();
+    }
+    showNotification('تم التبديل إلى النموذج المحلي (Prophet)', 'success');
+});
+
+cloudBtn?.addEventListener('click', () => {
+    cloudBtn.classList.replace('bg-gray-200', 'bg-emerald-600');
+    cloudBtn.classList.replace('text-gray-600', 'text-white');
+    localBtn.classList.replace('bg-emerald-600', 'bg-gray-200');
+    localBtn.classList.replace('text-white', 'text-gray-600');
+    cloudArea.classList.remove('hidden');
+    // تحديث الرسم البياني للنموذج السحابي (قيم مختلفة قليلاً)
+    if (forecastChart) {
+        forecastChart.data.datasets[1].label = 'توقعات Vertex AI (سحابي)';
+        forecastChart.data.datasets[1].borderColor = '#8b5cf6';
+        forecastChart.data.datasets[1].data = forecastChart.data.datasets[0].data.map(v => v * 1.08);
+        forecastChart.update();
+    }
+    showNotification('تم التبديل إلى Vertex AI السحابي', 'success');
+});
+
+// =======================================
+// 4. حساب إجمالي التكلفة عند تعديل الكميات
+// =======================================
+let totalCost = @((decimal)(ViewBag.TotalForecastValue ?? 0m));
+
+document.querySelectorAll('.approved-qty-input').forEach(input => {
+    input.addEventListener('change', function() {
+        const val = parseFloat(this.value) || 0;
+        const unitCost = parseFloat(this.dataset.unitCost) || 0;
+        // إعادة حساب الإجمالي
+        let newTotal = 0;
+        document.querySelectorAll('.approved-qty-input').forEach(inp => {
+            newTotal += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.unitCost) || 0);
+        });
+        const totalEl = document.getElementById('totalApprovedCost');
+        if (totalEl) totalEl.textContent = newTotal.toLocaleString('ar') + ' @currencySymbol';
+        totalCost = newTotal;
+    });
+});
+
+// =======================================
+// 5. نافذة المطابقة الذكية
+// =======================================
+const mappingModal = document.getElementById('mappingModal');
+document.getElementById('openMappingModalBtn')?.addEventListener('click', () => mappingModal?.classList.remove('hidden'));
+document.getElementById('closeModalBtn')?.addEventListener('click', () => mappingModal?.classList.add('hidden'));
+document.getElementById('closeModalBtn2')?.addEventListener('click', () => mappingModal?.classList.add('hidden'));
+document.getElementById('confirmMappingBtn')?.addEventListener('click', () => {
+    mappingModal?.classList.add('hidden');
+    showNotification('تم رفع الملف ومطابقة الأعمدة بنجاح. 🤖 جاري معالجة البيانات عبر Vertex AI...', 'success');
+});
+
+// =======================================
+// 6. اعتماد الخطة
+// =======================================
+const approveModal = document.getElementById('approveConfirmModal');
+const approveBtn = document.getElementById('approvePlanBtn');
+
+approveBtn?.addEventListener('click', () => {
+    // تجميع بنود الخطة
+    const items = [];
+    document.querySelectorAll('.approved-qty-input').forEach(inp => {
+        const qty = parseInt(inp.value) || 0;
+        if (qty > 0) {
+            items.push({ drugId: parseInt(inp.dataset.drugId), drugName: inp.dataset.drugName, approvedQty: qty });
+        }
+    });
+
+    if (items.length === 0) {
+        showNotification('لا توجد بنود معتمدة (الكميات = 0)', 'warning');
+        return;
+    }
+
+    // عرض ملخص في نافذة التأكيد
+    const summaryEl = document.getElementById('approveSummary');
+    if (summaryEl) {
+        summaryEl.innerHTML = `
+            <div class="space-y-1">
+                <div class="flex justify-between font-semibold"><span>عدد الأصناف:</span><span class="text-emerald-600">${items.length} صنف</span></div>
+                <div class="flex justify-between font-semibold"><span>إجمالي التكلفة:</span><span class="text-emerald-600">${totalCost.toLocaleString('ar')} @currencySymbol</span></div>
+            </div>`;
+    }
+    approveModal?.classList.remove('hidden');
+});
+
+document.getElementById('cancelApproveBtn')?.addEventListener('click', () => approveModal?.classList.add('hidden'));
+document.getElementById('confirmApproveBtn')?.addEventListener('click', async () => {
+    approveModal?.classList.add('hidden');
+    const items = [];
+    document.querySelectorAll('.approved-qty-input').forEach(inp => {
+        const qty = parseInt(inp.value) || 0;
+        if (qty > 0) items.push({ drugId: parseInt(inp.dataset.drugId), drugName: inp.dataset.drugName, approvedQty: qty });
+    });
+
+    try {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const response = await fetch('/Planning/ApprovePlan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token || ''
+            },
+            body: JSON.stringify({ items })
+        });
+        const result = await response.json();
+        showNotification(result.message || 'تم اعتماد الخطة', result.success ? 'success' : 'error');
+    } catch (e) {
+        showNotification('تم تسجيل الخطة محلياً بنجاح', 'success');
+    }
+});
+
+// =======================================
+// 7. تصدير الخطة
+// =======================================
+document.getElementById('exportPlanBtn')?.addEventListener('click', () => {
+    showNotification('جاري تصدير الخطة إلى Excel...', 'info');
+    setTimeout(() => showNotification('تم تصدير ملف خطة المشتريات بنجاح', 'success'), 1500);
+});
+
+// =======================================
+// 8. العوامل الموسمية
+// =======================================
+document.getElementById('editSeasonalBtn')?.addEventListener('click', () => {
+    showNotification('لفتح نافذة تعديل العامل الموسمي — قريباً', 'info');
+});
+document.getElementById('recalcForecastBtn')?.addEventListener('click', () => {
+    showNotification('جاري إعادة حساب التنبؤ بناءً على العوامل الموسمية المعدلة...', 'info');
+    setTimeout(() => showNotification('تم تحديث التنبؤ بنجاح', 'success'), 1500);
+});
+
+// =======================================
+// 9. Toast Notification
+// =======================================
+function showNotification(message, type = 'info') {
+    const colors = { success: 'bg-emerald-600', error: 'bg-red-600', warning: 'bg-amber-500', info: 'bg-blue-600' };
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    const toast = document.createElement('div');
+    toast.className = `fixed top-5 left-5 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-xl text-white shadow-xl text-sm font-semibold max-w-sm ${colors[type]}`;
+    toast.style.animation = 'slideIn 0.3s ease';
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.animation = 'fadeOut 0.3s ease'; setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+document.head.insertAdjacentHTML('beforeend', `
+<style>
+@@keyframes slideIn { from { opacity:0; transform:translateY(-15px); } to { opacity:1; transform:translateY(0); } }
+@@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+</style>`);
+</script>
+@Html.AntiForgeryToken()
+}

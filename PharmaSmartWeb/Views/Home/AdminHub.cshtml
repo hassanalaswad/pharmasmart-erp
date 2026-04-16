@@ -1,34 +1,49 @@
 @model PharmaSmartWeb.Models.AdminHubViewModel
 @{
-    ViewData["Title"] = "لوحة تحكم الإدارة والتهيئة";
+    ViewData["Title"] = "وحدة الإدارة والتهيئة";
     Layout = "_Layout";
 }
 
-<!-- Header -->
-<div class="bg-white border-t-4 border-t-[#063955] border-b border-l border-r border-[#d1d5db] rounded-sm mb-6 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div>
-        <h1 class="text-[18px] font-black text-[#063955] flex items-center gap-2 m-0">
-            <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-            وحدة الإدارة والتهيئة 
-            <span class="bg-[#e11d48] text-white text-[10px] px-2 py-0.5 rounded-sm font-bold tracking-widest uppercase">Super Admin</span>
-        </h1>
-        <p class="text-[12px] text-slate-500 font-bold mt-1">إعدادات النظام، الصلاحيات، الأمان، وسجلات الرقابة</p>
-    </div>
-    <div class="flex items-center gap-4">
-        <!-- زر النسخ الاحتياطي -->
-        <a href="/Admin/Backup" class="hidden md:flex items-center gap-2 bg-[#0284c7] text-white p-2 px-4 rounded-sm hover:bg-[#0369a1] transition-all font-bold text-[12px] shadow-sm">
-            <span class="material-symbols-outlined text-[16px]">cloud_sync</span>
-            النسخ الاحتياطي السريع
-        </a>
-
-        <div class="text-left hidden md:flex items-center gap-2 bg-slate-50 p-2 px-3 rounded-sm border border-slate-200">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#059669] animate-pulse"></span>
-            <div>
-                <p class="text-[10px] font-bold text-slate-500 text-right uppercase tracking-wider mb-0.5">حالة الخادم</p>
-                <p class="text-[12px] font-bold text-[#059669]">متصل بشكل آمن - Uptime 99.9%</p>
-            </div>
+<!-- ===== رأس الوحدة ===== -->
+<div class="flex flex-wrap justify-between items-start mb-5">
+    <div class="flex items-center gap-3 mb-2 sm:mb-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-gray-900 flex items-center justify-center shadow-sm">
+            <i class="fas fa-shield-alt text-white"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black text-gray-800">وحدة الإدارة والتهيئة</h1>
+            <p class="text-xs text-gray-500">إعدادات النظام · الصلاحيات · سجلات المراقبة · الأمان والنسخ الاحتياطي</p>
         </div>
     </div>
+    <div class="flex flex-wrap gap-2 items-center">
+        @if (Model.SystemErrorsCount > 0)
+        {
+            <span class="bg-red-50 border border-red-200 text-red-700 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                <i class="fas fa-exclamation-triangle"></i> @Model.SystemErrorsCount تنبيه أمان
+            </span>
+        }
+        <a href="/Admin/Backup" class="quick-action-btn bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5">
+            <i class="fas fa-cloud-upload-alt"></i> نسخ احتياطي
+        </a>
+        <a href="/Users/Create" class="quick-action-btn bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5">
+            <i class="fas fa-user-plus"></i> مستخدم جديد
+        </a>
+        <a href="/Branches/Create" class="quick-action-btn bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all hover:-translate-y-0.5">
+            <i class="fas fa-building"></i> فرع جديد
+        </a>
+    </div>
+</div>
+
+<!-- ===== شريط اختصارات ===== -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-3 mb-5 flex flex-wrap gap-2 items-center">
+    <span class="text-xs text-gray-400 font-semibold ml-2">اختصارات:</span>
+    <a href="/Users/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-slate-100 border border-gray-200 hover:border-slate-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-users-cog text-slate-400 text-[10px]"></i> المستخدمون</a>
+    <a href="/Roles/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-user-shield text-indigo-400 text-[10px]"></i> الصلاحيات</a>
+    <a href="/Branches/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-network-wired text-blue-400 text-[10px]"></i> الفروع</a>
+    <a href="/Employees/Index" class="px-3 py-1.5 bg-gray-50 hover:bg-teal-50 border border-gray-200 hover:border-teal-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-id-badge text-teal-400 text-[10px]"></i> الموظفون</a>
+    <a href="/Admin/SystemLogs" class="px-3 py-1.5 bg-gray-50 hover:bg-amber-50 border border-gray-200 hover:border-amber-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-history text-amber-400 text-[10px]"></i> سجلات الرقابة</a>
+    <a href="/Admin/Settings" class="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-400 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-cogs text-gray-400 text-[10px]"></i> إعدادات النظام</a>
+    <a href="/Admin/Backup" class="px-3 py-1.5 bg-gray-50 hover:bg-sky-50 border border-gray-200 hover:border-sky-300 text-gray-700 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"><i class="fas fa-cloud text-sky-400 text-[10px]"></i> النسخ الاحتياطي</a>
 </div>
 
 <div class="space-y-6 pb-12">

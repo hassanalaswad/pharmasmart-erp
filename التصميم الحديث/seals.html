@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - العمليات التجارية | نظام إدارة صيدليات ذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: #f1f5f9; font-family: system-ui, 'Segoe UI', 'Tajawal', sans-serif; }
+        .sidebar-group-btn { transition: all 0.2s; }
+        .sidebar-group-btn:hover { background-color: #f1f5f9; }
+        .submenu-item { transition: all 0.15s; }
+        .submenu-item:hover { background-color: #f1f5f9; padding-right: 0.75rem; }
+        .kpi-card, .quick-action-btn { transition: all 0.2s; }
+        .kpi-card:hover, .quick-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        @media (max-width: 768px) { .sidebar-mobile-hidden { transform: translateX(100%); } .sidebar-mobile-visible { transform: translateX(0); } }
+        .data-table tbody tr:hover { background-color: #f8fafc; }
+        .tab-active { border-bottom: 3px solid #10b981; color: #065f46; font-weight: 600; }
+        .tab-inactive { color: #6b7280; border-bottom: 2px solid transparent; }
+        .tab-inactive:hover { color: #374151; border-bottom-color: #d1d5db; }
+        .pos-item:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+<div class="flex h-screen overflow-hidden">
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside id="sidebar" class="w-72 bg-white shadow-xl border-l border-gray-100 flex-shrink-0 overflow-y-auto z-20 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible">
+        <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+            <i class="fas fa-hospital-user text-2xl text-emerald-600"></i>
+            <span class="font-bold text-xl text-gray-800">تالين فارما</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mr-auto">v3.0</span>
+        </div>
+        <div class="p-4">
+            <div class="relative">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400">
+            </div>
+        </div>
+        <nav id="sidebarNavContainer" class="px-3 pb-6 space-y-1"></nav>
+        <div class="p-4 border-t border-gray-100 text-xs text-gray-400 mt-6">
+            <i class="fas fa-shield-alt"></i> عزل بيانات الفروع • RBAC • تنبؤ Prophet/Vertex AI
+        </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 overflow-y-auto bg-slate-50">
+        <!-- الهيدر -->
+        <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button id="toggleSidebarMobile" class="md:hidden text-gray-600 text-xl"><i class="fas fa-bars"></i></button>
+                    <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-store"></i> <span id="currentBranchDisplay">فرع صنعاء</span></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-user-tag text-gray-500"></i>
+                        <select id="roleSelector" class="bg-transparent text-sm font-semibold outline-none cursor-pointer">
+                            <option value="branch_manager">👨‍💼 مدير فرع (صنعاء)</option>
+                            <option value="super_admin">🌐 مدير النظام (سوبير أدمين)</option>
+                            <option value="cashier">🛒 كاشير / صيدلي</option>
+                        </select>
+                    </div>
+                    <button class="relative text-gray-600 hover:text-emerald-600"><i class="fas fa-bell text-xl"></i><span class="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] rounded-full px-1">3</span></button>
+                    <div class="flex items-center gap-2 border-r border-gray-200 pr-3">
+                        <i class="fas fa-user-circle text-2xl text-gray-500"></i>
+                        <span id="userNameDisplay" class="text-sm font-medium hidden md:inline">أحمد العسيري</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- محتوى العمليات التجارية (التبويبات) -->
+        <div class="p-5 md:p-6 space-y-6">
+            <!-- عنوان الوحدة + breadcrumb -->
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">العمليات التجارية</h1>
+                    <div class="text-sm text-gray-500 mt-1"><i class="fas fa-home"></i> الرئيسية / العمليات التجارية</div>
+                </div>
+            </div>
+
+            <!-- تبويبات التنقل بين الواجهات الخمس -->
+            <div class="border-b border-gray-200 bg-white rounded-t-xl shadow-sm">
+                <nav class="flex flex-wrap gap-1 px-4 pt-2" id="tabsNav">
+                    <button data-tab="pos" class="tab-active px-4 py-2 text-sm font-medium"><i class="fas fa-cash-register ml-1"></i> نقطة البيع السريعة</button>
+                    <button data-tab="sales" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-chart-line ml-1"></i> المبيعات</button>
+                    <button data-tab="salesReturn" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-undo-alt ml-1"></i> مرتجع المبيعات</button>
+                    <button data-tab="purchases" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-truck ml-1"></i> المشتريات</button>
+                    <button data-tab="purchaseReturn" class="tab-inactive px-4 py-2 text-sm font-medium"><i class="fas fa-arrow-left ml-1"></i> مرتجع المشتريات</button>
+                </nav>
+            </div>
+
+            <!-- محتوى التبويبات (5 واجهات) -->
+            <div class="bg-white rounded-b-xl shadow-lg p-5">
+                <!-- 1. نقطة البيع -->
+                <div id="posTab" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-xl border"><div class="relative"><i class="fas fa-search absolute right-3 top-3 text-gray-400"></i><input type="text" id="posSearch" placeholder="ابحث بالباركود أو اسم الدواء..." class="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg"></div><div class="mt-2 text-xs text-gray-400">مثال: 6281102 (باركود) أو "بنادول"</div></div>
+                            <div class="border rounded-xl overflow-hidden"><table class="min-w-full text-sm data-table"><thead class="bg-gray-100"><tr><th class="px-4 py-2 text-right">المنتج</th><th>السعر</th><th>المخزون</th><th></th></tr></thead><tbody id="posProductsList"><tr class="border-b"><td class="px-4 py-2">بنادول 500mg (شريط)</td><td>5.00 $</td><td>23</td><td><button class="add-to-cart bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs">إضافة</button></td></tr><tr class="border-b"><td class="px-4 py-2">أموكسيسيلين 500mg</td><td>8.50 $</td><td>12</td><td><button class="add-to-cart bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs">إضافة</button></td></tr><tr><td class="px-4 py-2">فنتولين بخاخ</td><td>12.00 $</td><td>5</td><td><button class="add-to-cart bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs">إضافة</button></td></tr></tbody></table></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-xl border"><h3 class="font-bold text-lg mb-2"><i class="fas fa-shopping-cart"></i> سلة البيع</h3><div id="cartItems" class="space-y-2 max-h-64 overflow-y-auto mb-3"><div class="text-center text-gray-400 py-4">السلة فارغة</div></div><div class="border-t pt-3"><div class="flex justify-between font-bold"><span>الإجمالي:</span><span id="cartTotal">0.00 $</span></div><div class="mt-3 flex gap-2"><select id="paymentMethod" class="border rounded px-2 py-1 text-sm"><option value="cash">نقدي</option><option value="credit">آجل</option><option value="card">بطاقة</option></select><button id="completeSaleBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-emerald-700">إنهاء الفاتورة</button></div></div></div>
+                    </div>
+                </div>
+                <!-- 2. المبيعات -->
+                <div id="salesTab" class="tab-content hidden"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">📋 فواتير المبيعات</h3><div class="flex gap-2"><button class="bg-gray-100 px-3 py-1 rounded text-sm"><i class="fas fa-file-excel"></i> تصدير</button><button class="bg-gray-100 px-3 py-1 rounded text-sm"><i class="fas fa-print"></i> طباعة</button></div></div><div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead class="bg-gray-100"><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody><tr><td>INV-101</td><td>2025-03-15</td><td>أحمد محمد</td><td>45.00 $</td><td><span class="bg-green-100 text-green-700 px-2 rounded-full">مدفوع</span></td><td><button class="text-blue-600 text-xs view-invoice">عرض</button></td></tr><tr><td>INV-102</td><td>2025-03-16</td><td>سعاد علي</td><td>120.00 $</td><td><span class="bg-yellow-100 text-yellow-700 px-2 rounded-full">آجل</span></td><td><button class="text-blue-600 text-xs view-invoice">عرض</button></td></tr></tbody></table></div></div>
+                <!-- 3. مرتجع المبيعات -->
+                <div id="salesReturnTab" class="tab-content hidden"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">🔄 مرتجع المبيعات</h3><button id="newReturnBtn" class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-sm"><i class="fas fa-plus"></i> إنشاء مرتجع جديد</button></div><div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead><tr><th>رقم المرتجع</th><th>الفاتورة الأصلية</th><th>العميل</th><th>المبلغ المسترد</th><th>التاريخ</th><th></th></tr></thead><tbody><tr><td>RET-001</td><td>INV-102</td><td>سعاد علي</td><td>25.00 $</td><td>2025-03-17</td><td><button class="text-gray-500 text-xs">عرض</button></td></tr></tbody></table></div></div>
+                <!-- 4. المشتريات -->
+                <div id="purchasesTab" class="tab-content hidden"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">🚚 فواتير المشتريات</h3><button id="newPurchaseBtn" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm"><i class="fas fa-cart-plus"></i> إضافة فاتورة شراء</button></div><div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead><tr><th>رقم الفاتورة</th><th>المورد</th><th>التاريخ</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead><tbody><tr><td>PO-1001</td><td>المدينة للأدوية</td><td>2025-03-10</td><td>1,250 $</td><td>مكتملة</td><td><button class="text-xs text-blue-600">تفاصيل</button></td></tr><tr><td>PO-1002</td><td>الرازي فارما</td><td>2025-03-14</td><td>890 $</td><td>قيد الاستلام</td><td><button class="text-xs text-blue-600">تفاصيل</button></td></tr></tbody></table></div></div>
+                <!-- 5. مرتجع المشتريات -->
+                <div id="purchaseReturnTab" class="tab-content hidden"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">↩️ مرتجع المشتريات (للموردين)</h3><button id="newPurchaseReturnBtn" class="bg-red-100 text-red-700 px-3 py-1 rounded text-sm"><i class="fas fa-exchange-alt"></i> تسجيل مرتجع</button></div><div class="overflow-x-auto"><table class="min-w-full text-sm border"><thead><tr><th>رقم مرتجع</th><th>فاتورة الشراء</th><th>المورد</th><th>المبلغ المسترد</th><th>التاريخ</th></tr></thead><tbody><tr><td>PR-001</td><td>PO-1001</td><td>المدينة للأدوية</td><td>150 $</td><td>2025-03-12</td></tr></tbody></table></div></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // ---------- القائمة الجانبية الديناميكية (3 أدوار) ----------
+    const sidebarStructure = {
+        super_admin: { groups: [{ name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية", icon: "fas fa-chart-pie" }], defaultOpen: true, isSingle: true },
+            { name: "إدارة المؤسسة", icon: "fas fa-building", items: [{ name: "الفروع" }, { name: "المستخدمين والصلاحيات" }, { name: "سجلات الرقابة" }], defaultOpen: false },
+            { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [{ name: "نقطة البيع السريعة" }, { name: "المبيعات" }, { name: "مرتجع المبيعات" }, { name: "المشتريات" }, { name: "مرتجع المشتريات" }], defaultOpen: true }] },
+        branch_manager: { groups: [{ name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية" }], defaultOpen: true },
+            { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [{ name: "نقطة البيع السريعة" }, { name: "المبيعات" }, { name: "مرتجع المبيعات" }, { name: "المشتريات" }, { name: "مرتجع المشتريات" }], defaultOpen: true },
+            { name: "المخزون والإمداد", icon: "fas fa-boxes", items: [{ name: "الأدوية والمخزون" }, { name: "نواقص الأدوية" }], defaultOpen: false }] },
+        cashier: { groups: [{ name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية" }], defaultOpen: true },
+            { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [{ name: "نقطة البيع السريعة" }, { name: "المبيعات (عرض فقط)" }, { name: "مرتجع المبيعات" }], defaultOpen: true }] }
+    };
+    function buildSidebar(role) {
+        const structure = sidebarStructure[role];
+        const container = document.getElementById('sidebarNavContainer');
+        container.innerHTML = '';
+        let openGroups = JSON.parse(localStorage.getItem('sidebar_open_groups')) || {};
+        structure.groups.forEach(group => {
+            const groupId = group.name.replace(/\s/g, '_');
+            const isOpen = openGroups[groupId] !== undefined ? openGroups[groupId] : group.defaultOpen;
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'group-item mb-1';
+            const btn = document.createElement('button');
+            btn.className = 'sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition';
+            btn.innerHTML = `<div class="flex items-center gap-3"><i class="${group.icon} w-5"></i><span class="text-sm font-medium">${group.name}</span></div><i class="fas fa-chevron-down text-xs transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}"></i>`;
+            const submenu = document.createElement('div');
+            submenu.className = `submenu space-y-1 pr-6 mt-1 ${isOpen ? '' : 'hidden'}`;
+            group.items.forEach(item => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm';
+                link.innerHTML = `<i class="${group.icon.replace('fa-exchange-alt','fa-circle')} w-5"></i><span>${item.name}</span>`;
+                link.addEventListener('click', (e) => { e.preventDefault(); alert(`تم التوجيه إلى: ${item.name} (محاكاة)`); });
+                submenu.appendChild(link);
+            });
+            btn.addEventListener('click', () => { submenu.classList.toggle('hidden'); const icon = btn.querySelector('.fa-chevron-down'); icon.classList.toggle('rotate-180'); openGroups[groupId] = !submenu.classList.contains('hidden'); localStorage.setItem('sidebar_open_groups', JSON.stringify(openGroups)); });
+            groupDiv.appendChild(btn); groupDiv.appendChild(submenu); container.appendChild(groupDiv);
+        });
+    }
+    function updateSidebarAndHeader(role) {
+        buildSidebar(role);
+        const userSpan = document.getElementById('userNameDisplay');
+        const branchSpan = document.getElementById('currentBranchDisplay');
+        if (role === 'branch_manager') { userSpan.innerText = 'أحمد العسيري (مدير فرع)'; branchSpan.innerText = 'فرع صنعاء'; }
+        else if (role === 'super_admin') { userSpan.innerText = 'سليمان الرئيس (مدير النظام)'; branchSpan.innerText = 'جميع الفروع'; }
+        else { userSpan.innerText = 'نور الصيدلي (كاشير)'; branchSpan.innerText = 'فرع صنعاء - كاشير'; }
+    }
+    const roleSelect = document.getElementById('roleSelector');
+    roleSelect.addEventListener('change', (e) => updateSidebarAndHeader(e.target.value));
+    updateSidebarAndHeader('branch_manager');
+
+    // ---------- تبويبات العمليات التجارية (التفاعل الأساسي) ----------
+    const tabs = { pos: document.getElementById('posTab'), sales: document.getElementById('salesTab'), salesReturn: document.getElementById('salesReturnTab'), purchases: document.getElementById('purchasesTab'), purchaseReturn: document.getElementById('purchaseReturnTab') };
+    const tabBtns = document.querySelectorAll('[data-tab]');
+    function activateTab(tabId) { Object.keys(tabs).forEach(id => tabs[id].classList.add('hidden')); tabs[tabId].classList.remove('hidden'); tabBtns.forEach(btn => { if (btn.dataset.tab === tabId) { btn.classList.remove('tab-inactive'); btn.classList.add('tab-active'); } else { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); } }); }
+    tabBtns.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
+    // ---------- محاكاة سلة البيع (POS) ----------
+    let cart = []; const cartContainer = document.getElementById('cartItems'); const cartTotalSpan = document.getElementById('cartTotal');
+    function updateCartUI() { if (cart.length === 0) { cartContainer.innerHTML = '<div class="text-center text-gray-400 py-4">السلة فارغة</div>'; cartTotalSpan.innerText = '0.00 $'; return; } let html = '', total = 0; cart.forEach((item, idx) => { total += item.price * item.qty; html += `<div class="flex justify-between items-center border-b pb-2"><div><span class="font-medium">${item.name}</span><span class="text-xs text-gray-500 mr-2">×${item.qty}</span></div><div>${(item.price*item.qty).toFixed(2)} $ <button class="remove-item text-red-500 mr-2" data-idx="${idx}"><i class="fas fa-trash-alt"></i></button></div></div>`; }); cartContainer.innerHTML = html; cartTotalSpan.innerText = total.toFixed(2) + ' $'; document.querySelectorAll('.remove-item').forEach(btn => btn.addEventListener('click', (e) => { cart.splice(parseInt(btn.dataset.idx), 1); updateCartUI(); })); }
+    document.querySelectorAll('.add-to-cart').forEach(btn => btn.addEventListener('click', (e) => { const row = btn.closest('tr'); const name = row.cells[0].innerText; const price = parseFloat(row.cells[1].innerText.replace('$','')); const existing = cart.find(i => i.name === name); if (existing) existing.qty++; else cart.push({ name, price, qty: 1 }); updateCartUI(); }));
+    document.getElementById('completeSaleBtn')?.addEventListener('click', () => { if (cart.length === 0) { alert('أضف منتجات أولاً'); return; } const method = document.getElementById('paymentMethod').value; alert(`تمت عملية البيع بنجاح! المبلغ: ${cartTotalSpan.innerText}\nطريقة الدفع: ${method}\nتم خصم المخزون وإنشاء القيد المحاسبي تلقائياً.`); cart = []; updateCartUI(); });
+    document.querySelectorAll('.view-invoice').forEach(btn => btn.addEventListener('click', () => alert('عرض تفاصيل الفاتورة')));
+    document.getElementById('newReturnBtn')?.addEventListener('click', () => alert('فتح نموذج إنشاء مرتجع مبيعات'));
+    document.getElementById('newPurchaseBtn')?.addEventListener('click', () => alert('نموذج إضافة فاتورة شراء'));
+    document.getElementById('newPurchaseReturnBtn')?.addEventListener('click', () => alert('تسجيل مرتجع مشتريات'));
+
+    // البحث في القائمة الجانبية وزر الطي للجوال
+    const searchInput = document.getElementById('sidebarSearch');
+    searchInput.addEventListener('input', (e) => { const term = e.target.value.trim().toLowerCase(); document.querySelectorAll('#sidebarNavContainer .submenu-item').forEach(link => { const text = link.innerText.toLowerCase(); link.style.display = (term === '' || text.includes(term)) ? 'flex' : 'none'; }); });
+    const toggleBtn = document.getElementById('toggleSidebarMobile');
+    const sidebar = document.getElementById('sidebar');
+    toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('sidebar-mobile-hidden'); sidebar.classList.toggle('sidebar-mobile-visible'); });
+</script>
+</body>
+</html>

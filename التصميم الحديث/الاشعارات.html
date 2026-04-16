@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - مركز التنبيهات والإشعارات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: #f1f5f9;
+            font-family: 'Inter', system-ui, 'Segoe UI', 'Tajawal', sans-serif;
+        }
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        /* تأثيرات البطاقات */
+        .notification-item {
+            transition: all 0.2s ease;
+            border-right: 4px solid transparent;
+        }
+        .notification-item:hover {
+            background-color: #f8fafc;
+            transform: translateX(-2px);
+        }
+        .notification-item.critical {
+            border-right-color: #ef4444;
+            background-color: #fef2f2;
+        }
+        .notification-item.warning {
+            border-right-color: #f59e0b;
+            background-color: #fffbeb;
+        }
+        .notification-item.info {
+            border-right-color: #3b82f6;
+        }
+        /* زر القراءة */
+        .mark-read-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .notification-item:hover .mark-read-btn {
+            opacity: 1;
+        }
+        /* الفلاتر */
+        .filter-btn.active {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+<div class="max-w-6xl mx-auto">
+    <!-- عنوان الصفحة والرأس -->
+    <div class="flex flex-wrap justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-bell text-emerald-600 ml-2"></i> مركز التنبيهات والإشعارات</h1>
+            <p class="text-gray-500 text-sm mt-1">آخر التحديثات والتنبيهات الهامة لإدارة الصيدلية</p>
+        </div>
+        <div class="flex gap-3 mt-2 sm:mt-0">
+            <button id="markAllReadBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-xl text-sm transition"><i class="fas fa-check-double ml-1"></i> تعيين الكل كمقروء</button>
+            <button id="refreshBtn" class="bg-white border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-xl text-sm transition"><i class="fas fa-sync-alt ml-1"></i> تحديث</button>
+        </div>
+    </div>
+
+    <!-- بطاقات إحصاء سريعة -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm p-4 border-r-4 border-red-500"><div class="flex justify-between"><span class="text-gray-500">حرجة (عاجلة)</span><i class="fas fa-exclamation-circle text-red-500 text-xl"></i></div><div class="text-2xl font-bold mt-1" id="criticalCount">3</div><div class="text-xs text-red-500">تتطلب تدخلاً فورياً</div></div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 border-r-4 border-amber-500"><div class="flex justify-between"><span class="text-gray-500">تحذيرية</span><i class="fas fa-triangle-exclamation text-amber-500 text-xl"></i></div><div class="text-2xl font-bold mt-1" id="warningCount">5</div><div class="text-xs text-amber-500">يجب مراجعتها قريباً</div></div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 border-r-4 border-blue-500"><div class="flex justify-between"><span class="text-gray-500">إعلامية</span><i class="fas fa-info-circle text-blue-500 text-xl"></i></div><div class="text-2xl font-bold mt-1" id="infoCount">8</div><div class="text-xs text-blue-500">معلومات وتحديثات</div></div>
+        <div class="bg-white rounded-2xl shadow-sm p-4 border-r-4 border-emerald-500"><div class="flex justify-between"><span class="text-gray-500">غير مقروء</span><i class="fas fa-envelope text-emerald-500 text-xl"></i></div><div class="text-2xl font-bold mt-1" id="unreadCount">12</div><div class="text-xs text-emerald-500">إشعارات جديدة</div></div>
+    </div>
+
+    <!-- شريط الفلاتر والبحث -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-center justify-between">
+        <div class="flex flex-wrap gap-2">
+            <button data-filter="all" class="filter-btn active px-4 py-1.5 rounded-full text-sm border border-gray-200 transition">الكل</button>
+            <button data-filter="critical" class="filter-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 transition">حرجة</button>
+            <button data-filter="warning" class="filter-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 transition">تحذيرية</button>
+            <button data-filter="info" class="filter-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 transition">إعلامية</button>
+            <button data-filter="unread" class="filter-btn px-4 py-1.5 rounded-full text-sm border border-gray-200 transition">غير مقروءة</button>
+        </div>
+        <div class="relative">
+            <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+            <input type="text" id="searchNotifications" placeholder="بحث في التنبيهات..." class="pr-9 pl-3 py-2 border border-gray-200 rounded-xl text-sm w-64 focus:outline-none focus:ring-1 focus:ring-emerald-400">
+        </div>
+    </div>
+
+    <!-- قائمة التنبيهات -->
+    <div id="notificationsList" class="space-y-3">
+        <!-- سيتم ملؤها بواسطة JavaScript -->
+    </div>
+
+    <!-- رسالة عند عدم وجود نتائج -->
+    <div id="noResults" class="hidden text-center py-12 bg-white rounded-2xl shadow-sm">
+        <i class="fas fa-bell-slash text-gray-300 text-5xl mb-3"></i>
+        <p class="text-gray-500">لا توجد تنبيهات تطابق معايير البحث</p>
+    </div>
+</div>
+
+<script>
+    // بيانات التنبيهات والإشعارات (محاكاة كاملة)
+    let notifications = [
+        { id: 1, type: 'critical', title: 'نفاد دواء منقذ للحياة', message: 'دواء "أدرينالين حقن" قد نفد تماماً من المخزون. يرجى طلب عاجل.', time: 'منذ 5 دقائق', read: false, link: '/shortages', icon: 'fa-heartbeat', relatedId: 'drug_101' },
+        { id: 2, type: 'critical', title: 'انتهاء صلاحية دواء', message: 'دواء "باراسيتامول شراب" ينتهي خلال 3 أيام (الكمية 15 علبة). قيمة الهدر المتوقعة 75$', time: 'منذ ساعة', read: false, link: '/expiry', icon: 'fa-calendar-times', relatedId: 'exp_45' },
+        { id: 3, type: 'warning', title: 'الحد الأدنى للمخزون', message: 'دواء "فنتولين بخاخ" وصل إلى حد الطلب (المتبقي 5 وحدات). الكمية الموصى بها EOQ: 20', time: 'منذ ساعتين', read: false, link: '/shortages', icon: 'fa-box-open' },
+        { id: 4, type: 'warning', title: 'فاتورة آجلة مستحقة', message: 'فاتورة العميل "سعاد علي" رقم INV-102 مستحقة الدفع اليوم (المبلغ 120$).', time: 'منذ 3 ساعات', read: true, link: '/sales', icon: 'fa-file-invoice-dollar' },
+        { id: 5, type: 'info', title: 'تحويل مخزني قادم', message: 'تم إنشاء تحويل مخزني من فرع صنعاء إلى فرع عدن للأدوية: أوجمنتين 1g (الكمية 30).', time: 'أمس', read: false, link: '/transfers', icon: 'fa-truck' },
+        { id: 6, type: 'info', title: 'تقرير التنبؤ الموسمي جاهز', message: 'تم تحديث توقعات الطلب الموسمي لأدوية الحساسية (زيادة متوقعة 35% في أبريل).', time: 'أمس', read: true, link: '/forecasting', icon: 'fa-chart-line' },
+        { id: 7, type: 'critical', title: 'خطأ في القيد المحاسبي', message: 'تم اكتشاف قيد غير متوازن في قيد اليومية رقم J-045 (المدين 500$ والدائن 450$).', time: 'أمس', read: false, link: '/journal', icon: 'fa-balance-scale' },
+        { id: 8, type: 'warning', title: 'اقتراح شراء تلقائي', message: 'نظام الذكاء الاصطناعي يوصي بشراء 50 علبة من "سيتريزين 10mg" للموسم القادم (التكلفة التقديرية 250$).', time: 'أمس', read: true, link: '/forecasting', icon: 'fa-robot' },
+        { id: 9, type: 'info', title: 'تم إنشاء نسخة احتياطية', message: 'تم إنشاء نسخة احتياطية تلقائية للبيانات الساعة 2:00 صباحاً. الموقع: /backup/2025-03-18.zip', time: '2025-03-18', read: true, link: '/backup', icon: 'fa-database' },
+        { id: 10, type: 'warning', title: 'مورد يقدم خصماً', message: 'المورد "المدينة للأدوية" يقدم خصم 10% على أدوية السكري حتى نهاية الشهر.', time: '2025-03-17', read: false, link: '/suppliers', icon: 'fa-tags' },
+        { id: 11, type: 'info', title: 'تم إضافة مستخدم جديد', message: 'تم إنشاء حساب جديد للموظف "نور الصيدلي" بدور كاشير في فرع صنعاء.', time: '2025-03-17', read: true, link: '/users', icon: 'fa-user-plus' },
+        { id: 12, type: 'critical', title: 'انقطاع اتصال POS', message: 'جهاز نقطة البيع رقم 2 غير متصل منذ 10 دقائق (وضع غير متصل نشط).', time: '2025-03-17', read: false, link: '/pos', icon: 'fa-plug' }
+    ];
+
+    // دوال مساعدة
+    function getTypeStyle(type) {
+        switch(type) {
+            case 'critical': return { bg: 'bg-red-50', border: 'border-red-200', iconColor: 'text-red-600', badge: 'حرجة' };
+            case 'warning': return { bg: 'bg-amber-50', border: 'border-amber-200', iconColor: 'text-amber-600', badge: 'تحذير' };
+            default: return { bg: 'bg-blue-50', border: 'border-blue-200', iconColor: 'text-blue-600', badge: 'إعلام' };
+        }
+    }
+
+    function formatTimeAgo(dateString) {
+        // بسيطة: نعيد النص كما هو لأنه جاهز من البيانات
+        return dateString;
+    }
+
+    let currentFilter = 'all';
+    let searchTerm = '';
+
+    function renderNotifications() {
+        const container = document.getElementById('notificationsList');
+        let filtered = notifications.filter(n => {
+            if (currentFilter === 'all') return true;
+            if (currentFilter === 'unread') return !n.read;
+            return n.type === currentFilter;
+        });
+        if (searchTerm.trim() !== '') {
+            filtered = filtered.filter(n => n.title.includes(searchTerm) || n.message.includes(searchTerm));
+        }
+        // تحديث الإحصائيات
+        document.getElementById('criticalCount').innerText = notifications.filter(n => n.type === 'critical').length;
+        document.getElementById('warningCount').innerText = notifications.filter(n => n.type === 'warning').length;
+        document.getElementById('infoCount').innerText = notifications.filter(n => n.type === 'info').length;
+        document.getElementById('unreadCount').innerText = notifications.filter(n => !n.read).length;
+
+        if (filtered.length === 0) {
+            document.getElementById('noResults').classList.remove('hidden');
+            container.innerHTML = '';
+            return;
+        }
+        document.getElementById('noResults').classList.add('hidden');
+        container.innerHTML = filtered.map(notif => {
+            const style = getTypeStyle(notif.type);
+            const readClass = notif.read ? 'opacity-80' : 'font-semibold';
+            return `
+                <div class="notification-item ${notif.type} ${!notif.read ? 'unread' : ''} bg-white rounded-xl shadow-sm p-4 transition-all ${!notif.read ? 'border-r-4 border-emerald-400' : ''}" data-id="${notif.id}">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full ${style.bg} flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${notif.icon} ${style.iconColor} text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex flex-wrap justify-between items-start gap-2">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-base ${readClass} text-gray-800">${notif.title}</h3>
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${style.bg} ${style.iconColor}">${style.badge}</span>
+                                    ${!notif.read ? '<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">جديد</span>' : ''}
+                                </div>
+                                <div class="flex items-center gap-2 text-xs text-gray-400">
+                                    <i class="far fa-clock"></i> ${formatTimeAgo(notif.time)}
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">${notif.message}</p>
+                            <div class="flex justify-between items-center mt-3">
+                                <a href="#" class="text-emerald-600 text-xs hover:underline flex items-center gap-1 view-details" data-link="${notif.link}"><i class="fas fa-arrow-left"></i> عرض التفاصيل</a>
+                                <button class="mark-read-btn text-gray-400 hover:text-emerald-600 text-xs ${notif.read ? 'hidden' : ''}" data-id="${notif.id}"><i class="fas fa-check-circle ml-1"></i> تعيين كمقروء</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // إعادة ربط الأحداث
+        document.querySelectorAll('.mark-read-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                const notif = notifications.find(n => n.id === id);
+                if (notif && !notif.read) {
+                    notif.read = true;
+                    renderNotifications();
+                }
+            });
+        });
+        document.querySelectorAll('.view-details').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = link.dataset.link;
+                alert(`توجيه إلى ${target} (محاكاة تفاعلية)\nيمكن ربط هذا بالواجهة الحقيقية لفتح التفاصيل.`);
+            });
+        });
+    }
+
+    // تعيين الكل كمقروء
+    document.getElementById('markAllReadBtn').addEventListener('click', () => {
+        notifications.forEach(n => { if (!n.read) n.read = true; });
+        renderNotifications();
+        alert('تم تعيين جميع التنبيهات كمقروءة');
+    });
+    // تحديث
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        renderNotifications();
+        alert('تم تحديث قائمة التنبيهات');
+    });
+    // فلاتر
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            renderNotifications();
+        });
+    });
+    // بحث
+    const searchInput = document.getElementById('searchNotifications');
+    searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderNotifications();
+    });
+
+    // تحميل أولي
+    renderNotifications();
+</script>
+</body>
+</html>

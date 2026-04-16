@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>تالين فارما - لوحة التحكم الرئيسية | نظام إدارة صيدليات ذكي</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تخصيصات متقدمة */
+        body {
+            background: #f1f5f9;
+            font-family: 'Tajawal', system-ui, 'Segoe UI', sans-serif;
+        }
+        /* تأثيرات القائمة الجانبية */
+        .sidebar-group-btn {
+            transition: all 0.2s;
+        }
+        .sidebar-group-btn:hover {
+            background-color: #f1f5f9;
+        }
+        .submenu-item {
+            transition: all 0.15s;
+        }
+        .submenu-item:hover {
+            background-color: #f1f5f9;
+            padding-right: 0.75rem;
+        }
+        /* بطاقات وأزرار */
+        .kpi-card, .quick-action-btn {
+            transition: all 0.2s ease;
+        }
+        .kpi-card:hover, .quick-action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        }
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        /* للجوال */
+        @media (max-width: 768px) {
+            .sidebar-mobile-hidden {
+                transform: translateX(100%);
+            }
+            .sidebar-mobile-visible {
+                transform: translateX(0);
+            }
+        }
+        /* تنسيق الجداول */
+        .data-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .active-sidebar-item {
+            background-color: #ecfdf5;
+            color: #059669;
+            border-right: 3px solid #10b981;
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+<div class="flex h-screen overflow-hidden">
+    
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside id="sidebar" class="w-72 bg-white shadow-xl border-l border-gray-100 flex-shrink-0 overflow-y-auto z-20 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible">
+        <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+            <i class="fas fa-hospital-user text-2xl text-emerald-600"></i>
+            <span class="font-bold text-xl text-gray-800">تالين فارما</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mr-auto">v3.0</span>
+        </div>
+        
+        <!-- شريط بحث داخل القائمة -->
+        <div class="p-4">
+            <div class="relative">
+                <i class="fas fa-search absolute right-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400">
+            </div>
+        </div>
+
+        <!-- حاوية عناصر القائمة (سيتم ملؤها ديناميكيًا حسب الدور) -->
+        <nav id="sidebarNavContainer" class="px-3 pb-6 space-y-1">
+            <!-- سيتم إدراج القوائم هنا عبر JS -->
+        </nav>
+        
+        <div class="p-4 border-t border-gray-100 text-xs text-gray-400 mt-6">
+            <i class="fas fa-shield-alt"></i> عزل بيانات الفروع • RBAC • تنبؤ Prophet/Vertex AI
+        </div>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 overflow-y-auto bg-slate-50">
+        <!-- الهيدر العلوي -->
+        <header class="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
+            <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button id="toggleSidebarMobile" class="md:hidden text-gray-600 text-xl"><i class="fas fa-bars"></i></button>
+                    <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-store"></i> <span id="currentBranchDisplay">فرع صنعاء</span></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <!-- محدد الدور (محاكاة) -->
+                    <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-user-tag text-gray-500"></i>
+                        <select id="roleSelector" class="bg-transparent text-sm font-semibold outline-none cursor-pointer">
+                            <option value="branch_manager">👨‍💼 مدير فرع (صنعاء)</option>
+                            <option value="super_admin">🌐 مدير النظام (سوبير أدمين)</option>
+                            <option value="cashier">🛒 كاشير / صيدلي</option>
+                        </select>
+                    </div>
+                    <button class="relative text-gray-600 hover:text-emerald-600 transition">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] rounded-full px-1">3</span>
+                    </button>
+                    <div class="flex items-center gap-2 border-r border-gray-200 pr-3">
+                        <i class="fas fa-user-circle text-2xl text-gray-500"></i>
+                        <span id="userNameDisplay" class="text-sm font-medium hidden md:inline">أحمد العسيري</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- محتوى لوحة التحكم (يتغير حسب الدور) -->
+        <div id="dashboardContent" class="p-5 md:p-6 space-y-6">
+            <!-- سيتم ملؤه ديناميكيًا -->
+        </div>
+
+        <!-- زر عائم للبيع السريع (يظهر لمدير الفرع والكاشير) -->
+        <div id="fabContainer" class="fixed bottom-6 left-6 z-30"></div>
+    </main>
+</div>
+
+<script>
+    // ----- تعريف عناصر القائمة الجانبية لكل دور (هيكل متقدم مع مجموعات قابلة للطي) -----
+    const sidebarStructure = {
+        super_admin: {
+            groups: [
+                { name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية", icon: "fas fa-chart-pie", id: "dashboard" }], defaultOpen: true, isSingle: true },
+                { name: "إدارة المؤسسة", icon: "fas fa-building", items: [
+                    { name: "الفروع", icon: "fas fa-store", id: "branches" },
+                    { name: "المستخدمين والصلاحيات", icon: "fas fa-users-cog", id: "users-roles" },
+                    { name: "إعدادات المؤسسة", icon: "fas fa-sliders-h", id: "settings" },
+                    { name: "سجلات الرقابة", icon: "fas fa-history", id: "audit-logs" },
+                    { name: "النسخ الاحتياطي", icon: "fas fa-database", id: "backup" }
+                ], defaultOpen: false },
+                { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [
+                    { name: "نقطة البيع السريعة", icon: "fas fa-cash-register", id: "pos" },
+                    { name: "المبيعات", icon: "fas fa-chart-line", id: "sales" },
+                    { name: "مرتجع المبيعات", icon: "fas fa-undo-alt", id: "sales-return" },
+                    { name: "المشتريات", icon: "fas fa-truck", id: "purchases" },
+                    { name: "مرتجع المشتريات", icon: "fas fa-arrow-left", id: "purchase-return" }
+                ], defaultOpen: true },
+                { name: "المخزون والإمداد", icon: "fas fa-boxes", items: [
+                    { name: "الأدوية والمخزون", icon: "fas fa-capsules", id: "drugs" },
+                    { name: "المستودعات والرفوف", icon: "fas fa-warehouse", id: "warehouses" },
+                    { name: "جرد وتسوية المخزون", icon: "fas fa-clipboard-list", id: "stock-audit" },
+                    { name: "التحويلات المخزنية", icon: "fas fa-exchange-alt", id: "stock-transfers" },
+                    { name: "نواقص الأدوية", icon: "fas fa-exclamation-triangle", id: "shortages" },
+                    { name: "مراقبة الصلاحية", icon: "fas fa-calendar-times", id: "expiry" }
+                ], defaultOpen: false },
+                { name: "المالية والحسابات", icon: "fas fa-chart-pie", items: [
+                    { name: "لوحة تحكم المالية", icon: "fas fa-chart-line", id: "finance-dashboard" },
+                    { name: "الدليل المحاسبي", icon: "fas fa-book", id: "chart-of-accounts" },
+                    { name: "القيود اليومية", icon: "fas fa-journal-whills", id: "journal" }
+                ], defaultOpen: false },
+                { name: "التخطيط والتنبؤ", icon: "fas fa-chart-line", items: [
+                    { name: "التنبؤ بخطة المشتريات", icon: "fas fa-robot", id: "forecasting" },
+                    { name: "العوامل الموسمية", icon: "fas fa-cloud-sun", id: "seasonal" }
+                ], defaultOpen: false },
+                { name: "التقارير", icon: "fas fa-file-alt", items: [
+                    { name: "مركز التقارير", icon: "fas fa-chart-bar", id: "reports" }
+                ], defaultOpen: false }
+            ]
+        },
+        branch_manager: {
+            groups: [
+                { name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية", icon: "fas fa-chart-pie", id: "dashboard" }], defaultOpen: true, isSingle: true },
+                { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [
+                    { name: "نقطة البيع السريعة", icon: "fas fa-cash-register", id: "pos" },
+                    { name: "المبيعات", icon: "fas fa-chart-line", id: "sales" },
+                    { name: "مرتجع المبيعات", icon: "fas fa-undo-alt", id: "sales-return" },
+                    { name: "المشتريات", icon: "fas fa-truck", id: "purchases" },
+                    { name: "مرتجع المشتريات", icon: "fas fa-arrow-left", id: "purchase-return" }
+                ], defaultOpen: true },
+                { name: "المخزون والإمداد", icon: "fas fa-boxes", items: [
+                    { name: "الأدوية والمخزون", icon: "fas fa-capsules", id: "drugs" },
+                    { name: "المستودعات والرفوف", icon: "fas fa-warehouse", id: "warehouses" },
+                    { name: "جرد وتسوية المخزون", icon: "fas fa-clipboard-list", id: "stock-audit" },
+                    { name: "التحويلات المخزنية", icon: "fas fa-exchange-alt", id: "stock-transfers" },
+                    { name: "نواقص الأدوية", icon: "fas fa-exclamation-triangle", id: "shortages" },
+                    { name: "مراقبة الصلاحية", icon: "fas fa-calendar-times", id: "expiry" }
+                ], defaultOpen: false },
+                { name: "المالية والحسابات", icon: "fas fa-chart-pie", items: [
+                    { name: "لوحة تحكم المالية", icon: "fas fa-chart-line", id: "finance-dashboard" },
+                    { name: "الدليل المحاسبي", icon: "fas fa-book", id: "chart-of-accounts" },
+                    { name: "القيود اليومية", icon: "fas fa-journal-whills", id: "journal" },
+                    { name: "التحويلات المالية", icon: "fas fa-exchange-alt", id: "fund-transfers" },
+                    { name: "كشف الحساب", icon: "fas fa-receipt", id: "account-statement" },
+                    { name: "التقارير المالية", icon: "fas fa-chart-line", id: "financial-reports" }
+                ], defaultOpen: false },
+                { name: "العلاقات التجارية", icon: "fas fa-handshake", items: [
+                    { name: "العملاء", icon: "fas fa-user-friends", id: "customers" },
+                    { name: "الموردين", icon: "fas fa-truck", id: "suppliers" },
+                    { name: "الموظفين", icon: "fas fa-user-md", id: "employees" }
+                ], defaultOpen: false },
+                { name: "التخطيط والتنبؤ", icon: "fas fa-chart-line", items: [
+                    { name: "التنبؤ بخطة المشتريات", icon: "fas fa-robot", id: "forecasting" },
+                    { name: "العوامل الموسمية", icon: "fas fa-cloud-sun", id: "seasonal" }
+                ], defaultOpen: false },
+                { name: "التقارير", icon: "fas fa-file-alt", items: [
+                    { name: "مركز التقارير", icon: "fas fa-chart-bar", id: "reports" }
+                ], defaultOpen: false }
+            ]
+        },
+        cashier: {
+            groups: [
+                { name: "الرئيسية", icon: "fas fa-tachometer-alt", items: [{ name: "لوحة التحكم الرئيسية", icon: "fas fa-chart-pie", id: "dashboard" }], defaultOpen: true, isSingle: true },
+                { name: "العمليات التجارية", icon: "fas fa-exchange-alt", items: [
+                    { name: "نقطة البيع السريعة", icon: "fas fa-cash-register", id: "pos" },
+                    { name: "المبيعات (عرض فقط)", icon: "fas fa-chart-line", id: "sales-view" },
+                    { name: "مرتجع المبيعات", icon: "fas fa-undo-alt", id: "sales-return" }
+                ], defaultOpen: true },
+                { name: "المخزون والإمداد (عرض)", icon: "fas fa-boxes", items: [
+                    { name: "الأدوية والمخزون (بحث)", icon: "fas fa-capsules", id: "drugs-view" },
+                    { name: "نواقص الأدوية (عرض)", icon: "fas fa-exclamation-triangle", id: "shortages-view" },
+                    { name: "مراقبة الصلاحية (عرض)", icon: "fas fa-calendar-times", id: "expiry-view" }
+                ], defaultOpen: false },
+                { name: "إغلاق الوردية", icon: "fas fa-door-closed", items: [
+                    { name: "إغلاق الوردية الحالية", icon: "fas fa-lock", id: "shift-closing" }
+                ], defaultOpen: false, isSingle: true }
+            ]
+        }
+    };
+
+    // --- دوال إنشاء القائمة الجانبية ديناميكيًا مع حفظ حالة الطي ---
+    function buildSidebar(role) {
+        const structure = sidebarStructure[role];
+        if (!structure) return;
+        const container = document.getElementById('sidebarNavContainer');
+        container.innerHTML = '';
+        // استرجاع تفضيلات الطي من localStorage
+        let openGroups = JSON.parse(localStorage.getItem('sidebar_open_groups')) || {};
+        
+        structure.groups.forEach(group => {
+            const groupId = group.name.replace(/\s/g, '_');
+            const isOpen = openGroups[groupId] !== undefined ? openGroups[groupId] : group.defaultOpen;
+            // إنشاء عنصر المجموعة
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'group-item mb-1';
+            // زر المجموعة
+            const btn = document.createElement('button');
+            btn.className = `sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition`;
+            btn.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="${group.icon} w-5"></i>
+                    <span class="text-sm font-medium">${group.name}</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}"></i>
+            `;
+            const submenu = document.createElement('div');
+            submenu.className = `submenu space-y-1 pr-6 mt-1 ${isOpen ? '' : 'hidden'}`;
+            // إضافة عناصر المجموعة
+            group.items.forEach(item => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = `submenu-item flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm transition-all`;
+                link.innerHTML = `<i class="${item.icon} w-5"></i><span>${item.name}</span>`;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    alert(`تم التوجيه إلى وحدة: ${item.name} (محاكاة تفاعلية)\nالنظام يدعم RBAC وعزل الفروع والذكاء الاصطناعي.`);
+                });
+                submenu.appendChild(link);
+            });
+            btn.addEventListener('click', () => {
+                const icon = btn.querySelector('.fa-chevron-down');
+                submenu.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+                // حفظ الحالة
+                openGroups[groupId] = !submenu.classList.contains('hidden');
+                localStorage.setItem('sidebar_open_groups', JSON.stringify(openGroups));
+            });
+            groupDiv.appendChild(btn);
+            groupDiv.appendChild(submenu);
+            container.appendChild(groupDiv);
+        });
+    }
+
+    // --- دوال إنشاء محتوى لوحة التحكم حسب الدور (احترافية) ---
+    function getBranchManagerDashboard() {
+        return `
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2 hover:shadow-md border border-gray-100"><i class="fas fa-cash-register text-2xl text-emerald-600"></i><span class="text-sm font-medium">بيع جديد</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-shopping-cart text-2xl text-blue-600"></i><span class="text-sm font-medium">طلب شراء</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-clipboard-list text-2xl text-amber-600"></i><span class="text-sm font-medium">جرد سريع</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-chart-simple text-2xl text-purple-600"></i><span class="text-sm font-medium">تقرير اليوم</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-exclamation-triangle text-2xl text-red-500"></i><span class="text-sm font-medium">نواقص عاجلة</span></button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-emerald-500"><div class="flex justify-between"><span class="text-gray-500 text-sm">مبيعات اليوم</span><i class="fas fa-chart-line text-emerald-500"></i></div><div class="text-2xl font-bold mt-2">1,250 $</div><div class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> +12% عن الأمس</div><button class="mt-3 text-emerald-600 text-xs font-medium hover:underline">تقرير مفصل →</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-amber-500"><div class="flex justify-between"><span class="text-gray-500 text-sm">أصناف ناقصة</span><i class="fas fa-box-open text-amber-500"></i></div><div class="text-2xl font-bold mt-2">8</div><div class="text-xs text-amber-600 mt-1">يحتاج طلب عاجل</div><button class="mt-3 text-amber-600 text-xs font-medium hover:underline">طلب شراء →</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-red-400"><div class="flex justify-between"><span class="text-gray-500 text-sm">صلاحية ≤30 يوم</span><i class="fas fa-calendar-times text-red-500"></i></div><div class="text-2xl font-bold mt-2">12</div><div class="text-xs text-red-500 mt-1">قيمة: 540$ مهددة</div><button class="mt-3 text-red-500 text-xs font-medium hover:underline">ترويج سريع →</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-blue-500"><div class="flex justify-between"><span class="text-gray-500 text-sm">الرصيد النقدي</span><i class="fas fa-wallet text-blue-500"></i></div><div class="text-2xl font-bold mt-2">5,200 $</div><div class="text-xs text-gray-500 mt-1">خزنة + بنك</div><button class="mt-3 text-blue-600 text-xs font-medium hover:underline">كشف حساب →</button></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow p-4"><div class="flex justify-between items-center mb-3"><h3 class="font-semibold">المبيعات الفعلية vs توقعات الذكاء الاصطناعي</h3><span class="text-xs text-gray-400"><i class="fas fa-chart-line"></i> Prophet + Vertex AI</span></div><canvas id="salesChart" height="180" style="max-height: 220px; width:100%"></canvas><div class="text-xs text-center text-gray-400 mt-2">الخط المتصل: فعلي | المتقطع: متوقع</div></div>
+                <div class="bg-white rounded-2xl shadow p-4"><div class="flex justify-between items-center mb-3"><h3 class="font-semibold"><i class="fas fa-exclamation-circle text-amber-500"></i> أدوية تحتاج قرارًا</h3><button class="text-emerald-600 text-xs">عرض الكل</button></div><div class="space-y-3"><div class="flex justify-between items-center border-b pb-2"><div><p class="font-medium">بنادول 500mg</p><p class="text-xs text-gray-500">مخزون: 5 | حد الطلب: 20</p></div><button class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs"><i class="fas fa-cart-plus"></i> شراء عاجل</button></div><div class="flex justify-between items-center border-b pb-2"><div><p class="font-medium">أموكسيسيلين</p><p class="text-xs text-gray-500">مخزون: 0 | حد الطلب: 15</p></div><button class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs">طلب</button></div><div class="flex justify-between items-center"><div><p class="font-medium">سيتريزين</p><p class="text-xs text-gray-500">مخزون: 12 | حد الطلب: 30 (موسمي)</p></div><button class="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">توقع موسمي</button></div></div></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl shadow p-4"><div class="flex justify-between items-center mb-3"><h3 class="font-semibold">🧾 آخر فواتير البيع</h3><a href="#" class="text-emerald-600 text-sm">كل الفواتير</a></div><div class="overflow-x-auto"><table class="min-w-full text-sm data-table"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-right">رقم الفاتورة</th><th class="px-4 py-2 text-right">العميل</th><th class="px-4 py-2 text-right">المبلغ</th><th class="px-4 py-2 text-right">الحالة</th><th></th></tr></thead><tbody><tr class="border-b"><td class="px-4 py-2">INV-101</td><td>أحمد محمد</td><td>45.00 $</td><td><span class="bg-green-100 text-green-700 px-2 rounded-full text-xs">مدفوع</span></td><td><i class="fas fa-print text-gray-400"></i></td></tr><tr class="border-b"><td class="px-4 py-2">INV-102</td><td>سعاد علي</td><td>120.00 $</td><td><span class="bg-yellow-100 text-yellow-700 px-2 rounded-full text-xs">آجل</span></td><td><i class="fas fa-receipt"></i></td></tr><tr><td class="px-4 py-2">INV-103</td><td>محمد صلاح</td><td>78.50 $</td><td><span class="bg-green-100 text-green-700 px-2 rounded-full text-xs">مدفوع</span></td><td><i class="fas fa-print"></i></td></tr></tbody></table></div></div>
+                <div class="bg-white rounded-2xl shadow p-4"><div class="flex justify-between items-center mb-3"><h3 class="font-semibold"><i class="fas fa-bell"></i> التنبيهات الذكية</h3><button class="text-emerald-600 text-xs">تحديث</button></div><ul class="space-y-3"><li class="flex gap-3 text-sm"><i class="fas fa-chart-line text-emerald-500"></i><span>توقع زيادة الطلب على أدوية الحساسية خلال أسبوعين.</span></li><li class="flex gap-3 text-sm"><i class="fas fa-trash-alt text-red-500"></i><span>باراسيتامول شراب ينتهي خلال 10 أيام.</span></li><li class="flex gap-3 text-sm"><i class="fas fa-truck text-blue-500"></i><span>تحويل مخزني قادم من فرع آزال.</span></li></ul></div>
+            </div>
+        `;
+    }
+
+    function getSuperAdminDashboard() {
+        return `
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-indigo-800 text-sm mb-5"><i class="fas fa-globe"></i> رؤية موحدة: جميع الفروع (صنعاء، عدن، تعز)</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-chart-line text-2xl text-emerald-600"></i><span class="text-sm font-medium">إجمالي التقارير</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-users text-2xl text-blue-600"></i><span class="text-sm font-medium">إدارة المستخدمين</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-store text-2xl text-amber-600"></i><span class="text-sm font-medium">الفروع</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-database text-2xl text-purple-600"></i><span class="text-sm font-medium">نسخ احتياطي</span></button>
+                <button class="quick-action-btn bg-white shadow rounded-xl py-3 px-2 flex flex-col items-center gap-2"><i class="fas fa-chart-simple text-2xl text-red-500"></i><span class="text-sm font-medium">مقارنة الفروع</span></button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-emerald-500"><div><span class="text-gray-500">إجمالي مبيعات اليوم (كل الفروع)</span></div><div class="text-2xl font-bold mt-1">3,870 $</div><button class="mt-2 text-emerald-600 text-xs">تفاصيل</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-amber-500"><div><span class="text-gray-500">إجمالي النواقص</span></div><div class="text-2xl font-bold mt-1">22 صنف</div><button class="mt-2 text-amber-600 text-xs">عرض الكل</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-red-400"><div><span class="text-gray-500">صلاحية حرجة (≤30 يوم)</span></div><div class="text-2xl font-bold mt-1">34 دواء</div><button class="mt-2 text-red-500 text-xs">تنبيه مركزي</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4 border-r-4 border-blue-500"><div><span class="text-gray-500">أفضل فرع (مبيعات)</span></div><div class="text-2xl font-bold mt-1">صنعاء</div><button class="mt-2 text-blue-600 text-xs">نسخ الإعدادات</button></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4 mb-6"><canvas id="branchesChart" height="120" style="max-height:200px"></canvas></div>
+            <div class="bg-white rounded-2xl shadow p-4"><h3 class="font-semibold mb-2">🏆 أداء الفروع (شهري)</h3><table class="min-w-full text-sm"><thead><tr><th>الفرع</th><th>المبيعات</th><th>النواقص</th><th>دوران المخزون</th></tr></thead><tbody><tr><td>صنعاء</td><td>15,200 $</td><td>8</td><td>4.2</td></tr><tr><td>عدن</td><td>9,800 $</td><td>12</td><td>3.1</td></tr><tr><td>تعز</td><td>11,500 $</td><td>6</td><td>3.8</td></tr></tbody></table></div>
+        `;
+    }
+
+    function getCashierDashboard() {
+        return `
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="kpi-card bg-white rounded-2xl shadow p-4"><span class="text-gray-500">مبيعات الوردية الحالية</span><div class="text-2xl font-bold">320 $</div><span class="text-xs text-green-600">5 فواتير</span></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4"><span class="text-gray-500">النقد في الدرج</span><div class="text-2xl font-bold">412 $</div><button class="text-blue-500 text-xs mt-1">تسوية</button></div>
+                <div class="kpi-card bg-white rounded-2xl shadow p-4"><span class="text-gray-500">آخر فاتورة</span><div class="text-2xl font-bold">15:30</div><span class="text-xs">العميل: نورا</span></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4 mb-6"><canvas id="shiftChart" height="100" style="max-height:180px"></canvas><p class="text-center text-xs text-gray-500 mt-2">مبيعات الوردية (بالساعة)</p></div>
+            <div class="bg-white rounded-2xl shadow p-4"><h3 class="font-semibold mb-2">🧾 فواتير اليوم (آخر 5)</h3><table class="min-w-full text-sm"><thead><tr><th>رقم</th><th>العميل</th><th>المبلغ</th><th>الوقت</th></tr></thead><tbody><tr><td>201</td><td>سارة</td><td>25$</td><td>10:15</td></tr><tr><td>202</td><td>خالد</td><td>48$</td><td>11:00</td></tr><tr><td>203</td><td>ريم</td><td>120$</td><td>13:20</td></tr></tbody></table><button class="mt-3 text-emerald-600 text-sm w-full py-2 border-t">عرض كل الفواتير</button></div>
+        `;
+    }
+
+    let charts = {};
+    function renderChartsForRole(role) {
+        if (charts.salesChart) charts.salesChart.destroy();
+        if (charts.branchesChart) charts.branchesChart.destroy();
+        if (charts.shiftChart) charts.shiftChart.destroy();
+        if (role === 'branch_manager') {
+            const ctx = document.getElementById('salesChart')?.getContext('2d');
+            if (ctx) charts.salesChart = new Chart(ctx, { type: 'line', data: { labels: ['1 مارس','3','5','7','9','11','13'], datasets: [{ label: 'فعلي', data: [620,670,710,680,730,800,850], borderColor: '#10b981' },{ label: 'توقع Prophet', data: [640,690,730,710,760,830,880], borderColor: '#f59e0b', borderDash: [5,5] }] } });
+        } else if (role === 'super_admin') {
+            const ctx = document.getElementById('branchesChart')?.getContext('2d');
+            if (ctx) charts.branchesChart = new Chart(ctx, { type: 'bar', data: { labels: ['صنعاء','عدن','تعز'], datasets: [{ label: 'المبيعات (ألف $)', data: [15.2,9.8,11.5], backgroundColor: '#3b82f6' }] } });
+        } else if (role === 'cashier') {
+            const ctx = document.getElementById('shiftChart')?.getContext('2d');
+            if (ctx) charts.shiftChart = new Chart(ctx, { type: 'line', data: { labels: ['9ص','10ص','11ص','12م','1م','2م','3م'], datasets: [{ label: 'مبيعات الوردية', data: [20,45,60,85,70,65,55], borderColor: '#10b981' }] } });
+        }
+    }
+
+    function updateDashboardAndSidebar(role) {
+        // تحديث القائمة الجانبية
+        buildSidebar(role);
+        // تحديث المحتوى
+        let html = '';
+        if (role === 'branch_manager') html = getBranchManagerDashboard();
+        else if (role === 'super_admin') html = getSuperAdminDashboard();
+        else if (role === 'cashier') html = getCashierDashboard();
+        document.getElementById('dashboardContent').innerHTML = html;
+        setTimeout(() => renderChartsForRole(role), 50);
+        // تحديث الزر العائم
+        const fabDiv = document.getElementById('fabContainer');
+        if (role !== 'super_admin') {
+            fabDiv.innerHTML = `<button id="fabBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-4 shadow-xl transition-all flex items-center gap-2"><i class="fas fa-cash-register text-xl"></i><span class="hidden md:inline">بيع سريع</span></button>`;
+            document.getElementById('fabBtn')?.addEventListener('click', () => alert("فتح واجهة نقطة البيع السريعة (POS) - يدعم المزامنة التلقائية"));
+        } else {
+            fabDiv.innerHTML = '';
+        }
+        // تحديث اسم المستخدم والفرع
+        const userSpan = document.getElementById('userNameDisplay');
+        const branchSpan = document.getElementById('currentBranchDisplay');
+        if (role === 'branch_manager') { userSpan.innerText = 'أحمد العسيري (مدير فرع)'; branchSpan.innerText = 'فرع صنعاء'; }
+        else if (role === 'super_admin') { userSpan.innerText = 'سليمان الرئيس (مدير النظام)'; branchSpan.innerText = 'جميع الفروع'; }
+        else { userSpan.innerText = 'نور الصيدلي (كاشير)'; branchSpan.innerText = 'فرع صنعاء - كاشير'; }
+    }
+
+    // الاستماع لتغيير الدور
+    const roleSelect = document.getElementById('roleSelector');
+    roleSelect.addEventListener('change', (e) => {
+        updateDashboardAndSidebar(e.target.value);
+    });
+    // تهيئة أولية
+    updateDashboardAndSidebar('branch_manager');
+
+    // البحث في القائمة الجانبية
+    const searchInput = document.getElementById('sidebarSearch');
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value.trim().toLowerCase();
+        const allLinks = document.querySelectorAll('#sidebarNavContainer .submenu-item');
+        allLinks.forEach(link => {
+            const text = link.innerText.toLowerCase();
+            if (term === '' || text.includes(term)) link.style.display = 'flex';
+            else link.style.display = 'none';
+        });
+    });
+
+    // زر طي القائمة للجوال
+    const toggleBtn = document.getElementById('toggleSidebarMobile');
+    const sidebar = document.getElementById('sidebar');
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('sidebar-mobile-hidden');
+        sidebar.classList.toggle('sidebar-mobile-visible');
+    });
+</script>
+</body>
+</html>

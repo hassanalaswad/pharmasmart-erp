@@ -11,6 +11,10 @@
  <script src="~/js/tailwind.config.js"></script>
  <link href="~/css/cura-styles.css" rel="stylesheet"/>
  <link rel="stylesheet" href="~/css/local-fonts.css" />
+ <!-- Chart.js -->
+ <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+ <!-- Font Awesome 6 -->
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body class="text-on-surface flex rtl">
  <!-- Premium Global Preloader -->
@@ -117,30 +121,48 @@
 @if (!isMainHub && !isPOSMode)
 {
 <!-- Sidebar Navigation -->
-<aside class="print:hidden h-screen w-64 fixed right-0 top-0 border-l border-slate-100 bg-slate-50 z-50 flex flex-col p-4">
- <div class="mb-6 px-2 flex items-center justify-between border-b border-slate-200 pb-4">
- <a href="/Home/Index" class="flex items-center gap-2 text-primary hover:text-sky-900 transition-colors tooltip" title="العودة لبوابة النظام">
- <img src="/images/Logo.png" class="h-8 max-w-[120px] object-contain" alt="Logo" onerror="this.style.display='none'" />
- <span class="text-sm font-black tracking-tight">@Settings.CompanyName</span>
- </a>
- <!-- زر إغلاق الـ Sidebar على الهاتف -->
- <button onclick="closeSidebar()" class="hidden md:hidden text-slate-400 hover:text-slate-700" id="btnCloseSidebar" style="background:none;border:none;cursor:pointer;display:none;">
-  <span class="material-symbols-outlined">close</span>
- </button>
+<aside id="mainSidebar" class="print:hidden h-screen w-64 fixed right-0 top-0 border-l border-gray-100 bg-white z-50 flex flex-col shadow-xl">
+ <!-- لوجو وعنوان النظام -->
+ <div class="p-5 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10 flex-shrink-0">
+  <a href="/Home/Index" class="flex items-center gap-3 flex-1 min-w-0">
+   <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+    <i class="fas fa-prescription-bottle-alt text-white text-sm"></i>
+   </div>
+   <span class="font-bold text-base text-gray-800 truncate">@Settings.CompanyName</span>
+  </a>
+  <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex-shrink-0">v3</span>
+  <button onclick="closeSidebar()" id="btnCloseSidebar" class="text-gray-400 hover:text-gray-700 flex-shrink-0" style="display:none;background:none;border:none;cursor:pointer;">
+   <span class="material-symbols-outlined text-[18px]">close</span>
+  </button>
  </div>
- 
- <div class="flex items-center gap-3 p-3 mb-4 bg-white rounded-sm border border-slate-100 shadow-sm">
- <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-white overflow-hidden">
- <span class="material-symbols-outlined text-[20px]">person</span>
+
+ <!-- شريط بحث داخل القائمة -->
+ <div class="px-4 pt-3 pb-1 flex-shrink-0">
+  <div class="relative">
+   <i class="fas fa-search absolute right-3 top-2.5 text-gray-400 text-sm"></i>
+   <input type="text" id="sidebarSearchInput" placeholder="بحث في القائمة..." class="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-gray-50" />
+  </div>
  </div>
- <div>
- <p class="text-sm font-bold text-slate-800">@User.Identity?.Name</p>
- <p class="text-[10px] text-slate-500 font-medium">مستخدم النظام</p> 
- </div>
+
+ <!-- معلومات المستخدم -->
+ <div class="flex items-center gap-3 px-4 py-2.5 mx-3 mb-1 bg-gray-50 rounded-xl border border-gray-100 flex-shrink-0">
+  <div class="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white flex-shrink-0">
+   <i class="fas fa-user-md text-sm"></i>
+  </div>
+  <div class="min-w-0">
+   <p class="text-sm font-bold text-gray-800 truncate">@User.Identity?.Name</p>
+   <p class="text-[10px] text-gray-500 font-medium truncate">
+    @if (User.IsInRole("SuperAdmin")) { <span>مدير النظام</span> }
+    else if (User.IsInRole("BranchManager")) { <span>مدير فرع</span> }
+    else if (User.IsInRole("Cashier")) { <span>كاشير</span> }
+    else if (User.IsInRole("Pharmacist")) { <span>صيدلي</span> }
+    else { <span>مستخدم النظام</span> }
+   </p>
+  </div>
  </div>
 
  <!-- Dynamic Menu Rendering -->
- <nav class="space-y-1 flex-1 overflow-y-auto w-full custom-scrollbar pr-2">
+ <nav class="space-y-1 flex-1 overflow-y-auto w-full custom-scrollbar px-3 pb-3" id="sidebarNavContainer">
  @{
  var allowedMenus = await Navigation.GetAllowedMenusAsync(User);
  }
@@ -150,26 +172,28 @@
  groupIndex++;
  bool hasActiveChild = group.Items.Any(item => !string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
 
- <div class="mt-2 mb-1">
- <button type="button" onclick="document.getElementById('menu-group-@groupIndex').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" class="w-full flex items-start justify-between px-3 py-2 hover:bg-slate-100 rounded-sm transition-colors group cursor-pointer focus:outline-none text-right">
- <div class="flex items-start gap-2">
- <span class="material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0 @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
- <span class="text-[12px] font-black uppercase leading-tight @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
- </div>
- <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5 flex-shrink-0 transition-transform duration-300 chevron @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
+ <div class="mt-2 mb-1 sidebar-menu-group">
+ <button type="button"
+  data-group-id="group-@groupIndex"
+  onclick="toggleSidebarGroup(this)"
+  class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-100 transition-colors group cursor-pointer focus:outline-none text-right">
+  <div class="flex items-center gap-2.5">
+   <span class="material-symbols-outlined text-[18px] flex-shrink-0 @(hasActiveChild || isReportsModule ? "text-emerald-600" : "text-slate-400") group-hover:text-emerald-600 transition-colors">@group.Icon</span>
+   <span class="text-[12px] font-bold @(hasActiveChild || isReportsModule ? "text-emerald-700" : "text-slate-600") group-hover:text-emerald-700 transition-colors">@group.Title</span>
+  </div>
+  <i class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-200 chevron-icon @(hasActiveChild || isReportsModule ? "rotate-180" : "")"></i>
  </button>
- 
- <div id="menu-group-@groupIndex" class="mt-1 space-y-1 @((hasActiveChild || isReportsModule) ? "" : "hidden") border-r-[3px] border-slate-100 mr-5 pr-2 overflow-hidden transition-all duration-300">
- @foreach (var item in group.Items)
- {
- var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
- var bgClass = isActive ? "bg-primary/10 text-primary font-bold rounded-sm shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-primary font-medium rounded-sm";
 
- <a class="flex items-start gap-2 px-2 py-2 transition-all duration-200 @bgClass text-right" href="@item.Url" onclick="closeSidebarOnMobile()">
- <span class="material-symbols-outlined text-[16px] mt-0.5 flex-shrink-0 @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
- <span class="text-[11px] leading-snug">@item.Title</span>
- </a>
- }
+ <div id="menu-group-@groupIndex" class="mt-1 space-y-0.5 pr-5 border-r-2 border-gray-100 mr-4 overflow-hidden transition-all duration-300 @((hasActiveChild || isReportsModule) ? "" : "hidden")">
+  @foreach (var item in group.Items)
+  {
+   var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
+
+   <a class="sidebar-menu-item flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-150 @(isActive ? "active-sidebar-item" : "text-gray-600 hover:bg-gray-50 hover:text-emerald-700")" href="@item.Url" onclick="closeSidebarOnMobile()">
+    <span class="material-symbols-outlined text-[15px] flex-shrink-0 @(isActive ? "text-emerald-600" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
+    <span class="text-[11.5px] leading-snug font-medium">@item.Title</span>
+   </a>
+  }
  </div>
  </div>
  }
@@ -225,6 +249,14 @@
  </div>
 </aside>
 }
+ <!-- Footer داخل السايدبار -->
+ @if (!isMainHub && !isPOSMode)
+ {
+ <div class="px-4 py-3 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5 flex-shrink-0">
+  <i class="fas fa-shield-alt text-emerald-500"></i>
+  <span>عزل فروع • RBAC • AI تنبؤ</span>
+ </div>
+ }
 
 <!-- Mobile Sidebar Overlay -->
 <div id="mobileSidebarOverlay" onclick="closeSidebar()"></div>
@@ -338,6 +370,19 @@
 </main>
 @RenderSection("Scripts", required: false)
 
+<!-- FAB Button (for BranchManager & Cashier on dashboard) -->
+@if (!isMainHub && !isPOSMode && (User.IsInRole("Cashier") || User.IsInRole("Pharmacist") || User.IsInRole("BranchManager")))
+{
+<div id="fabContainer" class="fixed bottom-6 left-6 z-30 print:hidden">
+ <a href="/Sales/Create" id="fabBtn"
+  class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 py-3.5 shadow-xl transition-all flex items-center gap-2 hover:-translate-y-1 active:scale-95"
+  title="بيع سريع">
+  <i class="fas fa-cash-register text-lg"></i>
+  <span class="hidden md:inline text-sm font-bold">بيع سريع</span>
+ </a>
+</div>
+}
+
 <style>
  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -386,24 +431,74 @@
  // 📱 Sidebar Toggle (Mobile Responsive)
  // ════════════════════════════════════════
  function toggleSidebar() {
-   const sidebar = document.querySelector('aside.fixed');
+   const sidebar = document.getElementById('mainSidebar');
    const overlay = document.getElementById('mobileSidebarOverlay');
    const closeBtn = document.getElementById('btnCloseSidebar');
    if (!sidebar) return;
    sidebar.classList.toggle('sidebar-open');
-   overlay.classList.toggle('active');
+   if (overlay) overlay.classList.toggle('active');
    if (closeBtn) closeBtn.style.display = sidebar.classList.contains('sidebar-open') ? 'block' : 'none';
  }
  function closeSidebar() {
-   const sidebar = document.querySelector('aside.fixed');
+   const sidebar = document.getElementById('mainSidebar');
    const overlay = document.getElementById('mobileSidebarOverlay');
    if (!sidebar) return;
    sidebar.classList.remove('sidebar-open');
-   overlay.classList.remove('active');
+   if (overlay) overlay.classList.remove('active');
+   const closeBtn = document.getElementById('btnCloseSidebar');
+   if (closeBtn) closeBtn.style.display = 'none';
  }
  function closeSidebarOnMobile() {
    if (window.innerWidth <= 768) closeSidebar();
  }
+
+ // ════════════════════════════════════════
+ // 🗂️ Sidebar Group Toggle + LocalStorage State
+ // ════════════════════════════════════════
+ function toggleSidebarGroup(btn) {
+   const groupId = btn.getAttribute('data-group-id');
+   const submenu = document.getElementById(groupId);
+   const icon = btn.querySelector('.chevron-icon');
+   if (!submenu) return;
+   const isHidden = submenu.classList.toggle('hidden');
+   if (icon) icon.classList.toggle('rotate-180', !isHidden);
+   // حفظ الحالة
+   try {
+    const stored = JSON.parse(localStorage.getItem('pharma_sidebar_groups') || '{}');
+    stored[groupId] = !isHidden;
+    localStorage.setItem('pharma_sidebar_groups', JSON.stringify(stored));
+   } catch(e) {}
+ }
+
+ // ════════════════════════════════════════
+ // 🔍 Sidebar Search Filter
+ // ════════════════════════════════════════
+ document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('sidebarSearchInput');
+  if (searchInput) {
+   searchInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    const groups = document.querySelectorAll('.sidebar-menu-group');
+    groups.forEach(group => {
+     const links = group.querySelectorAll('.sidebar-menu-item');
+     let hasVisible = false;
+     links.forEach(link => {
+      const text = link.innerText.toLowerCase();
+      const show = term === '' || text.includes(term);
+      link.style.display = show ? 'flex' : 'none';
+      if (show) hasVisible = true;
+     });
+     // إظهار/إخفاء المجموعة كاملة
+     group.style.display = (term === '' || hasVisible) ? 'block' : 'none';
+     // فتح المجموعات عند البحث
+     if (term !== '' && hasVisible) {
+      const submenu = group.querySelector('[id^="menu-group-"]');
+      if (submenu) submenu.classList.remove('hidden');
+     }
+    });
+   });
+  }
+ });
 
  // ════════════════════════════════════════
  // 🖼️ Iframe Report Modal

@@ -1,0 +1,147 @@
+@*
+    قالب التقارير القابل للطباعة - Partial View مشترك
+    الاستخدام: @await Html.PartialAsync("_ReportTemplate", model)
+*@
+
+<!-- شريط أدوات التقارير (يُخفى عند الطباعة) -->
+<div class="print:hidden sticky top-0 z-10 bg-white shadow-sm border-b border-gray-100">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                <i class="fas fa-chart-bar text-white text-xs"></i>
+            </div>
+            <span class="font-bold text-gray-800 text-sm">@(ViewData["ReportTitle"] ?? "التقرير")</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="history.back()"
+                class="px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 text-xs font-semibold transition-colors flex items-center gap-1.5">
+                <i class="fas fa-arrow-right text-gray-400"></i> رجوع
+            </button>
+            <button onclick="window.print()"
+                class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 active:scale-95">
+                <i class="fas fa-print"></i> طباعة (A4)
+            </button>
+            <button onclick="exportReportExcel()"
+                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 active:scale-95">
+                <i class="fas fa-file-excel"></i> Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- حاوية التقرير القابل للطباعة -->
+<div class="max-w-5xl mx-auto print:max-w-full print:mx-0">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 print:shadow-none print:rounded-none print:border-none">
+
+        <!-- رأس التقرير -->
+        <div class="report-header-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #10b981;padding-bottom:16px;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                <!-- شعار الشركة -->
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:48px;height:48px;background:linear-gradient(135deg,#10b981,#047857);border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-size:22px;flex-shrink:0;">
+                        <i class="fas fa-prescription-bottle-alt"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:#0f172a;">@Settings.CompanyName</div>
+                        <div style="font-size:11px;color:#64748b;">نظام PharmaSmart لإدارة الصيدليات</div>
+                    </div>
+                </div>
+                <!-- معلومات الطباعة -->
+                <div style="font-size:12px;color:#64748b;text-align:right;">
+                    <div>تاريخ الطباعة: <strong id="reportPrintDate"></strong></div>
+                    <div>أُعدَّ بواسطة: <strong>@User.Identity?.Name</strong></div>
+                    @if (ViewBag.BranchName != null)
+                    {
+                        <div>الفرع: <strong>@ViewBag.BranchName</strong></div>
+                    }
+                </div>
+            </div>
+
+            <!-- عنوان التقرير -->
+            <div style="text-align:center;margin:16px 0 18px;">
+                <h2 style="font-size:22px;font-weight:800;color:#0f172a;">@(ViewData["ReportTitle"] ?? "التقرير")</h2>
+                @if (ViewData["ReportSubtitle"] != null)
+                {
+                    <p style="font-size:13px;color:#64748b;margin-top:4px;">@ViewData["ReportSubtitle"]</p>
+                }
+            </div>
+
+            <!-- فلاتر التقرير -->
+            @if (ViewBag.DateFrom != null || ViewBag.DateTo != null || ViewBag.FilterDescription != null)
+            {
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 16px;display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-bottom:20px;color:#475569;">
+                    @if (ViewBag.DateFrom != null)
+                    {
+                        <span>📅 <strong>من:</strong> @(((DateTime)ViewBag.DateFrom).ToString("yyyy/MM/dd"))</span>
+                    }
+                    @if (ViewBag.DateTo != null)
+                    {
+                        <span>📅 <strong>إلى:</strong> @(((DateTime)ViewBag.DateTo).ToString("yyyy/MM/dd"))</span>
+                    }
+                    @if (ViewBag.FilterDescription != null)
+                    {
+                        <span>🏷️ @ViewBag.FilterDescription</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- محتوى التقرير (يُدمج هنا من الـ View) -->
+        @RenderSection("ReportContent", required: false)
+
+        <!-- توقيعات -->
+        @if (ViewBag.ShowSignatures == true)
+        {
+            <div style="display:flex;justify-content:space-around;margin-top:40px;flex-wrap:wrap;gap:20px;">
+                @foreach (var sig in new[] { "مُعِدّ التقرير", "المدير المالي", "المدير العام" })
+                {
+                    <div style="text-align:center;min-width:150px;">
+                        <div style="border-bottom:1px solid #374151;height:40px;margin-bottom:8px;"></div>
+                        <div style="font-size:12px;color:#64748b;">@sig</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- تذييل التقرير -->
+        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px dashed #e2e8f0;padding-top:14px;">
+            <p>تم إنشاء هذا التقرير تلقائياً بواسطة نظام PharmaSmart ERP — @DateTime.Now.Year</p>
+            <p style="color:#10b981;margin-top:4px;">البيانات معتمدة ومحمية — لا تعديل بعد الطباعة</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body { background: white !important; }
+        .print\:hidden { display: none !important; }
+        .bg-white { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+        @@page { size: A4; margin: 1.5cm; }
+        table { page-break-inside: avoid; font-size: 11px; }
+        th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table thead th { background: #f1f5f9; padding: 10px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: #374151; }
+    table tbody td { padding: 9px 10px; border: 1px solid #e2e8f0; text-align: center; color: #374151; }
+    table tbody tr:hover { background: #f9fafb; }
+    .report-badge-success { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+    .report-badge-warning { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+    .report-badge-danger { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 20px; font-size: 11px; }
+    .report-summary { display:flex;justify-content:flex-end;flex-wrap:wrap;gap:20px;margin-top:20px;padding:14px 20px;background:#f8fafc;border-radius:12px; }
+    .report-summary-item { display:flex;flex-direction:column;align-items:center; }
+    .report-summary-label { font-size:11px;color:#64748b; }
+    .report-summary-value { font-size:18px;font-weight:800;color:#10b981; }
+</style>
+
+<script>
+    document.getElementById('reportPrintDate').textContent = new Date().toLocaleDateString('ar-EG', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+    function exportReportExcel() {
+        const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'export=excel';
+        showPharmaToast('جاري تصدير ملف Excel...', 'info');
+    }
+    if (typeof showPharmaToast !== 'function') {
+        function showPharmaToast(msg, type) { alert(msg); }
+    }
+</script>

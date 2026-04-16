@@ -1,0 +1,147 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "وحدة التخطيط والتنبؤ";
+    ViewData["HideLayoutBack"] = false;
+}
+
+<!-- ===== عنوان الوحدة ===== -->
+<div class="flex justify-between items-start mb-6">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <i class="fas fa-brain text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-gray-800">وحدة التخطيط والتنبؤ</h1>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    <a href="/Home/Index" class="hover:text-emerald-600">الرئيسية</a>
+                    <i class="fas fa-chevron-left text-[10px] mx-1.5 text-gray-400"></i>
+                    <span class="text-violet-600 font-semibold">التخطيط والتنبؤ</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <span class="bg-violet-50 border border-violet-200 text-violet-700 text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2">
+        <i class="fas fa-robot"></i> Prophet AI / Vertex AI
+    </span>
+</div>
+
+<!-- ===== بطاقات KPI سريعة ===== -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-5 border border-gray-100 border-r-4 border-r-violet-500">
+        <span class="text-xs text-gray-500 block mb-1">إجمالي الأصناف</span>
+        <div class="text-2xl font-black text-gray-800">@(ViewBag.TotalDrugs ?? "—")</div>
+        <span class="text-xs text-violet-600 font-medium">صنف دواء</span>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-5 border border-gray-100 border-r-4 border-r-red-500">
+        <span class="text-xs text-gray-500 block mb-1">يحتاج طلباً عاجلاً</span>
+        <div class="text-2xl font-black text-gray-800">@(ViewBag.ShortagesCount ?? "—")</div>
+        <a href="/Inventory/Shortages" class="text-xs text-red-500 font-semibold hover:underline">نواقص المخزون ←</a>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-5 border border-gray-100 border-r-4 border-r-amber-500">
+        <span class="text-xs text-gray-500 block mb-1">قريب انتهاء الصلاحية</span>
+        <div class="text-2xl font-black text-gray-800">@(ViewBag.ExpiringSoonCount ?? "—")</div>
+        <a href="/Report/StockExpiry" class="text-xs text-amber-500 font-semibold hover:underline">مراقبة الصلاحية ←</a>
+    </div>
+    <div class="kpi-card bg-white rounded-2xl shadow-sm p-5 border border-gray-100 border-r-4 border-r-emerald-500">
+        <span class="text-xs text-gray-500 block mb-1">آخر تنفيذ للخطة</span>
+        <div class="text-sm font-bold text-gray-700 mt-1">
+            @if (ViewBag.LastForecastDate != null && (DateTime)ViewBag.LastForecastDate != default(DateTime))
+            { <span>@(((DateTime)ViewBag.LastForecastDate).ToString("yyyy/MM/dd"))</span> }
+            else { <span class="text-gray-400">لم تُعتمد خطة بعد</span> }
+        </div>
+        <a href="/Planning/ForecastPlan" class="text-xs text-emerald-600 font-semibold hover:underline">إنشاء خطة جديدة ←</a>
+    </div>
+</div>
+
+<!-- ===== بطاقات التنقل السريع ===== -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- خطة المشتريات الذكية -->
+    <a href="/Planning/ForecastPlan"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-violet-200 hover:shadow-md block border-b-4 border-b-violet-500 group">
+        <div class="w-14 h-14 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-brain"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">خطة المشتريات الذكية</h3>
+        <p class="text-sm text-gray-500 mb-3">تنبؤ الطلب باستخدام Prophet AI ومعادلة EOQ لتحديد الكميات المثلى</p>
+        <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-violet-50 text-violet-600 px-2 py-1 rounded-full font-semibold">Prophet AI</span>
+            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-semibold">EOQ</span>
+            <span class="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full font-semibold">Data Mapping</span>
+        </div>
+    </a>
+
+    <!-- العوامل الموسمية -->
+    <a href="/Planning/SeasonalFactors"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-amber-200 hover:shadow-md block border-b-4 border-b-amber-400 group">
+        <div class="w-14 h-14 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-cloud-sun"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">العوامل الموسمية</h3>
+        <p class="text-sm text-gray-500 mb-3">ضبط معاملات الطلب الموسمي لكل دواء أو فئة علاجية على مدار 12 شهر</p>
+        <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-amber-50 text-amber-600 px-2 py-1 rounded-full font-semibold">موسمية الطلب</span>
+            <span class="text-xs bg-orange-50 text-orange-600 px-2 py-1 rounded-full font-semibold">12 فئة</span>
+        </div>
+    </a>
+
+    <!-- توقعات Vertex AI -->
+    <a href="/Planning/CloudForecast"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md block border-b-4 border-b-blue-500 group">
+        <div class="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-cloud"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">توقعات Vertex AI</h3>
+        <p class="text-sm text-gray-500 mb-3">رفع بيانات Excel/CSV ومعالجتها عبر Google Vertex AI للتنبؤ المتقدم</p>
+        <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-semibold">Google Cloud</span>
+            <span class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-full font-semibold">External Data</span>
+        </div>
+    </a>
+
+    <!-- تحليل ABC -->
+    <a href="/InventoryIntelligence/Index"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-emerald-200 hover:shadow-md block border-b-4 border-b-emerald-500 group">
+        <div class="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-pie-chart"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">تحليل ABC للمخزون</h3>
+        <p class="text-sm text-gray-500 mb-3">تصنيف الأدوية بحسب قيمتها وحجم امتصاصها لتحسين إدارة المخزون</p>
+        <div class="flex flex-wrap gap-2">
+            <span class="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full font-semibold">A B C</span>
+            <span class="text-xs bg-teal-50 text-teal-600 px-2 py-1 rounded-full font-semibold">دوران المخزون</span>
+        </div>
+    </a>
+
+    <!-- نواقص المخزون -->
+    <a href="/Inventory/Shortages"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-red-200 hover:shadow-md block border-b-4 border-b-red-500 group">
+        <div class="w-14 h-14 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">نواقص المخزون الحالية</h3>
+        <p class="text-sm text-gray-500 mb-3">عرض الأصناف التي وصلت إلى الحد الأدنى أو نفدت بالكامل وتحتاج طلبات عاجلة</p>
+        @if (ViewBag.ShortagesCount != null && (int)ViewBag.ShortagesCount > 0)
+        {
+            <span class="text-xs bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-full font-bold">
+                <i class="fas fa-exclamation-circle ml-1"></i>@ViewBag.ShortagesCount صنف ينتظر الطلب
+            </span>
+        }
+    </a>
+
+    <!-- مراقبة الصلاحية -->
+    <a href="/Report/StockExpiry"
+        class="quick-action-btn bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-md block border-b-4 border-b-orange-400 group">
+        <div class="w-14 h-14 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fas fa-calendar-times"></i>
+        </div>
+        <h3 class="text-lg font-black text-gray-800 mb-2">مراقبة الصلاحية</h3>
+        <p class="text-sm text-gray-500 mb-3">تتبع الأصناف التي تنتهي صلاحيتها قريباً للتخطيط للتصريف قبل الهدر</p>
+        @if (ViewBag.ExpiringSoonCount != null && (int)ViewBag.ExpiringSoonCount > 0)
+        {
+            <span class="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-3 py-1 rounded-full font-bold">
+                <i class="fas fa-clock ml-1"></i>@ViewBag.ExpiringSoonCount تشغيلة تنتهي قريباً
+            </span>
+        }
+    </a>
+</div>
