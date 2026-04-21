@@ -135,8 +135,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> DailyCashFlow(int? accountId, DateTime? date)
+        public async Task<IActionResult> DailyCashFlow(int? accountId, DateTime? date, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             int branchId = ReportScopeId;
             var targetDate = date?.Date ?? DateTime.Today;
             ViewBag.TargetDate = targetDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
@@ -179,6 +181,7 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.TotalCredit = dailyMovements.Sum(m => m.Credit);
             ViewBag.ClosingBalance = openingBalance + (dailyMovements.Sum(m => m.Debit - m.Credit));
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(dailyMovements);
             return View(dailyMovements);
         }
 
@@ -187,8 +190,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> ProfitAndLoss(DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> ProfitAndLoss(DateTime? fromDate, DateTime? toDate, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             int branchId = ReportScopeId;
             var start = fromDate?.Date ?? new DateTime(DateTime.Now.Year, 1, 1);
             var end = toDate?.Date.AddHours(23).AddMinutes(59) ?? DateTime.Now;
@@ -244,6 +249,7 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.ComparisonLabels = new string[] { "إجمالي الإيرادات", "إجمالي المصروفات" };
             ViewBag.ComparisonValues = new decimal[] { totalRevenue, totalExpenses };
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView();
             return View();
         }
 
@@ -252,8 +258,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> IncomeStatement(DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> IncomeStatement(DateTime? fromDate, DateTime? toDate, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             int branchId = ReportScopeId;
             var start = fromDate?.Date ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var end = toDate?.Date.AddHours(23).AddMinutes(59) ?? DateTime.Now;
@@ -278,9 +286,10 @@ namespace PharmaSmartWeb.Controllers
             var opExpenses = allData.Where(d => d.Account.AccountCode.StartsWith("5") &&
                                                 !d.Account.AccountCode.StartsWith("511") &&
                                                 !d.Account.AccountCode.StartsWith("512"))
-                .GroupBy(d => new { d.Account.AccountCode, d.Account.AccountName })
+                .GroupBy(d => new { d.AccountId, d.Account.AccountCode, d.Account.AccountName })
                 .Select(g => new PnlAccountViewModel
                 {
+                    AccountId = g.Key.AccountId,
                     Name = g.Key.AccountName,
                     Code = g.Key.AccountCode,
                     Total = g.Sum(x => x.Debit - x.Credit),
@@ -297,6 +306,7 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.GrossMargin = salesTotal > 0 ? (ViewBag.GrossProfit / salesTotal * 100) : 0;
             ViewBag.NetMargin = salesTotal > 0 ? (ViewBag.NetIncome / salesTotal * 100) : 0;
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView();
             return View();
         }
 
@@ -305,8 +315,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> PharmacistSales(DateTime? fromDate, DateTime? toDate, int? branchId)
+        public async Task<IActionResult> PharmacistSales(DateTime? fromDate, DateTime? toDate, int? branchId, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             int selectedBranchId = branchId ?? ReportScopeId;
             var start = fromDate?.Date ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var end = toDate?.Date.AddHours(23).AddMinutes(59) ?? DateTime.Now;
@@ -389,6 +401,7 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.ChartProfits = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.NetProfit).ToArray());
             ViewBag.ChartExpenses = Newtonsoft.Json.JsonConvert.SerializeObject(branchData.Select(x => x.TotalExpenses).ToArray());
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(branchData);
             return View(branchData);
         }
 
@@ -397,8 +410,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("ShortageForecast", "View")]
-        public async Task<IActionResult> ShortageForecast()
+        public async Task<IActionResult> ShortageForecast(string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             try
             {
                 int branchId = ReportScopeId;
@@ -477,7 +492,9 @@ namespace PharmaSmartWeb.Controllers
                 ViewBag.ChartHistory = historyData.ToArray();
                 ViewBag.ChartForecast = forecastData.ToArray();
 
-                return View(forecastList.OrderByDescending(x => x.SuggestedOrder).ToList());
+                var model = forecastList.OrderByDescending(x => x.SuggestedOrder).ToList();
+                if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(model);
+                return View(model);
             }
             catch (Exception ex)
             {
@@ -533,8 +550,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("AccountReports", "View")]
-        public async Task<IActionResult> StockExpiry(string filter)
+        public async Task<IActionResult> StockExpiry(string filter, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             int branchId = ReportScopeId;
             var today = DateTime.Today;
             var threeMonthsLater = today.AddMonths(3);
@@ -556,6 +575,7 @@ namespace PharmaSmartWeb.Controllers
             var items = await query.OrderBy(i => i.ExpiryDate)
                 .Select(d => new StockExpiryViewModel
                 {
+                    DrugId = d.DrugId,
                     ItemName = d.Drug.DrugName,
                     Barcode = d.Drug.Barcode,
                     BatchNumber = d.BatchNumber ?? "غير محدد",
@@ -573,6 +593,7 @@ namespace PharmaSmartWeb.Controllers
 
             ViewBag.CurrentFilter = filter;
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(items);
             return View(items);
         }
 
@@ -581,8 +602,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("Accounting", "View")]
-        public async Task<IActionResult> Ledger(int? accountId, DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> Ledger(int? accountId, DateTime? fromDate, DateTime? toDate, string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             ViewBag.Accounts = await _context.Accounts
                 .Where(a => a.IsActive == true)
                 .OrderBy(a => a.AccountCode)
@@ -644,6 +667,7 @@ namespace PharmaSmartWeb.Controllers
                 ViewBag.OpeningBalance = openingCredit - openingDebit;
             }
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(transactions);
             return View(transactions);
         }
 
@@ -652,8 +676,10 @@ namespace PharmaSmartWeb.Controllers
         // ==========================================
         [HttpGet]
         [HasPermission("Accounting", "View")]
-        public async Task<IActionResult> TrialBalance()
+        public async Task<IActionResult> TrialBalance(string returnUrl = null, string layoutTheme = null)
         {
+            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.LayoutTheme = layoutTheme;
             // جلب كافة الحسابات النشطة (AsNoTracking لمنع تتبع الكائنات)
             var allAccounts = await _context.Accounts
                 .AsNoTracking()
@@ -729,6 +755,7 @@ namespace PharmaSmartWeb.Controllers
                 .OrderBy(a => a.AccountCode)
                 .ToList();
 
+            if (layoutTheme == "modal" || layoutTheme == "drawer") return PartialView(trialBalanceList);
             return View(trialBalanceList);
         }
     }

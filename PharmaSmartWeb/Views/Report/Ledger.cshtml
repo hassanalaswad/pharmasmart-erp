@@ -1,7 +1,7 @@
 @model IEnumerable<PharmaSmartWeb.Models.Journaldetails>
 
 @{
-    Layout = "_ReportLayout";
+    Layout = (ViewBag.LayoutTheme == "drawer" || ViewBag.LayoutTheme == "modal") ? null : "_ReportLayout";
     ViewData["Title"] = "كشف حساب تفصيلي - الأستاذ المساعد";
     ViewData["Subtitle"] = "Detailed Ledger Statement";
     var selectedAccount = ViewBag.SelectedAccount as PharmaSmartWeb.Models.Accounts;
@@ -136,15 +136,33 @@
         </tbody>
     </table>
 
-    @section Summary {
-        <div><span>إجمالي مدين:</span><span style="color:#059669; font-weight:bold;">@Model.Sum(x => x.Debit).ToString("N2")</span></div>
-        <div><span>إجمالي دائن:</span><span style="color:#e11d48; font-weight:bold;">@Model.Sum(x => x.Credit).ToString("N2")</span></div>
-        <div>
-            <span style="font-size:15px; color:#063955;">الرصيد الختامي:</span>
-            <span style="font-size:15px;" dir="ltr">
-                @runningBalance.ToString("N2") <small style="font-size:11px; color:#64748b;">@(accountNature ? "(مدين)" : "(دائن)")</small>
-            </span>
+    @if (ViewBag.LayoutTheme == "drawer" || ViewBag.LayoutTheme == "modal")
+    {
+        <div style="background:#f8fafc; padding:12px; margin-top:16px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; gap:16px;">
+                <div><span style="font-size:11px; color:#64748b;">إجمالي مدين:</span><span style="color:#059669; font-weight:bold; margin-right:4px;">@Model.Sum(x => x.Debit).ToString("N2")</span></div>
+                <div><span style="font-size:11px; color:#64748b;">إجمالي دائن:</span><span style="color:#e11d48; font-weight:bold; margin-right:4px;">@Model.Sum(x => x.Credit).ToString("N2")</span></div>
+            </div>
+            <div>
+                <span style="font-size:13px; color:#063955; font-weight:bold;">الرصيد الختامي:</span>
+                <span style="font-size:15px; font-weight:bold;" dir="ltr">
+                    @runningBalance.ToString("N2") <small style="font-size:11px; color:#64748b;">@(accountNature ? "(مدين)" : "(دائن)")</small>
+                </span>
+            </div>
         </div>
+    }
+    else
+    {
+        @section Summary {
+            <div><span>إجمالي مدين:</span><span style="color:#059669; font-weight:bold;">@Model.Sum(x => x.Debit).ToString("N2")</span></div>
+            <div><span>إجمالي دائن:</span><span style="color:#e11d48; font-weight:bold;">@Model.Sum(x => x.Credit).ToString("N2")</span></div>
+            <div>
+                <span style="font-size:15px; color:#063955;">الرصيد الختامي:</span>
+                <span style="font-size:15px;" dir="ltr">
+                    @runningBalance.ToString("N2") <small style="font-size:11px; color:#64748b;">@(accountNature ? "(مدين)" : "(دائن)")</small>
+                </span>
+            </div>
+        }
     }
 }
 else

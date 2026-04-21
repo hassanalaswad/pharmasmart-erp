@@ -11,8 +11,32 @@
  <script src="~/js/tailwind.config.js"></script>
  <link href="~/css/cura-styles.css" rel="stylesheet"/>
  <link rel="stylesheet" href="~/css/local-fonts.css" />
+ <!-- Chart.js -->
+ <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+ <style>
+    .sidebar-group-btn { transition: all 0.2s; }
+    .sidebar-group-btn:hover { background-color: rgba(var(--md-sys-color-surface-variant-rgb, 241 245 249) / 0.6); }
+    .submenu-item { transition: all 0.15s; }
+    .submenu-item:hover { padding-right: 0.75rem; }
+    .kpi-card, .quick-action-btn { transition: all 0.2s ease; }
+    .kpi-card:hover, .quick-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    @@media (max-width: 768px) {
+        .sidebar-mobile-hidden { transform: translateX(100%); }
+        .sidebar-mobile-visible { transform: translateX(0); }
+    }
+    .data-table tbody tr:hover { background-color: #f8fafc; }
+    .active-sidebar-item {
+        background-color: rgb(var(--md-sys-color-primary-container-rgb, 209 246 230));
+        color: rgb(var(--md-sys-color-primary-rgb, 6 57 85));
+        border-right: 3px solid rgb(var(--md-sys-color-primary-rgb, 6 57 85));
+    }
+    /* Sidebar search */
+    #sidebarSearch:focus { outline: none; box-shadow: 0 0 0 2px rgba(6,57,85,0.15); }
+ </style>
 </head>
 <body class="text-on-surface flex rtl">
+ <div class="flex h-screen overflow-hidden w-full">
+
  <!-- Premium Global Preloader -->
  <div id="preloader" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-50/80 backdrop-blur-md transition-all duration-300">
   <div class="flex flex-col items-center gap-5">
@@ -90,8 +114,8 @@
  var currentController = Context.Request.RouteValues["controller"]?.ToString();
  var currentAction = Context.Request.RouteValues["action"]?.ToString();
 
- bool isMainHub = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase) 
- && string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
+ // السيدبار يظهر دائماً (في كل الصفحات بما فيها الرئيسية)
+ bool isMainHub = false;
 
  bool isPOSMode = string.Equals(currentController, "Sales", StringComparison.OrdinalIgnoreCase) 
  && string.Equals(currentAction, "Create", StringComparison.OrdinalIgnoreCase);
@@ -114,154 +138,173 @@
  bool showHeaderBack = !isMainHub && ViewData["HideLayoutBack"] as bool? != true;
 }
 
-@if (!isMainHub && !isPOSMode)
+@if (!isPOSMode)
 {
 <!-- Sidebar Navigation -->
-<aside class="print:hidden h-screen w-64 fixed right-0 top-0 border-l border-slate-100 bg-slate-50 z-50 flex flex-col p-4">
- <div class="mb-6 px-2 flex items-center justify-between border-b border-slate-200 pb-4">
- <a href="/Home/Index" class="flex items-center gap-2 text-primary hover:text-sky-900 transition-colors tooltip" title="العودة لبوابة النظام">
- <img src="/images/Logo.png" class="h-8 max-w-[120px] object-contain" alt="Logo" onerror="this.style.display='none'" />
- <span class="text-sm font-black tracking-tight">@Settings.CompanyName</span>
- </a>
- <!-- زر إغلاق الـ Sidebar على الهاتف -->
- <button onclick="closeSidebar()" class="hidden md:hidden text-slate-400 hover:text-slate-700" id="btnCloseSidebar" style="background:none;border:none;cursor:pointer;display:none;">
-  <span class="material-symbols-outlined">close</span>
- </button>
- </div>
- 
- <div class="flex items-center gap-3 p-3 mb-4 bg-white rounded-sm border border-slate-100 shadow-sm">
- <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-white overflow-hidden">
- <span class="material-symbols-outlined text-[20px]">person</span>
- </div>
- <div>
- <p class="text-sm font-bold text-slate-800">@User.Identity?.Name</p>
- <p class="text-[10px] text-slate-500 font-medium">مستخدم النظام</p> 
- </div>
- </div>
+<aside id="sidebar" class="print:hidden w-72 bg-white shadow-xl border-l border-slate-100 flex-shrink-0 overflow-y-auto z-50 transition-all duration-300 fixed md:relative inset-y-0 right-0 sidebar-mobile-hidden md:sidebar-mobile-visible flex flex-col">
+    <!-- Header: Logo + Company Name -->
+    <div class="p-5 border-b border-slate-100 flex items-center gap-3 sticky top-0 bg-white z-10">
+        <a href="/Home/Index" class="flex items-center gap-3 flex-1 min-w-0">
+            <img src="/images/Logo.png" class="h-8 max-w-[32px] object-contain" alt="Logo" onerror="this.style.display='none'" />
+            <span class="font-bold text-base text-primary tracking-tight truncate">@Settings.CompanyName</span>
+        </a>
+        <span class="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-auto font-bold">v3.0</span>
+        <button onclick="toggleSidebar()" id="btnCloseSidebar" class="md:hidden text-slate-400 hover:text-slate-700 mr-2 focus:outline-none">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+    </div>
 
- <!-- Dynamic Menu Rendering -->
- <nav class="space-y-1 flex-1 overflow-y-auto w-full custom-scrollbar pr-2">
- @{
- var allowedMenus = await Navigation.GetAllowedMenusAsync(User);
- }
- @{ int groupIndex = 0; }
- @foreach (var group in allowedMenus)
- {
- groupIndex++;
- bool hasActiveChild = group.Items.Any(item => !string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
+    <!-- شريط بحث داخل القائمة -->
+    <div class="px-4 pt-4 pb-2">
+        <div class="relative">
+            <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 text-[18px] pointer-events-none">search</span>
+            <input type="text" id="sidebarSearch" placeholder="بحث في القائمة..." 
+                   class="w-full pr-9 pl-3 py-2 border border-slate-200 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-slate-50 placeholder-slate-400 font-medium">
+        </div>
+    </div>
 
- <div class="mt-2 mb-1">
- <button type="button" onclick="document.getElementById('menu-group-@groupIndex').classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')" class="w-full flex items-start justify-between px-3 py-2 hover:bg-slate-100 rounded-sm transition-colors group cursor-pointer focus:outline-none text-right">
- <div class="flex items-start gap-2">
- <span class="material-symbols-outlined text-[18px] mt-0.5 flex-shrink-0 @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
- <span class="text-[12px] font-black uppercase leading-tight @(hasActiveChild || isReportsModule ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
- </div>
- <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5 flex-shrink-0 transition-transform duration-300 chevron @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
- </button>
- 
- <div id="menu-group-@groupIndex" class="mt-1 space-y-1 @((hasActiveChild || isReportsModule) ? "" : "hidden") border-r-[3px] border-slate-100 mr-5 pr-2 overflow-hidden transition-all duration-300">
- @foreach (var item in group.Items)
- {
- var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
- var bgClass = isActive ? "bg-primary/10 text-primary font-bold rounded-sm shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-primary font-medium rounded-sm";
+    <!-- معلومات المستخدم مع الدور الفعلي -->
+    <div class="flex items-center gap-3 px-4 py-3 mx-3 border border-slate-100 rounded-sm bg-surface-container-highest mb-2 shadow-sm">
+        <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-primary text-[18px]">person</span>
+        </div>
+        <div class="min-w-0">
+            <p class="text-sm font-bold text-slate-800 truncate">@User.Identity?.Name</p>
+            <p class="text-[11px] text-slate-500 font-semibold truncate">
+             @if (User.IsInRole("SuperAdmin")) { <span>مدير النظام</span> }
+             else if (User.IsInRole("BranchManager")) { <span>مدير فرع</span> }
+             else if (User.IsInRole("Cashier")) { <span>كاشير</span> }
+             else if (User.IsInRole("Pharmacist")) { <span>صيدلي</span> }
+             else if (User.IsInRole("Accountant")) { <span>محاسب</span> }
+             else if (User.IsInRole("Storekeeper")) { <span>أمين مستودع</span> }
+             else { <span>مستخدم النظام</span> }
+            </p>
+        </div>
+    </div>
 
- <a class="flex items-start gap-2 px-2 py-2 transition-all duration-200 @bgClass text-right" href="@item.Url" onclick="closeSidebarOnMobile()">
- <span class="material-symbols-outlined text-[16px] mt-0.5 flex-shrink-0 @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
- <span class="text-[11px] leading-snug">@item.Title</span>
- </a>
- }
- </div>
- </div>
- }
- </nav>
+    <!-- حاوية عناصر القائمة (مبنية ديناميكياً من الباك-إند) -->
+    <nav id="sidebarNavContainer" class="px-3 pb-4 space-y-1 w-full custom-scrollbar flex-1 overflow-y-auto">
+    @{
+        var allowedMenus = await Navigation.GetAllowedMenusAsync(User);
+    }
+    @{ int groupIndex = 0; }
+    @foreach (var group in allowedMenus)
+    {
+        groupIndex++;
+        bool hasActiveChild = group.Items.Any(item => !string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
 
- <!-- Dynamic Action Buttons at bottom of sidebar -->
- <div class="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
- @{
-    string activeUnit = "Commercial"; 
-    if (new[] { "Report", "InventoryIntelligence" }.Contains(currentController)) activeUnit = "Reports";
-    else if (new[] { "Drugs", "Inventory" }.Contains(currentController)) activeUnit = "Inventory";
-    else if (new[] { "Journal", "ChartOfAccounts", "Vouchers", "FinancialSettings" }.Contains(currentController)) activeUnit = "Finance";
-    else if (new[] { "Admin", "Users", "Roles", "Branches", "Account" }.Contains(currentController)) activeUnit = "SystemSettings";
- }
- 
-  @if(activeUnit == "Commercial")
-  {
-     if (User.HasClaim("Permission", "Sales.Add") || User.IsInRole("SuperAdmin") || User.IsInRole("Cashier") || User.IsInRole("Pharmacist"))
+        <!-- إنشاء عنصر المجموعة -->
+        <div class="group-item mb-1 sidebar-menu-group">
+            <button type="button" data-group-id="menu-group-@groupIndex" onclick="toggleSidebarGroup(this)" 
+                    class="sidebar-group-btn w-full flex items-center justify-between px-3 py-2.5 rounded-sm text-slate-700 hover:bg-surface-container-high transition focus:outline-none group">
+                <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-[18px] flex-shrink-0 @(hasActiveChild ? "text-primary" : "text-slate-400") group-hover:text-primary transition-colors">@group.Icon</span>
+                    <span class="text-[12px] font-black uppercase leading-tight @(hasActiveChild ? "text-primary" : "text-slate-600") group-hover:text-primary transition-colors">@group.Title</span>
+                </div>
+                <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform duration-200 chevron-icon @(hasActiveChild || isReportsModule ? "rotate-180" : "")">expand_more</span>
+            </button>
+            <div id="menu-group-@groupIndex" class="submenu space-y-0.5 mt-1 border-r-[3px] border-slate-100 mr-5 pr-2 overflow-hidden transition-all duration-300 @((hasActiveChild || isReportsModule) ? "" : "hidden")">
+                @foreach (var item in group.Items)
+                {
+                    var isActive = (!string.IsNullOrEmpty(item.Url) && item.Url != "/" && Context.Request.Path.Value?.StartsWith(item.Url, StringComparison.OrdinalIgnoreCase) == true);
+                    var bgClass = isActive ? "bg-primary/10 text-primary font-bold rounded-sm shadow-sm active-sidebar-item" : "text-slate-600 hover:bg-surface-container-high hover:text-primary font-medium rounded-sm";
+                    
+                    <a href="@item.Url" onclick="closeSidebarOnMobile()" 
+                       class="submenu-item sidebar-menu-item flex items-center gap-2 px-2 py-2 transition-all duration-150 @bgClass text-right">
+                        <span class="material-symbols-outlined text-[16px] flex-shrink-0 @(isActive ? "text-primary" : "text-slate-400")" data-icon="@item.Icon">@item.Icon</span>
+                        <span class="text-[11px] leading-snug">@item.Title</span>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+    </nav>
+
+    <!-- أزرار الإجراءات السياقية في أسفل السيدبار -->
+    <div class="px-4 pt-3 pb-4 border-t border-slate-100 flex flex-col gap-2 bg-white sticky bottom-0">
+    @{
+        string activeUnit = "Commercial"; 
+        if (new[] { "Report", "InventoryIntelligence" }.Contains(currentController)) activeUnit = "Reports";
+        else if (new[] { "Drugs", "Inventory" }.Contains(currentController)) activeUnit = "Inventory";
+        else if (new[] { "Journal", "ChartOfAccounts", "Vouchers", "FinancialSettings", "Accounting" }.Contains(currentController)) activeUnit = "Finance";
+        else if (new[] { "Admin", "Users", "Roles", "Branches", "Account", "Employees" }.Contains(currentController)) activeUnit = "SystemSettings";
+        else if (string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)) activeUnit = "Commercial";
+    }
+    
+     @if (activeUnit == "Commercial")
      {
-      <a href="/Sales/Create" class="w-full py-3 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
-       <span class="material-symbols-outlined">point_of_sale</span> نقطة بيع سريعة
+         if (User.HasClaim("Permission", "Sales.Add") || User.IsInRole("SuperAdmin") || User.IsInRole("Cashier") || User.IsInRole("Pharmacist") || User.IsInRole("BranchManager"))
+         {
+          <a href="/Sales/Create" class="w-full py-2.5 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+           <span class="material-symbols-outlined text-[18px]">point_of_sale</span> نقطة بيع سريعة
+          </a>
+          <div class="border-t border-slate-100 my-0.5"></div>
+         }
+      <a href="/Home/Index" class="w-full py-2.5 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+      <span class="material-symbols-outlined text-[18px]">dashboard</span> لوحة التحكم
       </a>
-      <div class="border-t border-slate-100 my-1"></div>
      }
-  <a href="/Home/CommercialHub" class="w-full py-3 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
-  <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> لوحة التجارية
-  </a>
-  }
- else if (activeUnit == "Finance" && User.HasClaim("Permission", "JournalEntries.View"))
- {
- <a href="/Vouchers/Index" class="w-full py-3 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
- <span class="material-symbols-outlined">receipt_long</span> إنشاء سند
- </a>
- }
- else if (activeUnit == "Inventory" && User.HasClaim("Permission", "Drug.View"))
- {
- <a href="/Drugs/Create" class="w-full py-3 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
- <span class="material-symbols-outlined">add_box</span> بطاقة صنف
- </a>
- }
- else if (activeUnit == "SystemSettings" && User.IsInRole("SuperAdmin"))
- {
- <a href="/Home/AdminHub" class="w-full py-3 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95">
- <span class="material-symbols-outlined">admin_panel_settings</span> لوحة الإدارة
- </a>
- }
- else if (activeUnit != "Commercial")
- {
- <a href="/Home/DashboardHub" class="w-full py-3 bg-surface-container-high text-primary rounded-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors">
- <span class="material-symbols-outlined">dashboard</span> لوحة النظام
- </a>
- }
- </div>
+    else if (activeUnit == "Finance" && User.HasClaim("Permission", "JournalEntries.View"))
+    {
+    <a href="/Vouchers/Index" class="w-full py-2.5 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+    <span class="material-symbols-outlined text-[18px]">receipt_long</span> إنشاء سند
+    </a>
+    }
+    else if (activeUnit == "Inventory" && User.HasClaim("Permission", "Drug.View"))
+    {
+    <a href="/Drugs/Create" class="w-full py-2.5 bg-emerald-600 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+    <span class="material-symbols-outlined text-[18px]">add_box</span> بطاقة صنف
+    </a>
+    }
+    else if (activeUnit == "SystemSettings" && User.IsInRole("SuperAdmin"))
+    {
+    <a href="/Home/AdminHub" class="w-full py-2.5 bg-slate-800 text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+    <span class="material-symbols-outlined text-[18px]">admin_panel_settings</span> لوحة الإدارة
+    </a>
+    }
+    else if (activeUnit != "Commercial")
+    {
+    <a href="/Home/Index" class="w-full py-2.5 bg-surface-container-high text-primary rounded-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors text-sm">
+    <span class="material-symbols-outlined text-[18px]">dashboard</span> لوحة النظام
+    </a>
+    }
+    </div>
 </aside>
 }
-
 <!-- Mobile Sidebar Overlay -->
-<div id="mobileSidebarOverlay" onclick="closeSidebar()"></div>
+<div id="mobileSidebarOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden transition-opacity" onclick="toggleSidebar()"></div>
+
 
 <!-- Main Content Canvas -->
-<main class="print:!m-0 print:!p-0 @(isMainHub || isPOSMode ? "" : "mr-64") p-5 min-h-screen flex-1 w-full max-w-full overflow-x-hidden bg-surface">
-
+<main class="print:!m-0 print:!p-0 p-5 min-h-screen flex-1 w-full max-w-full overflow-x-hidden bg-surface">
 @if (!isPOSMode) {
 <!-- Top Header Navigation -->
-<header class="print:hidden sticky top-0 z-40 flex justify-between items-center w-full px-6 py-4 bg-white rounded-sm mb-8 shadow-sm border border-slate-100">
+<header class="print:hidden sticky top-0 z-40 flex justify-between items-center w-full px-6 py-3 bg-white rounded-sm mb-6 shadow-sm border border-slate-100">
  <!-- Page Context -->
  <div class="flex items-center gap-3">
   <!-- زر الهامبرغر - يظهر فقط على الهاتف -->
-  <button id="btnToggleSidebar" onclick="toggleSidebar()" title="القائمة">
-   <span class="material-symbols-outlined" style="font-size:22px;">menu</span>
+  <button id="btnToggleSidebar" onclick="toggleSidebar()" title="القائمة" class="md:hidden text-slate-600">
+   <span class="material-symbols-outlined text-[22px]">menu</span>
   </button>
+  <!-- اسم الفرع النشط - يظهر فقط للهاتف أو للمستخدمين بدون dropdown -->
+  @if (!User.IsInRole("SuperAdmin") && !User.HasClaim("Permission", "System.ChangeBranch"))
+  {
+  <div class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2 border border-slate-200">
+   <span class="material-symbols-outlined text-[16px]">storefront</span>
+   <span class="font-semibold">@(ViewBag.ActiveBranchName?.ToString() ?? "الفرع الرئيسي")</span>
+  </div>
+  }
+
   @if (showHeaderBack)
   {
-  <button type="button" data-back-fallback="@backFallbackUrl" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="w-10 h-10 flex items-center justify-center rounded-sm bg-surface-container-high text-secondary hover:bg-primary hover:text-white transition-all shadow-sm group border-0 cursor-pointer" title="الرجوع للصفحة التي أتيت منها" aria-label="رجوع">
+  <button type="button" data-back-fallback="@backFallbackUrl" onclick="pharmaSmartNavigateBack(this.getAttribute('data-back-fallback'))" class="w-9 h-9 flex items-center justify-center rounded-sm bg-surface-container-high text-secondary hover:bg-primary hover:text-white transition-all shadow-sm group border-0 cursor-pointer" title="الرجوع للصفحة التي أتيت منها" aria-label="رجوع">
   <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_forward</span>
   </button>
-  <div class="h-8 w-px bg-slate-200"></div>
   }
-  <div>
-  <div class="flex items-center gap-3">
-  <h2 class="text-2xl font-black text-primary tracking-tight">@ViewData["Title"]</h2>
-  </div>
-  @if(ViewData["PageDescription"] != null)
-  {
-  <p class="text-xs text-slate-500 font-bold mt-1">@ViewData["PageDescription"]</p>
-  }
-  </div>
-  @RenderSection("SubHeaderNav", required: false)
  </div>
 
- <!-- Search & Global Actions -->
- <div class="flex items-center gap-4">
+ <!-- Global Actions -->
+ <div class="flex items-center gap-3">
   <!-- Dynamic header actions injected from the child view -->
   @RenderSection("HeaderActions", required: false)
 
@@ -270,7 +313,7 @@
   {
   <form asp-controller="Home" asp-action="ChangeActiveBranch" method="post" class="flex m-0 branch-selector">
   <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
-  <div class="relative flex items-center bg-surface-container-highest rounded-full hover:bg-surface-variant transition-all h-10 w-48 border border-slate-200">
+  <div class="relative flex items-center bg-surface-container-highest rounded-full hover:bg-surface-variant transition-all h-9 w-44 border border-slate-200">
   <span class="material-symbols-outlined text-xl text-primary pointer-events-none absolute right-3">storefront</span>
   <select name="branchId" onchange="this.form.submit()" class="appearance-none bg-transparent w-full text-primary font-black text-sm border-none focus:ring-0 pr-10 pl-8 cursor-pointer h-full">
   @{ 
@@ -289,14 +332,8 @@
   @foreach (var br in branchesList)
   {
   bool isSelected = (!isAllBranches && headerScope == br.BranchId);
-  if (isSelected)
-  {
-  <option value="@br.BranchId" selected>@br.BranchName</option>
-  }
-  else
-  {
-  <option value="@br.BranchId">@br.BranchName</option>
-  }
+  if (isSelected) { <option value="@br.BranchId" selected>@br.BranchName</option> }
+  else { <option value="@br.BranchId">@br.BranchName</option> }
   }
   </select>
   <span class="material-symbols-outlined text-sm text-primary pointer-events-none absolute left-3">expand_more</span>
@@ -305,38 +342,139 @@
   }
   else
   {
-  <div class="flex items-center gap-2 px-4 py-2 bg-surface-container-highest border border-slate-200 rounded-full text-primary font-black text-sm transition-all h-10 cursor-default whitespace-nowrap branch-selector">
-  <span class="material-symbols-outlined text-xl">storefront</span>
+  <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest border border-slate-200 rounded-full text-primary font-black text-sm h-9 cursor-default whitespace-nowrap branch-selector hidden md:flex">
+  <span class="material-symbols-outlined text-[18px]">storefront</span>
   <span>@(ViewBag.ActiveBranchName?.ToString() ?? "الفرع الحالي")</span>
   </div>
   }
 
-  <a href="/Home/Notifications" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-container-highest transition-all text-secondary relative border border-slate-200" title="التنبيهات">
-  <span class="material-symbols-outlined text-[20px]">notifications</span>
-  @if (ViewBag.NotificationCount != null && (int)ViewBag.NotificationCount > 0)
-  {
-      <span class="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-error text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
-          @(ViewBag.NotificationCount > 99 ? "99+" : ViewBag.NotificationCount)
-      </span>
-  }
-  </a>
+  <!-- 🔔 Bell Button + Dropdown -->
+  <div class="relative" id="bellDropdownWrapper">
+   <button id="bellBtn" onclick="toggleBellDropdown(event)"
+    class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-container-highest transition-all text-secondary relative border border-slate-200" title="التنبيهات">
+    <span class="material-symbols-outlined text-[20px]">notifications</span>
+    @if (ViewBag.NotificationCount != null && (int)ViewBag.NotificationCount > 0)
+    {
+        <span id="bellBadge" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-error text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+            @(ViewBag.NotificationCount > 99 ? "99+" : ViewBag.NotificationCount)
+        </span>
+    }
+   </button>
+   <!-- Dropdown Panel -->
+   <div id="bellDropdown" class="hidden absolute left-0 mt-2 w-80 bg-white rounded-sm shadow-2xl border border-slate-200 z-50 overflow-hidden" style="min-width:320px;">
+    <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+     <span class="font-black text-sm text-slate-800">التنبيهات</span>
+     <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+      @(ViewBag.NotificationCount ?? 0) غير مقروء
+     </span>
+    </div>
+    <div id="bellDropdownItems" class="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+     @{
+      int shortCnt = ViewBag.ShortagesCount ?? 0;
+      int expCnt = ViewBag.ExpiringCount ?? 0;
+      int loginFail = ViewBag.LoginFailuresCount ?? 0;
+     }
+     @if (shortCnt > 0)
+     {
+      <a href="/Inventory/Shortages" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
+       <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span class="material-symbols-outlined text-red-500 text-[16px]">inventory_2</span>
+       </div>
+       <div>
+        <p class="text-sm font-bold text-slate-800">نواقص مخزون حرجة</p>
+        <p class="text-xs text-slate-500 font-medium">@shortCnt صنف وصل للحد الأدنى</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
+       </div>
+       <div class="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+      </a>
+     }
+     @if (expCnt > 0)
+     {
+      <a href="/Report/StockExpiry" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
+       <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span class="material-symbols-outlined text-amber-500 text-[16px]">event_busy</span>
+       </div>
+       <div>
+        <p class="text-sm font-bold text-slate-800">صلاحيات مقاربة للانتهاء</p>
+        <p class="text-xs text-slate-500 font-medium">@expCnt تشغيلة تنتهي خلال شهرين</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
+       </div>
+       <div class="w-2 h-2 rounded-full bg-amber-500 mt-2 flex-shrink-0"></div>
+      </a>
+     }
+     @if (loginFail > 0)
+     {
+      <a href="/Admin/SystemLogs" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
+       <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span class="material-symbols-outlined text-purple-500 text-[16px]">gpp_bad</span>
+       </div>
+       <div>
+        <p class="text-sm font-bold text-slate-800">تنبيه أمني</p>
+        <p class="text-xs text-slate-500 font-medium">@loginFail محاولة دخول فاشلة (24 ساعة)</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
+       </div>
+       <div class="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
+      </a>
+     }
+     @if ((ViewBag.NotificationCount ?? 0) == 0)
+     {
+      <div class="flex flex-col items-center justify-center py-8 text-center">
+       <span class="material-symbols-outlined text-slate-300 text-[48px]">notifications_off</span>
+       <p class="text-sm font-bold text-slate-400 mt-2">لا توجد تنبيهات حالياً</p>
+      </div>
+     }
+    </div>
+    <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 text-center">
+     <a href="/Home/Notifications" class="text-xs font-black text-primary hover:underline flex items-center justify-center gap-1">
+      <span class="material-symbols-outlined text-[14px]">open_in_full</span>
+      عرض كل الإشعارات
+     </a>
+    </div>
+   </div>
+  </div>
   
-  <a href="/Account/ChangePassword" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-variant transition-all text-secondary border border-slate-200" title="تغيير كلمة المرور">
+  <a href="/Account/ChangePassword" class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-variant transition-all text-secondary border border-slate-200" title="تغيير كلمة المرور">
   <span class="material-symbols-outlined text-[20px]">key</span>
   </a>
 
-  <a href="/Account/Logout" class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-50 hover:bg-error-container hover:text-error text-rose-400 transition-all border border-rose-100" title="تسجيل الخروج">
+  <a href="/Account/Logout" class="w-9 h-9 flex items-center justify-center rounded-full bg-rose-50 hover:bg-error-container hover:text-error text-rose-400 transition-all border border-rose-100" title="تسجيل الخروج">
   <span class="material-symbols-outlined text-[20px]">logout</span>
   </a>
  </div>
 </header>
 }
+
+    <!-- View Canvas Content -->
+    <div class="@(isPOSMode ? "" : "space-y-6")">
+        @if (!isPOSMode) {
+            <div class="mb-2">
+                <h2 class="text-2xl font-black text-primary tracking-tight">@ViewData["Title"]</h2>
+                @if(ViewData["PageDescription"] != null)
+                {
+                    <p class="text-xs text-slate-500 font-bold mt-1">@ViewData["PageDescription"]</p>
+                }
+            </div>
+            @RenderSection("SubHeaderNav", required: false)
+        }
  
  <!-- Render Body -->
  @RenderBody()
 
 </main>
 @RenderSection("Scripts", required: false)
+
+<!-- FAB Button (for BranchManager & Cashier on dashboard) -->
+@if (!isPOSMode && (User.IsInRole("Cashier") || User.IsInRole("Pharmacist") || User.IsInRole("BranchManager")))
+{
+<div id="fabContainer" class="fixed bottom-6 left-6 z-30 print:hidden">
+ <a href="/Sales/Create" id="fabBtn"
+  class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 py-3.5 shadow-xl transition-all flex items-center gap-2 hover:-translate-y-1 active:scale-95"
+  title="بيع سريع">
+  <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+  <span class="hidden md:inline text-sm font-bold">بيع سريع</span>
+ </a>
+</div>
+}
 
 <style>
  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -346,12 +484,20 @@
 
  /* === Toast Notification System === */
  #pharma-toast-container { position:fixed; bottom:24px; left:24px; z-index:9000; display:flex; flex-direction:column-reverse; gap:12px; pointer-events:none; }
- .pharma-toast { pointer-events:all; min-width:300px; max-width:360px; background:white; border-radius:4px; box-shadow:0 8px 30px rgba(0,0,0,0.15); border-right:4px solid #f59e0b; display:flex; align-items:flex-start; gap:12px; padding:14px 16px; animation:toast-in 0.35s cubic-bezier(.21,1.02,.73,1) both; }
+ .pharma-toast { pointer-events:all; min-width:300px; max-width:380px; background:white; border-radius:4px; box-shadow:0 8px 30px rgba(0,0,0,0.15); border-right:4px solid #f59e0b; display:flex; align-items:flex-start; gap:12px; padding:14px 16px; animation:toast-in 0.35s cubic-bezier(.21,1.02,.73,1) both; }
  .pharma-toast.shortage { border-right-color:#ef4444; }
  .pharma-toast.expiring { border-right-color:#f59e0b; }
+ .pharma-toast.success  { border-right-color:#10b981; }
+ .pharma-toast.error    { border-right-color:#ef4444; }
+ .pharma-toast.warning  { border-right-color:#f59e0b; }
+ .pharma-toast.info     { border-right-color:#3b82f6; }
  .pharma-toast-icon { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
  .pharma-toast.shortage .pharma-toast-icon { background:#fee2e2; color:#ef4444; }
  .pharma-toast.expiring .pharma-toast-icon { background:#fef3c7; color:#d97706; }
+ .pharma-toast.success  .pharma-toast-icon { background:#d1fae5; color:#10b981; }
+ .pharma-toast.error    .pharma-toast-icon { background:#fee2e2; color:#ef4444; }
+ .pharma-toast.warning  .pharma-toast-icon { background:#fef3c7; color:#d97706; }
+ .pharma-toast.info     .pharma-toast-icon { background:#dbeafe; color:#3b82f6; }
  .pharma-toast-body { flex:1; }
  .pharma-toast-title { font-size:13px; font-weight:900; color:#0f172a; margin-bottom:2px; }
  .pharma-toast-sub { font-size:11px; color:#64748b; font-weight:600; }
@@ -366,7 +512,48 @@
 <!-- Toast Notification Container -->
 <div id="pharma-toast-container"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+ // ════════════════════════════════════════
+ // 🔔 Bell Dropdown Toggle
+ // ════════════════════════════════════════
+ function toggleBellDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('bellDropdown');
+  if (dd) dd.classList.toggle('hidden');
+ }
+ document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('bellDropdownWrapper');
+  const dd = document.getElementById('bellDropdown');
+  if (wrapper && dd && !wrapper.contains(e.target)) dd.classList.add('hidden');
+ });
+
+ // ════════════════════════════════════════
+ // ✅ Global showToast API (Success / Error / Warning / Info)
+ // ════════════════════════════════════════
+ window.showToast = function(message, type, duration) {
+  type = type || 'info';
+  duration = duration || 5000;
+  const icons = { success: 'check_circle', error: 'cancel', warning: 'warning', info: 'info' };
+  const container = document.getElementById('pharma-toast-container');
+  if (!container) return;
+  const t = document.createElement('div');
+  t.className = 'pharma-toast ' + type;
+  t.innerHTML = `
+   <div class="pharma-toast-icon"><span class="material-symbols-outlined" style="font-size:20px;">${icons[type] || 'info'}</span></div>
+   <div class="pharma-toast-body"><div class="pharma-toast-title">${message}</div></div>
+   <button class="pharma-toast-close" title="إغلاق">×</button>`;
+  t.querySelector('.pharma-toast-close').addEventListener('click', () => {
+   t.style.animation = 'toast-out 0.3s forwards';
+   setTimeout(() => t.remove(), 310);
+  });
+  container.appendChild(t);
+  setTimeout(() => {
+   t.style.animation = 'toast-out 0.3s forwards';
+   setTimeout(() => t.remove(), 310);
+  }, duration);
+ };
+
  // ════════════════════════════════════════
  // ◀ رجوع ذكي: تاريخ المتصفح إن جئت من داخل النظام، وإلا الانتقال لقائمة الوحدة
  // ════════════════════════════════════════
@@ -386,24 +573,87 @@
  // 📱 Sidebar Toggle (Mobile Responsive)
  // ════════════════════════════════════════
  function toggleSidebar() {
-   const sidebar = document.querySelector('aside.fixed');
+   const sidebar = document.getElementById('sidebar');
    const overlay = document.getElementById('mobileSidebarOverlay');
-   const closeBtn = document.getElementById('btnCloseSidebar');
    if (!sidebar) return;
-   sidebar.classList.toggle('sidebar-open');
-   overlay.classList.toggle('active');
-   if (closeBtn) closeBtn.style.display = sidebar.classList.contains('sidebar-open') ? 'block' : 'none';
+   
+   if (window.innerWidth <= 768) {
+       // Mobile behavior
+       sidebar.classList.toggle('sidebar-mobile-hidden');
+       sidebar.classList.toggle('sidebar-mobile-visible');
+       // Toggle overlay
+       if (sidebar.classList.contains('sidebar-mobile-visible')) {
+           overlay.classList.remove('hidden');
+           overlay.classList.add('block');
+       } else {
+           overlay.classList.remove('block');
+           overlay.classList.add('hidden');
+       }
+   }
  }
+ 
  function closeSidebar() {
-   const sidebar = document.querySelector('aside.fixed');
+   const sidebar = document.getElementById('sidebar');
    const overlay = document.getElementById('mobileSidebarOverlay');
    if (!sidebar) return;
-   sidebar.classList.remove('sidebar-open');
-   overlay.classList.remove('active');
+   
+   if (window.innerWidth <= 768) {
+       sidebar.classList.add('sidebar-mobile-hidden');
+       sidebar.classList.remove('sidebar-mobile-visible');
+       overlay.classList.remove('block');
+       overlay.classList.add('hidden');
+   }
  }
+ 
  function closeSidebarOnMobile() {
-   if (window.innerWidth <= 768) closeSidebar();
+   closeSidebar();
  }
+
+ // ════════════════════════════════════════
+ // 🗂️ Sidebar Group Toggle + LocalStorage State
+ // ════════════════════════════════════════
+ function toggleSidebarGroup(btn) {
+   const groupId = btn.getAttribute('data-group-id');
+   const submenu = document.getElementById(groupId);
+   const icon = btn.querySelector('.chevron-icon');
+   if (!submenu) return;
+   const isHidden = submenu.classList.toggle('hidden');
+   if (icon) icon.classList.toggle('rotate-180', !isHidden);
+   // حفظ الحالة
+   try {
+    const stored = JSON.parse(localStorage.getItem('pharma_sidebar_groups') || '{}');
+    stored[groupId] = !isHidden;
+    localStorage.setItem('pharma_sidebar_groups', JSON.stringify(stored));
+   } catch(e) {}
+ }
+
+ // ════════════════════════════════════════
+ // 🔍 Sidebar Search Filter
+ // ════════════════════════════════════════
+ document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('sidebarSearch');
+  if (searchInput) {
+   searchInput.addEventListener('input', function() {
+    const term = this.value.trim().toLowerCase();
+    const groups = document.querySelectorAll('.sidebar-menu-group');
+    groups.forEach(group => {
+     const links = group.querySelectorAll('.sidebar-menu-item');
+     let hasVisible = false;
+     links.forEach(link => {
+      const text = link.innerText.toLowerCase();
+      const show = term === '' || text.includes(term);
+      link.style.display = show ? 'flex' : 'none';
+      if (show) hasVisible = true;
+     });
+     group.style.display = (term === '' || hasVisible) ? 'block' : 'none';
+     if (term !== '' && hasVisible) {
+      const submenu = group.querySelector('.submenu');
+      if (submenu) submenu.classList.remove('hidden');
+     }
+    });
+   });
+  }
+ });
 
  // ════════════════════════════════════════
  // 🖼️ Iframe Report Modal
@@ -565,5 +815,56 @@
         }
     });
 </script>
+
+@{
+    var tempSuccess = TempData["Success"]?.ToString();
+    var tempError   = TempData["Error"]?.ToString();
+    var tempWarning = TempData["Warning"]?.ToString();
+    var viewBagErr  = ViewBag.Error as string;
+}
+@if (!string.IsNullOrEmpty(tempSuccess))
+{
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tempSuccess)), 'success', 6000);
+});
+</script>
+}
+@if (!string.IsNullOrEmpty(tempError))
+{
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tempError)), 'error', 8000);
+});
+</script>
+}
+@if (!string.IsNullOrEmpty(tempWarning))
+{
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tempWarning)), 'warning', 7000);
+});
+</script>
+}
+@if (!string.IsNullOrEmpty(viewBagErr))
+{
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'error',
+            title: 'تنبيه',
+            text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(viewBagErr)),
+            confirmButtonText: 'حسناً، سأراجع',
+            confirmButtonColor: '#063955',
+            rtl: true
+        });
+    } else {
+        showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(viewBagErr)), 'error', 10000);
+    }
+});
+</script>
+}
+ </div> <!-- /End Flex App Wrapper -->
 </body>
 </html>

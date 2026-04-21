@@ -111,10 +111,25 @@ namespace PharmaSmartWeb.Controllers
                 for (int i = 0; i < detailsList.Count; i++) { ModelState.Remove($"Purchasedetails[{i}].Purchase"); ModelState.Remove($"Purchasedetails[{i}].Drug"); }
             }
 
+            if (purchase.SupplierId <= 0 || !await _context.Suppliers.AnyAsync(s => s.SupplierId == purchase.SupplierId))
+            {
+                ModelState.AddModelError("SupplierId", "يجب إضافة مورد الصنف أولاً قبل تسجيل الفاتورة.");
+            }
+
+            if (purchase.Purchasedetails != null)
+            {
+                foreach (var detail in purchase.Purchasedetails)
+                {
+                    if (string.IsNullOrEmpty(detail.BatchNumber) || detail.ExpiryDate == default)
+                    {
+                        ModelState.AddModelError("", "تاريخ الصلاحية ورقم الباتش إلزاميان لكل صنف.");
+                        break;
+                    }
+                }
+            }
+
             if (!ModelState.IsValid)
             {
-                var errors = string.Join(" | ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                ViewBag.Error = "رفض النظام بسبب أخطاء في البيانات المكتوبة: " + errors;
                 return ReloadCreateView(purchase);
             }
 

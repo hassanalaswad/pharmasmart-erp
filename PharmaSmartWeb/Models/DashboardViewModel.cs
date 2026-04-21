@@ -109,6 +109,7 @@ namespace PharmaSmartWeb.Models
 
     public class StockExpiryViewModel
     {
+        public int DrugId { get; set; }
         public string ItemName { get; set; }
         public string Barcode { get; set; }
         public string BatchNumber { get; set; }
@@ -152,6 +153,7 @@ namespace PharmaSmartWeb.Models
     // 🚀 تم إضافة خاصية Percentage هنا لحل خطأ الكنترولر
     public class PnlAccountViewModel
     {
+        public int AccountId { get; set; }
         public string Name { get; set; }
         public string Code { get; set; }
         public decimal Total { get; set; }

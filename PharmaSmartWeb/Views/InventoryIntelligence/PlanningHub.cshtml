@@ -1,0 +1,477 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "مركز التخطيط والتنبؤ الذكي";
+    ViewData["PageDescription"] = "منصة متكاملة لخطة المشتريات الذكية مدعومة بـ Prophet AI / Vertex AI";
+}
+
+<!-- Custom CSS for Planning Hub -->
+<style>
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    .stepper-item { flex: 1; text-align: center; position: relative; }
+    .stepper-item:not(:last-child)::after {
+        content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px;
+        background: #e2e8f0; z-index: 0;
+    }
+    .stepper-item.completed::after { background: #10b981; }
+    .step-icon { position: relative; z-index: 1; margin: 0 auto; transition: all 0.3s ease; }
+    
+    /* Range Slider Styling */
+    input[type=range] {
+        -webkit-appearance: none; width: 100%; background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+        background: #0ea5e9; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(14,165,233,0.3);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+        width: 100%; height: 4px; cursor: pointer; background: #e2e8f0; border-radius: 2px;
+    }
+</style>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- SheetJS -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- المنطقة A: شريط الحالة (Status Stepper) -->
+<div class="glass-panel rounded-lg p-5 mb-6">
+    <div class="flex justify-between items-center relative">
+        <div class="stepper-item completed" data-step="1">
+            <div class="step-icon w-8 h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold ring-4 ring-blue-100 relative">
+                1<span class="absolute inset-0 rounded-full border-2 border-blue-600 animate-ping opacity-75"></span>
+            </div>
+            <div class="step-text text-xs font-bold text-blue-700 mt-1">تنبؤ آلي</div>
+        </div>
+        <div class="stepper-item" data-step="2">
+            <div class="step-icon w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold border border-slate-200">2</div>
+            <div class="step-text text-xs font-medium text-slate-400 mt-1">مراجعة الخطة</div>
+        </div>
+        <div class="stepper-item" data-step="3">
+            <div class="step-icon w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold border border-slate-200">3</div>
+            <div class="step-text text-xs font-medium text-slate-400 mt-1">بانتظار طلب التوريد</div>
+        </div>
+        <div class="stepper-item" data-step="4">
+            <div class="step-icon w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold border border-slate-200">4</div>
+            <div class="step-text text-xs font-medium text-slate-400 mt-1">استلام البضاعة</div>
+        </div>
+        <div class="stepper-item" data-step="5">
+            <div class="step-icon w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold border border-slate-200">5</div>
+            <div class="step-text text-xs font-medium text-slate-400 mt-1">الترحيل المالي</div>
+        </div>
+    </div>
+</div>
+
+<!-- المنطقة B: لوحة تحكم المحرك والأُفق الزمني -->
+<div class="glass-panel rounded-lg p-5 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- 1. Data Source -->
+    <div class="border-r border-slate-200 pr-4">
+        @Html.AntiForgeryToken()
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary">database</span> مصدر البيانات</h3>
+        <button id="refreshDbBtn" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-2 rounded-sm text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-[16px] text-emerald-600">sync</span> تحديث من قاعدة البيانات
+        </button>
+        <div id="cloudUploadArea" class="hidden w-full border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-sm p-3 text-center cursor-pointer hover:bg-blue-50 transition drop-zone" onclick="document.getElementById('externalFileInput').click()">
+            <span class="material-symbols-outlined text-blue-500 mb-1 block">upload_file</span>
+            <span id="uploadAreaText" class="text-xs font-medium text-blue-700">اسحب وافلت أو انقر لاختيار ملف (CSV / Excel)</span>
+            <input type="file" id="externalFileInput" class="hidden" accept=".csv, .xlsx, .xls">
+        </div>
+    </div>
+
+
+    <!-- 2. Model Selection -->
+    <div class="border-l border-slate-200 pl-4">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary">psychology</span> محرك الذكاء الاصطناعي</h3>
+        <div class="flex gap-2">
+            <button id="localBtn" class="flex-1 px-2 py-2 rounded-sm text-xs font-bold bg-primary text-white shadow-sm transition border border-primary text-center">
+                🤖 Prophet<br><span class="font-normal text-[10px] opacity-80">تحليل محلي سريع</span>
+            </button>
+            <button id="cloudBtn" class="flex-1 px-2 py-2 rounded-sm text-xs font-bold bg-white text-slate-700 shadow-sm transition border border-slate-200 hover:bg-slate-50 text-center">
+                ☁️ Vertex AI<br><span class="font-normal text-[10px] opacity-80">نماذج عميقة متقدمة</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Forecast Horizon -->
+    <div>
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary">timelapse</span> أفق التنبؤ الزمني</h3>
+        <div class="px-2 mt-4">
+            <input type="range" id="horizonSlider" min="1" max="12" step="1" value="3" list="horizonMarks">
+            <div class="flex justify-between mt-2 text-[10px] font-bold text-slate-500 horizon-labels">
+                <span data-val="1">شهر</span>
+                <span data-val="3" class="text-primary font-black scale-110">ربع سنة</span>
+                <span data-val="6">نصف سنة</span>
+                <span data-val="12">سنة</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- المنطقة C: التحليل البصري (كواليس الذكاء + الرسم البياني) -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+    <!-- كواليس الخوارزمية (الزر + Panel المنزلق) -->
+    <div class="lg:col-span-1">
+        <div class="glass-panel rounded-lg p-5 h-full flex flex-col justify-center items-center text-center">
+            <div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-4 border border-indigo-100 shadow-inner">
+                <span class="material-symbols-outlined text-[32px] text-indigo-600 animate-pulse">magic_button</span>
+            </div>
+            <h3 class="font-black text-slate-800 mb-2">شفافية الخوارزمية</h3>
+            <p class="text-xs text-slate-500 mb-4 px-2">اكتشف كيف قام النظام بترجمة بياناتك التاريخية والمالية إلى خطة مشتريات دقيقة.</p>
+            <button id="openMagicPanel" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-sm text-sm font-bold shadow-md transition w-full flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">visibility</span> كواليس التحليل
+            </button>
+        </div>
+    </div>
+
+    <!-- مخطط الطلب التفاعلي -->
+    <div class="lg:col-span-3">
+        <div class="glass-panel rounded-lg p-5 h-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[18px]">monitoring</span>
+                    المبيعات التاريخية مقابل توقعات الطلب
+                </h3>
+                <div class="text-[11px] font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded border border-slate-200">
+                    دقة النموذج المقدرة: <span class="text-emerald-600">92.4%</span>
+                </div>
+            </div>
+            <div class="relative w-full h-[250px]">
+                <canvas id="forecastChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Drawer شفافة الخوارزمية (مخفي افتراضياً) -->
+<div id="aiMagicDrawer" class="hidden fixed inset-y-0 left-0 w-[350px] bg-slate-900 shadow-2xl z-[150] p-6 text-white transform transition-transform border-r border-slate-700 overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-4">
+        <h2 class="font-black text-lg flex items-center gap-2"><span class="text-amber-400">✨</span> مراحل بناء الخطة</h2>
+        <button id="closeMagicPanel" class="text-slate-400 hover:text-white"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <ul id="aiMagicSteps" class="space-y-6 text-sm">
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 1: تجميع المعطيات</strong><span class="text-slate-400 text-xs">تم سحب تواريخ المبيعات لآخر عام.</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-100">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 2: تصنيف المخزون (ABC)</strong><span class="text-slate-400 text-xs">تم تصنيف @(ViewBag.TotalDrugs ?? 0) دواء حسب الأهمية.</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-200">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 3: التنبؤ (Forecasting)</strong><span class="text-slate-400 text-xs">تشغيل محرك البحث واستخراج اتجاهات النمو.</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-300">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 4: الاحتياج الصافي</strong><span class="text-slate-400 text-xs">طرح رصيد المخزون الحالي من الطلب المتوقع.</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-400">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 5: تحسين الكميات (EOQ)</strong><span class="text-slate-400 text-xs">تطبيق معادلة الطلب الاقتصادي لتقليل الهدر.</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-500">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-indigo-300">Phase 6: المطابقة المالية</strong><span class="text-slate-400 text-xs">السيولة المتاحة: @(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) R.Y</span></div>
+        </li>
+        <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-600">
+            <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
+            <div><strong class="block text-emerald-400">Phase 7: توليد المسودة</strong><span class="text-slate-400 text-xs">مسودة الخطة جاهزة لمراجعتك.</span></div>
+        </li>
+    </ul>
+</div>
+
+<!-- المنطقة D: مسودة المشتريات الذكية -->
+<div class="glass-panel rounded-lg mb-6 overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[22px]">format_list_bulleted</span> مسودة المشتريات الذكية
+        </h3>
+        
+        <!-- Safety Switch -->
+        <div class="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full border border-rose-200 shadow-sm">
+            <span class="text-xs font-bold text-rose-700 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">health_and_safety</span> قاطع الأمان (للأدوية المنقذة للحياة)</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="safetySwitch" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Data Grid -->
+    <div class="overflow-x-auto max-h-[500px]">
+        <table class="min-w-full text-sm">
+            <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                <tr class="text-slate-600">
+                    <th class="px-3 py-3 w-8"><input type="checkbox" checked class="rounded border-slate-300"></th>
+                    <th class="px-3 py-3 text-right font-black">الدواء (<span class="text-rose-600">A</span><span class="text-amber-500">B</span><span class="text-slate-400">C</span>)</th>
+                    <th class="px-3 py-3 text-center font-bold">الرصيد <span class="font-normal text-xs">/الحد</span></th>
+                    <th class="px-3 py-3 text-center font-bold">الطلب المتوقع</th>
+                    <th class="px-3 py-3 text-center font-bold">EOQ</th>
+                    <th class="px-3 py-3 text-center font-black bg-emerald-100 text-emerald-800 border-x border-emerald-200">الكمية للتوريد</th>
+                    <th class="px-3 py-3 text-center font-bold">مؤشر السيولة</th>
+                </tr>
+            </thead>
+            <tbody id="forecastTableBody" class="bg-white">
+                <!-- JavaScript Rendered Rows -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="bg-slate-50 border-t border-slate-200 p-4 flex justify-between items-center">
+        <div class="text-left font-black text-slate-800 bg-white px-4 py-2 rounded border border-slate-200 shadow-sm flex flex-col justify-center">
+            <span class="text-[10px] text-slate-500 tracking-wider">التكلفة التقديرية للخطة</span>
+            <span id="totalExpectedCost" class="text-lg text-primary">0.00 R.Y</span>
+        </div>
+        
+        <div class="flex gap-3">
+            <button id="customPdfBtn" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 px-5 py-2.5 rounded-sm text-sm font-bold shadow-sm transition flex items-center gap-1.5 focus:ring-2 focus:ring-slate-200">
+                <span class="material-symbols-outlined text-[16px] text-red-500">picture_as_pdf</span> PDF مخصص 
+            </button>
+            <button id="approvePlanBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-sm text-sm font-bold shadow-md transition hover:-translate-y-0.5 flex items-center gap-1.5 focus:ring-2 focus:ring-emerald-400">
+                <span class="material-symbols-outlined text-[18px]">how_to_reg</span> اعتماد وتحويل لـ PO
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- المنطقة E: بطاقات طلبات التوريد المعتمدة (مخفي حتى الاعتماد) -->
+<div id="poCardsSection" class="hidden mb-6">
+    <h3 class="font-black text-slate-800 text-lg mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[22px]">local_shipping</span> طلبات التوريد قيد الانتظار (PO)
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Sample PO Card -->
+        <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-4 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-1 bg-amber-400 h-full"></div>
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h4 class="font-bold text-slate-800">مورد: الشركة العالمية للأدوية</h4>
+                    <p class="text-[11px] text-slate-500 mt-1">رقم الطلب: #PO-202409-01</p>
+                </div>
+                <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded">بانتظار المورد</span>
+            </div>
+            
+            <div class="bg-slate-50 rounded p-2 mb-4 text-xs">
+                <div class="flex justify-between mb-1"><span class="text-slate-500">عدد الأصناف:</span><span class="font-bold">14 صنف</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">التكلفة التقديرية:</span><span class="font-bold">14,500 R.Y</span></div>
+            </div>
+
+            <div class="flex gap-2">
+                <button class="flex-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-[14px] text-green-600">send</span> WhatsApp
+                </button>
+                <button onclick="openReceiptModal()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded text-xs font-bold shadow-sm transition flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">inventory_2</span> استلام البضاعة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: الاستلام والترحيل النهائي (Receipt & FEFO) -->
+<div id="receiptModal" tabindex="-1" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-[200] justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0">
+    <div class="relative p-4 w-full max-w-4xl max-h-full transform transition-all scale-95 origin-center">
+        <div class="relative bg-white rounded-lg shadow-2xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">receipt_long</span> 
+                    استلام فاتورة مشتريات (PO-202409-01)
+                </h3>
+                <button type="button" onclick="closeReceiptModal()" class="text-slate-400 bg-transparent hover:bg-slate-200 hover:text-slate-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body: FEFO Details -->
+            <div class="p-4 md:p-5 overflow-y-auto max-h-[60vh]">
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold px-3 py-2 rounded mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">info</span>
+                    يُرجى إدخال السعر الفعلي من الفاتورة الورقية، ورقم التشغيلة، وتاريخ الصلاحية لكل صنف لاعتماد ضوابط FEFO.
+                </div>
+                
+                <table class="min-w-full text-xs">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th class="p-2 text-right">الدواء</th>
+                            <th class="p-2 text-center">الكمية المسلمة</th>
+                            <th class="p-2 text-center w-24">السعر الفعلي</th>
+                            <th class="p-2 text-center w-28">رقم التشغيلة (Batch)</th>
+                            <th class="p-2 text-center w-32">تاريخ الصلاحية</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiptModalBody">
+                        <!-- سيتم تعبئة الصفوف ديناميكياً من الجافاسكربت بناءً على العناصر المعتمدة -->
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center p-4 border-t border-slate-200 rounded-b bg-slate-50 justify-between">
+                <div class="text-xs text-slate-500">سيتم إنشاء قيد محاسبي آلي ورفع رصيد المخزون بناءً على البيانات.</div>
+                <button type="button" onclick="confirmReceipt()" class="text-white bg-emerald-600 hover:bg-emerald-700 font-bold rounded-sm text-sm px-6 py-2.5 shadow transition flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">verified</span> حفظ الفاتورة وترحيل مالي
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: مطابقة أعمدة ملف (Excel/CSV) -->
+<div id="mappingModal" tabindex="-1" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-[200] justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0">
+    <div class="relative p-4 w-full max-w-2xl max-h-full transform transition-all scale-95 origin-center">
+        <div class="relative bg-white rounded-lg shadow-2xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">data_object</span> 
+                    مطابقة حقول البيانات (Mapping)
+                </h3>
+                <button type="button" onclick="closeMappingModal()" class="text-slate-400 bg-transparent hover:bg-slate-200 hover:text-slate-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body: Mapping Forms -->
+            <div class="p-4 md:p-5 overflow-y-auto max-h-[60vh]">
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold px-3 py-2 rounded mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">info</span>
+                    يرجى تحديد العمود المناسب من ملفك لكل حقل من الحقول أدناه لضمان دقة التنبؤ.
+                </div>
+                
+                <div class="space-y-4" id="mappingFieldsContainer">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">اسم الدواء (Drug Name) <span class="text-red-500">*</span></label>
+                        <select id="mapDrugName" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">الرصيد الحالي (Current Stock) <span class="text-red-500">*</span></label>
+                        <select id="mapCurrentStock" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">الطلب المتوقع / المبيعات (Demand) <span class="text-red-500">*</span></label>
+                        <select id="mapExpectedQty" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">تكلفة الوحدة / السعر (Unit Cost) <span class="text-red-500">*</span></label>
+                        <select id="mapUnitCost" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                    </div>
+                </div>
+                <div id="mappingError" class="hidden text-rose-500 text-xs font-bold mt-2">يرجى اختيار أعمدة مختلفة لكل حقل إلزامي.</div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center p-4 border-t border-slate-200 rounded-b bg-slate-50 justify-between">
+                <button type="button" onclick="closeMappingModal()" class="text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 font-bold rounded-sm text-sm px-4 py-2 shadow-sm transition">
+                    إلغاء
+                </button>
+                <button type="button" onclick="confirmMapping()" class="text-white bg-primary hover:bg-blue-700 font-bold rounded-sm text-sm px-6 py-2 shadow transition flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">done_all</span> استيراد البيانات
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal: تخصيص الطباعة لـ PDF -->
+<div id="printConfigModal" tabindex="-1" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-[200] justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0">
+    <div class="relative p-4 w-full max-w-lg max-h-full transform transition-all scale-95 origin-center">
+        <div class="relative bg-white rounded-lg shadow-2xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">print</span> 
+                    تخصيص طباعة التقرير (PDF)
+                </h3>
+                <button type="button" onclick="closePrintModal()" class="text-slate-400 bg-transparent hover:bg-slate-200 hover:text-slate-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-4 md:p-5">
+                <div class="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-bold px-3 py-2 rounded mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">info</span>
+                    اختر الأعمدة التي تود ظهورها في التقرير المطبوع للحصول على تنسيق مرتب ونظيف.
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3" id="printColumnsContainer">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" value="drug" checked disabled class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        اسم الدواء (أساسي)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_abc" value="abc" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        التصنيف (ABC)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_stock" value="stock" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        الرصيد / الحد
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_expected" value="expectedQty" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        الطلب المتوقع
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_eoq" value="eoq" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        كمية (EOQ)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_approved" value="approved" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        الكمية للتوريد
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_cost" value="totalCost" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        التكلفة الإجمالية
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
+                        <input type="checkbox" id="col_status" value="status" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
+                        مؤشر الحالة
+                    </label>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center p-4 border-t border-slate-200 rounded-b bg-slate-50 justify-between">
+                <button type="button" onclick="closePrintModal()" class="text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 font-bold rounded-sm text-sm px-4 py-2 shadow-sm transition">
+                    إلغاء
+                </button>
+                <button type="button" onclick="generateCustomPdf()" class="text-white bg-rose-600 hover:bg-rose-700 font-bold rounded-sm text-sm px-6 py-2 shadow transition flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> إنشاء وطباعة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <!-- نربط السكريبت الذي قمنا بعزله -->
+    <script src="~/js/planning-hub.js" asp-append-version="true"></script>
+
+    <script>
+        // تمرير البيانات من الـ Server إلى كائن الحالة في JS
+        document.addEventListener('DOMContentLoaded', () => {
+            if(window.appState) {
+                appState.forecastData = @Html.Raw(ViewBag.PlanningItems ?? "[]");
+                appState.chartLabels = @Html.Raw(ViewBag.ChartLabels ?? "[]");
+                appState.chartActual = @Html.Raw(ViewBag.ChartActual ?? "[]");
+                appState.chartForecast = @Html.Raw(ViewBag.ChartForecast ?? "[]");
+                
+                // Re-init chart and grid with the real data
+                if(typeof initChart === 'function') initChart();
+                if(typeof renderDraftGrid === 'function') renderDraftGrid();
+            }
+        });
+    </script>
+}

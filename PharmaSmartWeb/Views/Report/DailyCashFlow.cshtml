@@ -1,7 +1,7 @@
 @model IEnumerable<PharmaSmartWeb.Models.Journaldetails>
 
 @{
-    Layout = "_ReportLayout";
+    Layout = (ViewBag.LayoutTheme == "drawer" || ViewBag.LayoutTheme == "modal") ? null : "_ReportLayout";
     ViewData["Title"] = "تقرير حركة السيولة اليومية";
     ViewData["Subtitle"] = "Daily Cash Flow Report";
     var account = ViewBag.SelectedAccount as PharmaSmartWeb.Models.Accounts;
@@ -46,6 +46,48 @@
             <button type="button" onclick="window.print()" class="rf-btn-print">🖨 طباعة</button>
         </form>
     </div>
+}
+
+@if (ViewBag.LayoutTheme == "drawer" || ViewBag.LayoutTheme == "modal")
+{
+    <div style="padding:15px; background:#f8fafc; border-bottom:1px solid #e2e8f0; margin-bottom:15px;">
+        <form method="get" onsubmit="event.preventDefault(); fetchDailyCashFlowData(this);" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="hidden" name="layoutTheme" value="@ViewBag.LayoutTheme" />
+            <div style="flex:2; min-width:200px;">
+                <label style="font-size:12px; font-weight:700; color:#64748b;">اختيار الصندوق / البنك</label>
+                <select name="accountId" required style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:4px;">
+                    <option value="">-- حدد الحساب --</option>
+                    @if(ViewBag.CashAccounts != null)
+                    {
+                        foreach (var acc in ViewBag.CashAccounts)
+                        {
+                            bool isSel = account?.AccountId == acc.AccountId;
+                            <option value="@acc.AccountId" selected="@isSel">@acc.AccountCode - @acc.AccountName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label style="font-size:12px; font-weight:700; color:#64748b;">تاريخ الحركة</label>
+                <input type="date" name="date" value="@ViewBag.TargetDate" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:4px;" dir="ltr">
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+                <button type="submit" style="background:#063955; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">استخراج</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        async function fetchDailyCashFlowData(form) {
+            const formData = new FormData(form);
+            const query = new URLSearchParams(formData).toString();
+            const content = document.getElementById('cashFlowContent');
+            content.innerHTML = '<div style="display:flex; height:200px; align-items:center; justify-content:center;"><span class="material-symbols-outlined animate-spin" style="font-size:32px;">progress_activity</span></div>';
+            try {
+                const response = await fetch(`/Report/DailyCashFlow?${query}`);
+                if (response.ok) { content.innerHTML = await response.text(); }
+            } catch (err) { }
+        }
+    </script>
 }
 
 @* ===== REPORT BODY (renders inside .page in _ReportLayout) ===== *@

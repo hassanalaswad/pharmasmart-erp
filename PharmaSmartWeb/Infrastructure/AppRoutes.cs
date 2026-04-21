@@ -382,9 +382,18 @@ namespace PharmaSmartWeb.Infrastructure
         public static class InventoryIntelligence
         {
             public const string Controller = "InventoryIntelligence";
+            public const string Screen     = "InventoryIntelligence";
             public static class Actions
             {
-                public const string Index = "Index";
+                public const string Index                      = "Index";
+                public const string CalculateABC               = "CalculateABC";
+                public const string GenerateSmartPlan          = "GenerateSmartPlan";
+                public const string ExtractExcelHeaders        = "ExtractExcelHeaders";
+                public const string GenerateSmartPlanFromExcel = "GenerateSmartPlanFromExcel";
+                public const string GetPlanDetails             = "GetPlanDetails";
+                public const string UpdatePlanDetail           = "UpdatePlanDetail";
+                public const string SmartPlanPrint             = "SmartPlanPrint";
+                public const string PlanningHub                = "PlanningHub";
             }
         }
 
@@ -507,8 +516,9 @@ namespace PharmaSmartWeb.Infrastructure
             public const string ProfitAndLoss   = "ProfitAndLoss";
 
             // ───── ذكاء الأعمال ─────
-            public const string PharmacistSales = "PharmacistSales";
-            public const string StockExpiry     = "StockExpiry";
+            public const string PharmacistSales       = "PharmacistSales";
+            public const string StockExpiry           = "StockExpiry";
+            public const string InventoryIntelligence = "InventoryIntelligence";
 
             // ───── الإدارة والرقابة ─────
             public const string Employees       = "Employees";

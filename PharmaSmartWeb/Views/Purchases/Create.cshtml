@@ -63,6 +63,7 @@
 <form id="purchasesForm" asp-action="Create" method="post" style="max-width:1200px; margin:0 auto; padding: 24px 16px;">
     @Html.AntiForgeryToken()
     <div id="hiddenInputsContainer"></div>
+    <div asp-validation-summary="All" class="text-danger font-bold bg-red-50 p-3 rounded mb-4" style="text-align: right; border: 1px solid #fecaca;"></div>
 
     <!-- Header Actions -->
     <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">

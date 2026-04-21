@@ -1,107 +1,419 @@
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "بوابة النظام الرئيسية";
+    ViewData["Title"] = "لوحة التحكم الرئيسية";
+    ViewData["HideLayoutBack"] = true;
+
+    decimal todaySales    = (decimal)(ViewBag.TodaySales ?? 0m);
+    int shortagesCount    = (int)(ViewBag.ShortagesCount ?? 0);
+    int expiringCount     = (int)(ViewBag.ExpiringCount ?? 0);
+    decimal cashBalance   = (decimal)(ViewBag.CashBalance ?? 0m);
+    int todayInvoices     = (int)(ViewBag.TodayInvoicesCount ?? 0);
+    string chartLabels    = ViewBag.ChartLabels   ?? "[]";
+    string chartActual    = ViewBag.ChartActual   ?? "[]";
+    string chartForecast  = ViewBag.ChartForecast ?? "[]";
+
+    var branchStats       = ViewBag.BranchStats as System.Collections.IEnumerable;
+    var recentSales       = ViewBag.RecentSales as System.Collections.IEnumerable;
+    var shortageItems     = ViewBag.ShortageItems as System.Collections.IEnumerable;
+
+    decimal totalSales    = (decimal)(ViewBag.TotalBranchSales ?? 0m);
+    int totalShortages    = (int)(ViewBag.TotalShortages ?? 0);
+    string bestBranch     = "الفرع الرئيسي";
+
+    bool isSuperAdmin     = User.IsInRole("SuperAdmin");
+    bool isBranchManager  = User.IsInRole("BranchManager");
+    bool isCashier        = User.IsInRole("Cashier") || User.IsInRole("Pharmacist");
+    bool hasNoRole        = !isSuperAdmin && !isBranchManager && !isCashier;
 }
 
-<div class="py-8 px-4 flex flex-col items-center min-h-[70vh]">
-    <!-- Hero Message -->
-    <div class="text-center mb-10 w-full max-w-4xl bg-white/10 rounded-sm p-5 border border-white/20 shadow-sm border border-slate-200">
-        <h1 class="text-3xl font-black text-slate-800 mb-2 font-headline" id="welcomeMessage">بوابة النظام الموحدة</h1>
-        <p class="text-slate-500 text-lg font-bold">يرجى اختيار الوحدة المطلوبة بناءً على صلاحياتك الممنوحة.</p>
+<style>
+    .kpi-card, .quick-action-btn { transition: all 0.2s ease; }
+    .kpi-card:hover, .quick-action-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    .data-table tbody tr:hover { background-color: #f8fafc; }
+</style>
+
+@if (hasNoRole)
+{
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4 text-primary">
+            <span class="material-symbols-outlined text-5xl">health_and_safety</span>
+        </div>
+        <h2 class="text-2xl font-black text-slate-800 mb-2">مرحباً بك في @Settings.CompanyName</h2>
+        <p class="text-slate-500 font-medium">استخدم القائمة الجانبية للتنقل بين وحدات النظام</p>
+    </div>
+}
+else if (isSuperAdmin)
+{
+    <!-- لوحة تحكم مدير النظام -->
+    <div class="bg-indigo-50 border border-indigo-200 rounded-sm p-3 text-indigo-800 text-sm mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">public</span>
+        <span>رؤية موحدة - مدير النظام - جميع الفروع (RBAC • عزل الفروع)</span>
     </div>
 
-    <!-- شبكة الوحدات (Grid of Modules) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full mx-auto" id="modulesContainer">
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+        <a href="/Home/ReportsHub" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-emerald-600">query_stats</span>
+            <span class="text-sm font-bold text-slate-700">إجمالي التقارير</span>
+        </a>
+        <a href="/Users/Index" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-blue-600">group</span>
+            <span class="text-sm font-bold text-slate-700">إدارة المستخدمين</span>
+        </a>
+        <a href="/Branches/Index" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-amber-600">storefront</span>
+            <span class="text-sm font-bold text-slate-700">الفروع</span>
+        </a>
+        <a href="/Admin/Backup" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-purple-600">database</span>
+            <span class="text-sm font-bold text-slate-700">نسخ احتياطي</span>
+        </a>
+        <a href="/Home/ReportsHub" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-red-500">leaderboard</span>
+            <span class="text-sm font-bold text-slate-700">مقارنة الفروع</span>
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-emerald-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">إجمالي مبيعات اليوم</span><span class="material-symbols-outlined text-emerald-500 text-[20px]">trending_up</span></div>
+            <div class="text-2xl font-bold mt-1 text-slate-800">@totalSales.ToString("N0") ﷼</div>
+            <a href="/Home/ReportsHub" class="mt-2 inline-block text-emerald-600 text-xs hover:underline font-bold">تفاصيل ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-amber-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">إجمالي النواقص</span><span class="material-symbols-outlined text-amber-500 text-[20px]">inventory_2</span></div>
+            <div class="text-2xl font-bold mt-1 text-amber-600">@totalShortages صنف</div>
+            <a href="/Inventory/Shortages" class="mt-2 inline-block text-amber-600 text-xs hover:underline font-bold">عرض الكل ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-red-400">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">صلاحية حرجة (≤30 يوم)</span><span class="material-symbols-outlined text-red-500 text-[20px]">event_busy</span></div>
+            <div class="text-2xl font-bold mt-1 text-red-500">@expiringCount دواء</div>
+            <a href="/Report/StockExpiry" class="mt-2 inline-block text-red-500 text-xs hover:underline font-bold">تنبيه مركزي ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-blue-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">أفضل فرع (مبيعات)</span><span class="material-symbols-outlined text-blue-500 text-[20px]">emoji_events</span></div>
+            <div class="text-2xl font-bold mt-1 text-blue-600">@bestBranch</div>
+            <a href="/Home/ReportsHub" class="mt-2 inline-block text-blue-600 text-xs hover:underline font-bold">نسخ الإعدادات ←</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <h3 class="font-bold mb-2 text-slate-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[18px]">bar_chart</span> مبيعات الفروع (آخر 7 أيام)
+            </h3>
+            <canvas id="salesChartAdmin" height="120" style="max-height:220px; width:100%"></canvas>
+        </div>
         
-        @{ bool hasAnyModule = false; }
-
-        <!-- 1. وحدة العمليات التجارية (المبيعات والمشتريات) -->
-        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "Sales.View") || User.IsInRole("Cashier") || User.IsInRole("Pharmacist") || User.IsInRole("BranchManager"))
-        {
-            hasAnyModule = true;
-            <a href="/Home/CommercialHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-blue-600">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="w-16 h-16 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="storefront">storefront</span>
-                    </div>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-3">وحدة العمليات التجارية</h3>
-                <p class="text-sm text-slate-500 font-bold leading-relaxed">نقطة البيع السريعة، المبيعات والمشتريات والمرتجعات.</p>
-            </a>
-        }
-
-        <!-- 2. الإمداد والمخزون -->
-        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "Inventory.View") || User.IsInRole("BranchManager") || User.IsInRole("Pharmacist") || User.IsInRole("Storekeeper"))
-        {
-            hasAnyModule = true;
-            <a href="/Home/InventoryHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-emerald-600">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="w-16 h-16 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="inventory_2">inventory_2</span>
-                    </div>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-3">الإمداد والمخزون</h3>
-                <p class="text-sm text-slate-500 font-bold leading-relaxed">جرد الأدوية، التوريدات، المشتريات، حركة الأصناف والنواقص.</p>
-            </a>
-        }
-        
-        <!-- 3. المالية والمحاسبة -->
-        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "JournalEntries.View") || User.IsInRole("Accountant") || User.IsInRole("BranchManager"))
-        {
-            hasAnyModule = true;
-            <a href="/Home/FinanceHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-amber-600">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="w-16 h-16 rounded-sm bg-amber-50 text-amber-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="account_balance">account_balance</span>
-                    </div>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-3">المالية والمحاسبة</h3>
-                <p class="text-sm text-slate-500 font-bold leading-relaxed">القيود المحاسبية، السندات، الدليل المحاسبي وميزان المراجعة.</p>
-            </a>
-        }
-
-        <!-- 4. ذكاء الأعمال والتقارير -->
-        @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "System.ChangeBranch") || User.IsInRole("Accountant") || User.IsInRole("BranchManager"))
-        {
-            hasAnyModule = true;
-            <a href="/Home/ReportsHub" class="module-card group bg-white rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-purple-600">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="w-16 h-16 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-4xl leading-none" data-icon="query_stats">query_stats</span>
-                    </div>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-3">ذكاء الأعمال والتقارير</h3>
-                <p class="text-sm text-slate-500 font-bold leading-relaxed">Prophet AI، قائمة الدخل، تقارير الأرباح والخسائر وتحليل الأداء.</p>
-            </a>
-        }
-
-        <!-- 6. الإدارة المركزية والأمن -->
-        @if (User.IsInRole("SuperAdmin"))
-        {
-            hasAnyModule = true;
-            <a href="/Home/AdminHub" class="module-card group bg-slate-900 rounded-sm p-5 shadow-sm hover:shadow-sm border border-slate-200 transition-all hover:-translate-y-1 block border-b-4 border-b-slate-500">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="w-16 h-16 rounded-sm bg-slate-800 text-slate-100 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined text-4xl leading-none text-white" data-icon="shield_person">shield_person</span>
-                    </div>
-                </div>
-                <h3 class="text-2xl font-black text-white mb-3">الإدارة المركزية والأمن</h3>
-                <p class="text-sm text-slate-400 font-bold leading-relaxed">صلاحيات المستخدمين، إعدادات النظام، مراقبة السجلات والنسخ الاحتياطي.</p>
-            </a>
-        }
-
-        @if (!hasAnyModule)
-        {
-            <div class="col-span-full text-center py-20 w-full animate-in fade-in duration-700">
-                <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span class="material-symbols-outlined text-6xl text-slate-300 leading-none">lock</span>
-                </div>
-                <h3 class="text-3xl font-black text-slate-900 mb-4">لا تملك صلاحيات وصول</h3>
-                <p class="text-slate-500 font-bold max-w-lg mx-auto text-lg leading-relaxed">
-                    يرجى مراجعة إدارة النظام لربط حسابك بصلاحيات الوصول المناسبة لمهامك التشغيلية.
-                </p>
+        <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <h3 class="font-bold mb-3 text-slate-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-indigo-500 text-[18px]">account_tree</span> أداء الفروع اليوم
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm data-table">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">الفرع</th>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">المبيعات</th>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (branchStats != null) {
+                            foreach (dynamic branch in branchStats) {
+                                <tr class="border-b last:border-0 border-slate-100">
+                                    <td class="px-4 py-2 font-bold text-slate-700">@branch.BranchName</td>
+                                    <td class="px-4 py-2 text-emerald-600 font-bold">@(((decimal)branch.TotalSales).ToString("N0")) ﷼</td>
+                                    <td class="px-4 py-2"><span class="bg-green-100 text-green-700 px-2 rounded-full text-xs font-bold">نشط</span></td>
+                                </tr>
+                            }
+                        } else {
+                            <tr><td colspan="3" class="px-4 py-6 text-center text-slate-400">لا توجد بيانات فروع</td></tr>
+                        }
+                    </tbody>
+                </table>
             </div>
-        }
-
+        </div>
     </div>
-</div>
+}
+else if (isBranchManager)
+{
+    <!-- لوحة تحكم مدير الفرع -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+        <a href="/Sales/Create" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-emerald-600">point_of_sale</span>
+            <span class="text-sm font-bold text-slate-700">بيع جديد</span>
+        </a>
+        <a href="/Purchases/Index" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-blue-600">shopping_cart</span>
+            <span class="text-sm font-bold text-slate-700">طلب شراء</span>
+        </a>
+        <a href="/StockAudit/Index" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-amber-600">fact_check</span>
+            <span class="text-sm font-bold text-slate-700">جرد سريع</span>
+        </a>
+        <a href="/Home/ReportsHub" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-purple-600">query_stats</span>
+            <span class="text-sm font-bold text-slate-700">تقرير اليوم</span>
+        </a>
+        <a href="/Inventory/Shortages" class="quick-action-btn bg-white shadow-sm rounded-sm py-3 px-2 flex flex-col items-center gap-2 border border-slate-200 hover:border-primary/30">
+            <span class="material-symbols-outlined text-3xl text-red-500">warning</span>
+            <span class="text-sm font-bold text-slate-700">نواقص عاجلة</span>
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-emerald-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">مبيعات اليوم</span><span class="material-symbols-outlined text-emerald-500 text-[20px]">trending_up</span></div>
+            <div class="text-2xl font-bold mt-2 text-slate-800">@todaySales.ToString("N0") ﷼</div>
+            <div class="text-xs text-green-600 mt-1 font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">receipt_long</span> @todayInvoices فاتورة تمت</div>
+            <a href="/Home/CommercialHub" class="mt-3 inline-block text-emerald-600 text-xs font-bold hover:underline">تقرير مفصل ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-amber-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">أصناف ناقصة</span><span class="material-symbols-outlined text-amber-500 text-[20px]">inventory_2</span></div>
+            <div class="text-2xl font-bold mt-2 text-amber-600">@shortagesCount</div>
+            <div class="text-xs text-amber-600 mt-1 font-bold">يحتاج طلب عاجل</div>
+            <a href="/Inventory/Shortages" class="mt-3 inline-block text-amber-600 text-xs font-bold hover:underline">طلب شراء ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-red-400">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">صلاحية ≤30 يوم</span><span class="material-symbols-outlined text-red-500 text-[20px]">event_busy</span></div>
+            <div class="text-2xl font-bold mt-2 text-red-500">@expiringCount</div>
+            <div class="text-xs text-red-500 mt-1 font-bold">مهددة التلف</div>
+            <a href="/Report/StockExpiry" class="mt-3 inline-block text-red-500 text-xs font-bold hover:underline">ترويج سريع ←</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-blue-500">
+            <div class="flex justify-between items-start"><span class="text-slate-500 text-sm font-medium">الرصيد النقدي</span><span class="material-symbols-outlined text-blue-500 text-[20px]">account_balance_wallet</span></div>
+            <div class="text-2xl font-bold mt-2 text-blue-600">@cashBalance.ToString("N0") ﷼</div>
+            <div class="text-xs text-slate-500 mt-1 font-bold">خزنة + بنك</div>
+            <a href="/Home/FinanceHub" class="mt-3 inline-block text-blue-600 text-xs font-bold hover:underline">كشف حساب ←</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2 bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[18px]">show_chart</span>
+                    المبيعات الفعلية vs توقعات الذكاء الاصطناعي
+                </h3>
+                <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-200 font-bold">Prophet AI</span>
+            </div>
+            <canvas id="salesChart" height="180" style="max-height: 220px; width:100%"></canvas>
+            <div class="text-xs text-center text-slate-400 mt-2">الخط المتصل: فعلي | المتقطع: متوقع</div>
+        </div>
+        <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-500 text-[18px]">warning</span> أدوية تحتاج قرارًا
+                </h3>
+                <a href="/Inventory/Shortages" class="text-emerald-600 text-xs hover:underline font-bold">عرض الكل</a>
+            </div>
+            <div class="space-y-3">
+            @if (shortageItems != null) {
+                foreach (dynamic item in shortageItems) {
+                    <div class="flex justify-between items-center border-b border-slate-50 pb-2 last:border-0 p-1 hover:bg-slate-50 rounded">
+                        <div>
+                            <p class="font-bold text-sm text-slate-800">@item.DrugName</p>
+                            <p class="text-[11px] text-slate-500">مخزون: @item.StockQuantity | حد الطلب: @item.MinimumStockLevel</p>
+                        </div>
+                        <a href="/Purchases/Create" class="bg-red-50 text-red-600 px-2 py-1 rounded-sm text-xs hover:bg-red-100 transition font-bold">شراء عاجل</a>
+                    </div>
+                }
+            } else {
+                <p class="text-slate-400 text-sm text-center py-4">لا يوجد نواقص عاجلة.</p>
+            }
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-500 text-[18px]">receipt_long</span> آخر فواتير البيع
+                </h3>
+                <a href="/Sales/Index" class="text-emerald-600 text-sm hover:underline font-bold">كل الفواتير</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm data-table">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">رقم الفاتورة</th>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">العميل</th>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">المبلغ</th>
+                            <th class="px-4 py-2 text-right font-bold text-slate-600">الوقت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (recentSales != null) {
+                            foreach (dynamic sale in recentSales) {
+                                <tr class="border-b border-slate-50 transition-colors">
+                                    <td class="px-4 py-2 text-slate-500 font-mono text-xs">#@sale.InvoiceId</td>
+                                    <td class="px-4 py-2 font-bold text-slate-700">@(sale.CustomerName ?? "عميل نقدي")</td>
+                                    <td class="px-4 py-2 font-bold text-slate-800">@((decimal)sale.TotalAmount) ﷼</td>
+                                    <td class="px-4 py-2">
+                                        <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">@(((DateTime)sale.SaleDate).ToString("hh:mm tt"))</span>
+                                    </td>
+                                </tr>
+                            }
+                        } else {
+                            <tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">لا يوجد فواتير حتى الآن.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-amber-500 text-[18px]">notifications_active</span> التنبيهات الذكية
+                </h3>
+                <button onclick="window.location.reload()" class="text-emerald-600 text-xs hover:underline flex items-center gap-1 font-bold">
+                    <span class="material-symbols-outlined text-[14px]">refresh</span> تحديث
+                </button>
+            </div>
+            <ul class="space-y-4 pt-2">
+                @if (shortagesCount > 0) {
+                    <li class="flex gap-3 text-sm items-start">
+                        <span class="material-symbols-outlined text-amber-500 mt-1 text-[18px]">warning</span>
+                        <span class="text-slate-700">يوجد <strong class="text-amber-600">@shortagesCount أصناف</strong> دون حد المخزون، يُنصح بالطلب.</span>
+                    </li>
+                }
+                @if (expiringCount > 0) {
+                    <li class="flex gap-3 text-sm items-start">
+                        <span class="material-symbols-outlined text-red-500 mt-1 text-[18px]">delete_sweep</span>
+                        <span class="text-slate-700"><strong class="text-red-500">@expiringCount أصناف</strong> تقترب من انتهاء الصلاحية.</span>
+                    </li>
+                }
+                <li class="flex gap-3 text-sm items-start">
+                    <span class="material-symbols-outlined text-emerald-500 mt-1 text-[18px]">trending_up</span>
+                    <span class="text-slate-700">توقع زيادة الطلب على أدوية الحساسية خلال هذا الأسبوع.</span>
+                </li>
+                <li class="flex gap-3 text-sm items-start">
+                    <span class="material-symbols-outlined text-blue-500 mt-1 text-[18px]">local_shipping</span>
+                    <span class="text-slate-700">النظام جاهز لاستقبال بضائع الموردين وشحنات الفروع.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+}
+else if (isCashier)
+{
+    <!-- لوحة تحكم الكاشير -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-emerald-500">
+            <span class="text-slate-500 text-sm font-medium">مبيعات الوردية الحالية</span>
+            <div class="text-2xl font-bold text-slate-800 mt-1">@todaySales.ToString("N0") ﷼</div>
+            <span class="text-xs text-green-600 font-bold flex items-center gap-1 mt-1">
+                <span class="material-symbols-outlined text-[14px]">receipt_long</span> @todayInvoices فواتير مباعة
+            </span>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-amber-500">
+            <span class="text-slate-500 text-sm font-medium">صلاحية الأصناف</span>
+            <div class="text-2xl font-bold text-amber-600 mt-1">@expiringCount صنف</div>
+            <a href="/Report/StockExpiry" class="text-blue-500 hover:underline text-xs mt-1 inline-block font-bold">التحقق الآن</a>
+        </div>
+        <div class="kpi-card bg-white rounded-sm shadow-sm p-4 border border-slate-200 border-r-4 border-r-blue-500">
+            <span class="text-slate-500 text-sm font-medium">آخر فاتورة</span>
+            <div class="text-2xl font-bold text-blue-600 mt-1">
+                @{ 
+                    var lastSale = recentSales?.Cast<dynamic>().FirstOrDefault();
+                    if (lastSale != null) {
+                        <span>@(((DateTime)lastSale.SaleDate).ToString("hh:mm tt"))</span>
+                    } else {
+                        <span>--:--</span>
+                    }
+                }
+            </div>
+            <span class="text-xs text-slate-500">@(lastSale != null ? "العميل: " + (lastSale.CustomerName ?? "نقدي") : "لا توجد")</span>
+        </div>
+    </div>
+    <div class="bg-white rounded-sm shadow-sm p-4 mb-6 border border-slate-200">
+        <h3 class="font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[18px]">show_chart</span> مبيعات الوردية (بالساعة)
+        </h3>
+        <canvas id="shiftChart" height="100" style="max-height:220px"></canvas>
+    </div>
+    
+    <div class="bg-white rounded-sm shadow-sm p-4 border border-slate-200">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <span class="material-symbols-outlined text-slate-500 text-[18px]">receipt_long</span> عمليات البيع الأخيرة
+            </h3>
+            <a href="/Sales/Create" class="text-white bg-emerald-600 px-3 py-1.5 rounded-sm text-xs font-bold hover:bg-emerald-700 transition">بيع جديد</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm data-table">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-2 text-right font-bold text-slate-600">رقم الفاتورة</th>
+                        <th class="px-4 py-2 text-right font-bold text-slate-600">العميل</th>
+                        <th class="px-4 py-2 text-right font-bold text-slate-600">المبلغ</th>
+                        <th class="px-4 py-2 text-right font-bold text-slate-600">الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (recentSales != null) {
+                        int rowLimit = 0;
+                        foreach (dynamic sale in recentSales) {
+                            if (rowLimit++ > 5) break;
+                            <tr class="border-b last:border-0 border-slate-50">
+                                <td class="px-4 py-2 font-mono text-xs text-slate-500">#@sale.InvoiceId</td>
+                                <td class="px-4 py-2 font-bold text-slate-700">@(sale.CustomerName ?? "تسوق سريع")</td>
+                                <td class="px-4 py-2 text-emerald-600 font-bold">@((decimal)sale.TotalAmount) ﷼</td>
+                                <td class="px-4 py-2 text-xs text-slate-500">@(((DateTime)sale.SaleDate).ToString("hh:mm tt"))</td>
+                            </tr>
+                        }
+                    } else {
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">لا يوجد مبياعات بعد للوردية.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <a href="/Sales/Index" class="mt-4 block bg-slate-50 hover:bg-slate-100 text-slate-700 text-center font-bold text-sm w-full py-2 rounded-sm transition border border-slate-200">عرض كل الفواتير</a>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function() {
+    var labels   = @Html.Raw(chartLabels);
+    var actual   = @Html.Raw(chartActual);
+    var forecast = @Html.Raw(chartForecast);
+
+    var lineOpts = {
+        responsive: true,
+        plugins: { legend: { position: 'top', labels: { font: { family: 'Tajawal', weight: '600' } } } },
+        scales:  { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } },
+        maintainAspectRatio: false
+    };
+
+    var c1 = document.getElementById('salesChart');
+    if (c1) new Chart(c1, { 
+        type: 'line', 
+        data: { 
+            labels: labels, 
+            datasets: [
+                { label: 'فعلي', data: actual, borderColor: '#10b981', backgroundColor: 'transparent', borderWidth: 2, pointBackgroundColor: '#10b981', pointRadius: 3, tension: 0.4 },
+                { label: 'توقع Prophet', data: forecast, borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 2, pointBackgroundColor: '#f59e0b', pointRadius: 2, tension: 0.4, borderDash: [5,5] }
+            ]
+        }, 
+        options: lineOpts 
+    });
+
+    var c2 = document.getElementById('salesChartAdmin');
+    if (c2) new Chart(c2, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: 'مبيعات (﷼)', data: actual, backgroundColor: '#3b82f6', borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } } }
+    });
+
+    var c3 = document.getElementById('shiftChart');
+    if (c3) new Chart(c3, {
+        type: 'line',
+        data: { labels: ['9ص','10ص','11ص','12م','1م','2م','3م'], datasets: [{ label: 'مبيعات الوردية', data: actual.length > 0 ? actual.slice(0,7) : [0,0,0,0,0,0,0], borderColor: '#10b981', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: 0.4 }] },
+        options: lineOpts
+    });
+})();
+</script>
+}

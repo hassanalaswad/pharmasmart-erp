@@ -32,10 +32,19 @@
 
         @if (ViewBag.Error != null)
         {
-            <div class="mb-6 bg-error-container/30 border-r-4 border-error p-4 rounded-sm flex items-center gap-3 animate-pulse">
-                <span class="material-symbols-outlined text-error">error</span>
-                <p class="text-error text-sm font-black">@ViewBag.Error</p>
-            </div>
+            <script src="~/lib/sweetalert2.js"></script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '⚠️ خطأ محاسبي حرج',
+                        html: '<div style="font-family: Tajawal, sans-serif; font-size: 15px; font-weight: 700; color: #dc2626; text-align: right; line-height: 1.8;">' + @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Error)) + '</div>',
+                        confirmButtonText: 'أتعهد بمراجعة القيد',
+                        confirmButtonColor: '#dc2626',
+                        backdrop: `rgba(220, 38, 38, 0.15)`
+                    });
+                });
+            </script>
         }
 
         <!-- Form Details -->

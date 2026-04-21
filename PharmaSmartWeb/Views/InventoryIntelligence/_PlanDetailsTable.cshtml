@@ -1,54 +1,99 @@
 @model IEnumerable<PharmaSmartWeb.Models.PurchasePlanDetail>
 
+@* ════════════════════════════════════════════════════════════════════
+   _PlanDetailsTable.cshtml — جدول تفاصيل خطة الشراء (Partial View)
+   ✅ تم استبدال جميع Tailwind utility classes بـ vanilla CSS
+   ════════════════════════════════════════════════════════════════════ *@
+
+<style>
+    /* ── صفوف الجدول ── */
+    .plan-table-row:hover { background-color: #f8fafc; }
+
+    /* ── شارات التصنيف ABC ── */
+    .badge-lifesaving { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 900; padding: 2px 8px; border-radius: 2px; font-size: 10px; }
+    .badge-a          { background: #fff1f2; color: #be123c; border: 1px solid #fda4af; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; }
+    .badge-b          { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; }
+    .badge-default    { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 2px; font-size: 10px; font-weight: 700; }
+
+    /* ── حالة الميزانية ── */
+    .status-ok   { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+    .status-over { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 3px 8px; border-radius: 2px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; text-decoration: line-through; opacity: 0.75; }
+
+    /* ── خلايا خاصة ── */
+    .cell-drug-name { font-weight: 700; color: #063955; }
+    .cell-forecast  { color: #0369a1; font-weight: 700; }
+    .cell-accuracy  { font-size: 9px; color: #059669; background: #d1fae5; padding: 1px 4px; border-radius: 2px; display: block; margin-top: 3px; }
+    .cell-eoq       { font-size: 14px; font-weight: 900; font-family: monospace; color: #059669; background: #f0fdf4; display: block; padding: 4px 0; }
+    .cell-approved  { background: #f0f9ff; }
+    .input-approved { width: 64px; border: 1px solid #cbd5e1; border-radius: 2px; padding: 4px; text-align: center; font-family: monospace; font-weight: 700; color: #0284c7; outline: none; }
+    .input-approved:focus { border-color: #0284c7; }
+    .cell-cost      { font-family: monospace; font-weight: 700; color: #334155; }
+
+    /* ── شريط الإجمالي ── */
+    .plan-summary-bar { margin-top: 0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 16px; border: 1px solid #e2e8f0; border-top: none; }
+    .plan-total-label { font-size: 16px; font-weight: 900; color: #063955; }
+    .plan-total-value { font-size: 18px; font-weight: 900; color: #0284c7; }
+</style>
+
 <table class="enterprise-table">
     <thead>
         <tr>
-            <th style="width: 250px;">الصنف (الدواء)</th>
+            <th style="width: 240px;">الصنف (الدواء)</th>
             <th style="text-align: center;">التصنيف</th>
-            <th style="text-align: center;" title="بناءً على تحليل Prophet">الطلب المتوقع والتنبؤ 🤖</th>
+            <th style="text-align: center;" title="بناءً على تحليل Prophet أو Vertex AI">الطلب المتوقع والتنبؤ 🤖</th>
             <th style="text-align: center;">التكلفة التقديرية</th>
             <th style="text-align: center; background: #ecfdf5; color: #065f46;">الكمية المقترحة (EOQ)</th>
             <th style="text-align: center; background: #f0f9ff; color: #0284c7;">الكمية المعتمدة (تعديل)</th>
-            <th style="text-align: left;">حالة الميزانية</th>
+            <th style="text-align: right;">حالة الميزانية</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var item in Model)
         {
-            var badgeClass = "bg-slate-100 text-slate-600 border border-slate-300";
-            if (item.IsLifeSaving) badgeClass = "bg-[#fff1f2] text-[#e11d48] border border-[#fecdd3] font-black";
-            else if (item.ABCCategory == "A") badgeClass = "bg-[#fff1f2] text-[#be123c] border border-[#fda4af]";
-            else if (item.ABCCategory == "B") badgeClass = "bg-[#fffbeb] text-[#b45309] border border-[#fde68a]";
+            @* ── تحديد CSS class للتصنيف ── *@
+            string badgeClass;
+            if (item.IsLifeSaving)
+                badgeClass = "badge-lifesaving";
+            else if (item.ABCCategory == "A")
+                badgeClass = "badge-a";
+            else if (item.ABCCategory == "B")
+                badgeClass = "badge-b";
+            else
+                badgeClass = "badge-default";
 
-            var statusClass = item.Status == "في حدود الميزانية" ? "text-[#059669] bg-[#ecfdf5] border border-[#a7f3d0]" : "text-[#e11d48] bg-[#fff1f2] border border-[#fecdd3] line-through opacity-70";
-            var statusIcon = item.Status == "في حدود الميزانية" ? "fa-check" : "fa-ban";
+            @* ── تحديد CSS class لحالة الميزانية ── *@
+            bool isOk = item.Status == "في حدود الميزانية";
+            string statusClass = isOk ? "status-ok" : "status-over";
+            string statusIcon  = isOk ? "fa-check" : "fa-ban";
 
-            <tr class="hover:bg-slate-50">
-                <td class="font-bold text-[#063955]">@item.Drug.DrugName</td>
-                <td class="text-center">
-                    <span class="px-2 py-0.5 rounded-[2px] text-[10px] font-bold @badgeClass">@item.ABCCategory</span>
+            <tr class="plan-table-row">
+                <td class="cell-drug-name">@item.Drug.DrugName</td>
+                <td style="text-align: center;">
+                    <span class="@badgeClass">
+                        @(item.IsLifeSaving ? "⭐ " + item.ABCCategory : item.ABCCategory)
+                    </span>
                 </td>
-                <td class="text-center">
-                    <span class="text-[#0369a1] font-bold">@item.ForecastedDemand</span>
+                <td style="text-align: center;">
+                    <span class="cell-forecast">@item.ForecastedDemand</span>
                     @if (item.ForecastAccuracy > 0)
                     {
-                        <span class="text-[9px] text-[#059669] bg-[#d1fae5] px-1 rounded-sm block mt-1" title="دقة نموذج التنبؤ">دقة: @item.ForecastAccuracy%</span>
+                        <span class="cell-accuracy" title="دقة نموذج التنبؤ">دقة: @item.ForecastAccuracy%</span>
                     }
                 </td>
-                <td class="text-center font-mono font-bold text-slate-700">@item.TotalCost.ToString("N0")</td>
-                
-                <td class="text-center bg-[#f0fdf4]">
-                    <span class="text-[14px] font-black font-mono text-[#059669]">@item.ProposedQuantity</span>
+                <td style="text-align: center;" class="cell-cost">@item.TotalCost.ToString("N0")</td>
+                <td style="text-align: center; background: #f0fdf4;">
+                    <span class="cell-eoq">@item.ProposedQuantity</span>
                 </td>
-                <td class="text-center bg-[#f0f9ff]">
-                    <input type="number" 
-                           class="w-16 border border-slate-300 rounded px-1 py-1 text-center font-mono font-bold text-[#0284c7] focus:outline-none focus:border-[#0284c7]" 
-                           value="@item.ApprovedQuantity" 
+                <td style="text-align: center;" class="cell-approved">
+                    <input type="number" min="0"
+                           class="input-approved"
+                           value="@item.ApprovedQuantity"
                            onchange="updatePlanDetail(@item.DetailId, this.value)" />
                 </td>
-                <td class="text-left">
-                    <span class="px-2 py-1 rounded-[2px] text-[11px] font-bold inline-flex items-center gap-1 @statusClass">
-                        <i class="fas @statusIcon text-[10px]"></i> @item.Status
+                <td style="text-align: right;">
+                    <span class="@statusClass">
+                        <i class="fas @statusIcon" style="font-size: 10px;"></i>
+                        @item.Status
                     </span>
                 </td>
             </tr>
@@ -56,13 +101,15 @@
     </tbody>
 </table>
 
-<div class="mt-4 flex justify-between items-center bg-slate-50 p-4 border border-slate-200">
+<div class="plan-summary-bar">
     <div>
         <button onclick="printSmartPlan()" class="btn-primary">
             <i class="fas fa-print"></i> طباعة الخطة الشرائية (النسخة المعتمدة)
         </button>
     </div>
-    <div class="text-left">
-        <h4 class="text-[#063955] font-black text-lg">الإجمالي المبدئي المعتمد: <span id="totalApprovedCost" class="text-[#0284c7]">@Model.Sum(x => x.TotalCost).ToString("N2")</span></h4>
+    <div>
+        <span class="plan-total-label">الإجمالي المبدئي المعتمد: </span>
+        <span id="totalApprovedCost" class="plan-total-value">@Model.Sum(x => x.TotalCost).ToString("N2")</span>
+        <span style="font-size: 13px; color: #64748b; margin-right: 4px;">ر.ي</span>
     </div>
 </div>

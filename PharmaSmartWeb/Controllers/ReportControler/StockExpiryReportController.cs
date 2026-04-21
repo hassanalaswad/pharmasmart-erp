@@ -36,6 +36,7 @@ namespace PharmaSmartWeb.Controllers
             var items = await query.OrderBy(i => i.ExpiryDate)
                 .Select(d => new StockExpiryViewModel
                 {
+                    DrugId = d.DrugId,
                     ItemName = d.Drug.DrugName,
                     Barcode = d.Drug.Barcode,
                     BatchNumber = d.BatchNumber ?? "غير محدد",

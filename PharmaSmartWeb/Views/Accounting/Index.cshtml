@@ -29,7 +29,6 @@
     }
 </style>
 
-<!-- Page Header -->
 <div class="enterprise-panel mb-4 p-3 flex justify-between items-center">
     <div>
         <h1 class="page-title">الدليل المحاسبي</h1>
@@ -55,7 +54,6 @@
     </div>
 }
 
-<!-- Accounts Tree Table -->
 <div class="enterprise-panel">
     <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 16px; font-size:13px; font-weight:700; color:#063955;">
         شجرة الحسابات المالية — (@sortedAccounts.Count() حساب)
@@ -74,7 +72,8 @@
             <tbody>
                 @foreach (var acc in sortedAccounts)
                 {
-                    int level = acc.AccountCode.Length;
+                    // تم إضافة حماية في حال كان كود الحساب Null
+                    int level = acc.AccountCode?.Length ?? 1; 
                     bool isLevel1 = acc.ParentAccountId == null || level == 1;
                     bool hasChildren = sortedAccounts.Any(a => a.ParentAccountId == acc.AccountId);
                     string paddingRem = $"{(level - 1) * 20}px";
@@ -113,7 +112,8 @@
                             <span class="account-type" style="background:@(typeColor + "15"); color:@typeColor; border:1px solid @(typeColor + "30");">@typeArabic</span>
                         </td>
                         <td style="text-align:center;">
-                            @if (acc.AccountNature)
+                            @* تم التعديل هنا لضمان عملها حتى لو كان المتغير bool? *@
+                            @if (acc.AccountNature == true) 
                             {
                                 <span style="font-size:11px; font-weight:700; color:#059669; background:#ecfdf5; padding:2px 8px; border-radius:2px; border:1px solid #a7f3d0;">مدين (Debit)</span>
                             }
@@ -134,6 +134,13 @@
                         </td>
                         <td style="text-align:center;" class="no-print">
                             <div style="display:flex; justify-content:center; gap:4px;">
+                                @if (!hasChildren)
+                                {
+                                    @* تم إصلاح الأخطاء الخاصة بالـ Null وعلامات التنصيص هنا *@
+                                    <button type="button" onclick="openLedgerDrawer('@acc.AccountId', '@(acc.AccountName?.Replace("'", "\\'") ?? "")')" class="btn-sm" style="background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd;" title="عرض كشف الحساب السريع">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span>
+                                    </button>
+                                }
                                 <a href="/Accounting/Create?parentId=@acc.AccountId" class="btn-sm btn-add" title="إضافة حساب فرعي">
                                     <span class="material-symbols-outlined" style="font-size:13px;">add</span>
                                 </a>
@@ -182,10 +189,66 @@
         const rows = document.querySelectorAll('[data-parent-id="' + parentId + '"]');
         rows.forEach(row => {
             row.style.display = 'none';
-            const childBtn = row.querySelector('button');
+            // تم التعديل: تحديد الزر الخاص بالطي فقط حتى لا يؤثر على زر كشف الحساب
+            const childBtn = row.querySelector('.toggle-btn');
             if (childBtn) childBtn.classList.remove('expanded');
             const childId = row.getAttribute('data-account-id');
             hideDescendants(childId);
         });
     }
+
+    // --- Ledger Drawer AJAX Logic ---
+    async function openLedgerDrawer(accountId, accountName) {
+        document.getElementById('ledgerAccountName').innerText = accountName || 'بدون اسم';
+        const overlay = document.getElementById('ledgerDrawerOverlay');
+        const drawer = document.getElementById('ledgerDrawer');
+        
+        overlay.classList.remove('hidden');
+        setTimeout(() => { overlay.classList.remove('opacity-0'); }, 10);
+        
+        // تم تبسيط الكود لتجنب أخطاء المتصفحات القديمة
+        drawer.classList.remove('-translate-x-full', 'translate-x-full');
+        drawer.style.transform = 'translateX(0)';
+
+        const contentDiv = document.getElementById('ledgerDrawerContent');
+        contentDiv.innerHTML = '<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;"><span class="material-symbols-outlined animate-spin" style="font-size:32px; color:#cbd5e1;">progress_activity</span></div>';
+        
+        try {
+            const response = await fetch(`/Report/Ledger?accountId=${accountId}&layoutTheme=drawer`);
+            if (response.ok) {
+                const html = await response.text();
+                contentDiv.innerHTML = html;
+            } else {
+                contentDiv.innerHTML = '<div style="padding:16px; color:#e11d48; text-align:center; font-weight:700;">حدث خطأ أثناء جلب الكشف المحاسبي.</div>';
+            }
+        } catch (error) {
+            contentDiv.innerHTML = '<div style="padding:16px; color:#e11d48; text-align:center; font-weight:700;">خطأ في الاتصال بالخادم.</div>';
+        }
+    }
+
+    function closeLedgerDrawer() {
+        const overlay = document.getElementById('ledgerDrawerOverlay');
+        const drawer = document.getElementById('ledgerDrawer');
+        drawer.style.transform = 'translateX(100vw)'; 
+        overlay.classList.add('opacity-0');
+        setTimeout(() => { 
+            overlay.classList.add('hidden'); 
+            document.getElementById('ledgerDrawerContent').innerHTML = ''; 
+        }, 300);
+    }
 </script>
+
+<div id="ledgerDrawerOverlay" class="fixed inset-0 bg-slate-900/40 z-[100] hidden transition-opacity opacity-0" onclick="closeLedgerDrawer()"></div>
+<div id="ledgerDrawer" class="fixed top-0 bottom-0 right-0 w-full max-w-4xl bg-white shadow-2xl z-[110] transition-transform duration-300 flex flex-col" style="transform: translateX(100vw);">
+    <div style="padding:16px; border-bottom:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined" style="color:#0284c7;">receipt_long</span>
+            كشف حساب: <span id="ledgerAccountName" style="color:#0284c7;"></span>
+        </h3>
+        <button onclick="closeLedgerDrawer()" style="width:32px; height:32px; border-radius:4px; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+    </div>
+    <div id="ledgerDrawerContent" style="flex:1; overflow-y:auto; background:#f8fafc; position:relative;">
+        </div>
+</div>

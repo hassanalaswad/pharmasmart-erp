@@ -65,6 +65,10 @@
             body { background: white; margin: 0; padding: 0; }
             .page { margin: 0; box-shadow: none; width: auto; min-height: 0; padding: 20px; }
             .no-print, .report-filter-bar { display: none !important; }
+            .print-visible { display: inline !important; }
+            tr { page-break-inside: avoid; }
+            thead { display: table-header-group; }
+            table { page-break-inside: auto; }
         }
 
         /* Top Bar */
@@ -270,6 +274,10 @@
         }
         /* Filter Bar (outside page, screen only) */
         .report-filter-bar {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
             width: 210mm;
             margin: 0 auto 0 auto;
             background: white;

@@ -1,7 +1,7 @@
 @inject PharmaSmartWeb.Services.ISystemSettingsService Settings
 @using PharmaSmartWeb.Models
 @{
-    Layout = "_ReportLayout";
+    Layout = (ViewBag.LayoutTheme == "modal" || ViewBag.LayoutTheme == "drawer") ? null : "_ReportLayout";
     ViewData["Title"] = "قائمة الدخل الاحترافية";
     ViewData["Subtitle"] = "PROFESSIONAL INCOME STATEMENT";
     decimal sales = ViewBag.Sales ?? 0m;
@@ -27,6 +27,8 @@
         .rpt-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .rpt-kpi-card { border: 1px solid #e2e8f0; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .rpt-net-box { margin-top: 20px; padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 2px solid; border-radius: 4px; }
+        @@media print { .print-visible { display: inline !important; } }
+        .print-visible { display: none; }
     </style>
 }
 
@@ -92,7 +94,10 @@
 {
     <div class="rpt-row">
         <span>@exp.Name <small style="color:#94a3b8; font-size:10px;">(@exp.Percentage.ToString("N1")%)</small></span>
-        <span style="font-weight:bold; color:#475569;">@exp.Total.ToString("N2") @Settings.Currency</span>
+        <span style="font-weight:bold; color:#475569;">
+            <a href="javascript:void(0)" onclick="openDrillDown(@exp.AccountId, '@exp.Name')" class="no-print" style="text-decoration:underline; color:#063955;" title="انقر لاستعراض تفاصيل حساب @exp.Name">@exp.Total.ToString("N2") @Settings.Currency</a>
+            <span class="print-visible">@exp.Total.ToString("N2") @Settings.Currency</span>
+        </span>
     </div>
 }
 @if (!expenses.Any())
@@ -114,3 +119,60 @@
         @netIncome.ToString("N2") @Settings.Currency
     </div>
 </div>
+
+<!-- Side Drawer Drill-Down Template -->
+<div id="drillDownOverlay" class="no-print" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999;" onclick="closeDrillDown()"></div>
+<div id="drillDownDrawer" class="no-print" style="position:fixed; top:0; left:-100%; width:90%; max-width:800px; height:100%; background:white; z-index:10000; transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:5px 0 25px rgba(0,0,0,0.5); display:flex; flex-direction:column;">
+    <div style="background:#f8fafc; padding:16px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h3 style="margin:0; color:#0f172a; font-weight:800; font-size:16px;" id="drillDownTitle">تفاصيل الحساب</h3>
+            <span style="font-size:11px; color:#64748b;">استعلام عميق (Drill-Down) للقيود المرتبطة</span>
+        </div>
+        <button onclick="closeDrillDown()" style="background:transparent; border:none; cursor:pointer; color:#64748b; font-weight:bold; font-size:20px;">X</button>
+    </div>
+    <div id="drillDownContent" style="flex:1; overflow-y:auto; padding:0; background:white;">
+        <!-- AJAX Content -->
+    </div>
+</div>
+
+<script>
+    async function openDrillDown(accountId, accountName) {
+        document.getElementById('drillDownOverlay').style.display = 'block';
+        const drawer = document.getElementById('drillDownDrawer');
+        drawer.style.left = '0'; // slide in
+        
+        document.getElementById('drillDownTitle').innerText = "كشف أستاذ: " + accountName;
+        
+        const content = document.getElementById('drillDownContent');
+        content.innerHTML = `
+            <div style="padding:20px;">
+                <div style="height:30px; width:40%; background:#e2e8f0; border-radius:4px; margin-bottom:20px; animation: pulse 1.5s infinite;"></div>
+                <div style="height:20px; width:100%; background:#f1f5f9; border-radius:4px; margin-bottom:10px; animation: pulse 1.5s infinite;"></div>
+                <div style="height:20px; width:100%; background:#f1f5f9; border-radius:4px; margin-bottom:10px; animation: pulse 1.5s infinite;"></div>
+                <div style="height:20px; width:80%; background:#f1f5f9; border-radius:4px; margin-bottom:10px; animation: pulse 1.5s infinite;"></div>
+            </div>
+            <style>@@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }</style>
+        `;
+        
+        try {
+            const fd = '@ViewBag.FromDate';
+            const td = '@ViewBag.ToDate';
+            const response = await fetch(`/Report/Ledger?accountId=${accountId}&fromDate=${fd}&toDate=${td}&layoutTheme=drawer`);
+            if(response.ok) {
+                content.innerHTML = await response.text();
+            } else {
+                content.innerHTML = '<div style="padding:20px; color:#e11d48; text-align:center;">فشل جلب تفاصيل الحساب</div>';
+            }
+        } catch(e) {
+            content.innerHTML = '<div style="padding:20px; color:#e11d48; text-align:center;">تعذر الاتصال بالخادم</div>';
+        }
+    }
+    
+    function closeDrillDown() {
+        document.getElementById('drillDownDrawer').style.left = '-100%';
+        setTimeout(() => {
+            document.getElementById('drillDownOverlay').style.display = 'none';
+            document.getElementById('drillDownContent').innerHTML = '';
+        }, 350);
+    }
+</script>

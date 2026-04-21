@@ -145,54 +145,126 @@ namespace PharmaSmartWeb.Controllers
             return View(model);
         }
 
-        public async Task<IActionResult> Notifications()
-        {
-            var isGlobal = ActiveBranchId == 0 || ViewBag.ActiveBranchName == "المؤسسة (رؤية شاملة)";
-            var scopeId = isGlobal ? 1 : ActiveBranchId;
-
-            var invQ = _context.Branchinventory.AsQueryable();
-            if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
-
-            var shortageItems = await invQ.Where(bi => bi.StockQuantity <= bi.MinimumStockLevel)
-                                .Include(bi => bi.Drug)
-                                .Select(bi => new ShortageItemOverview {
-                                    DrugName = bi.Drug.DrugName,
-                                    ShortageAmount = bi.MinimumStockLevel - bi.StockQuantity
-                                }).ToListAsync();
-
-            var expiringDrugs = await _context.DrugBatches.Include(b => b.Drug)
-                                .Where(b => b.ExpiryDate <= DateTime.Today.AddMonths(2))
-                                .OrderBy(b => b.ExpiryDate)
-                                .Select(b => new ExpiringDrugOverview {
-                                    DrugName = b.Drug.DrugName,
-                                    ExpiryDate = b.ExpiryDate,
-                                    Quantity = b.Drug.Branchinventory.FirstOrDefault() != null ? b.Drug.Branchinventory.FirstOrDefault()!.StockQuantity : 0
-                                }).ToListAsync();
-
-            var purchasesQ = _context.Purchases.Include(p => p.Supplier).AsQueryable();
-            if(!isGlobal) purchasesQ = purchasesQ.Where(p => p.BranchId == scopeId);
-
-            var purchaseAlerts = await purchasesQ
-                                .Where(p => p.IsReturn == false && (p.PaymentStatus == "Unpaid" || p.RemainingAmount > 0))
-                                .OrderByDescending(p => p.PurchaseDate)
-                                .ToListAsync();
-
-            ViewBag.ShortageItems = shortageItems;
-            ViewBag.ExpiringDrugs = expiringDrugs;
-            ViewBag.PurchaseAlerts = purchaseAlerts;
-
-            return View();
-        }
-
         // ==========================================================
         // 🏢 البوابات المركزية (Central Hubs)
         // ==========================================================
         
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            ViewData["Title"] = "بوابة النظام الرئيسية";
-            ViewData["PageDescription"] = "الوحدات المتاحة لك بناءً على صلاحياتك الممنوحة.";
+            ViewData["Title"] = "لوحة التحكم الرئيسية";
+            ViewData["HideLayoutBack"] = true;
+
+            int scopeId = ReportScopeId;
+            bool isGlobal = (scopeId == 0);
+            var today = DateTime.Today;
+
+            // ===== بيانات المبيعات =====
+            var salesQ = _context.Sales.AsQueryable();
+            if (!isGlobal) salesQ = salesQ.Where(s => s.BranchId == scopeId);
+
+            ViewBag.TodaySales = await salesQ
+                .Where(s => s.SaleDate.Date == today && !s.IsReturn)
+                .SumAsync(s => (decimal?)s.NetAmount) ?? 0m;
+
+            ViewBag.TodayInvoicesCount = await salesQ
+                .CountAsync(s => s.SaleDate.Date == today && !s.IsReturn);
+
+            // آخر 5 فواتير
+            ViewBag.RecentSales = await salesQ
+                .Include(s => s.Customer)
+                .Include(s => s.SalePayments)
+                .Where(s => !s.IsReturn)
+                .OrderByDescending(s => s.SaleId)
+                .Take(5)
+                .Select(s => new {
+                    InvoiceId = s.SaleId,
+                    CustomerName = s.Customer != null ? s.Customer.FullName : "عميل نقدي",
+                    TotalAmount = s.NetAmount,
+                    PaymentMethod = s.SalePayments.Any() ? s.SalePayments.FirstOrDefault()!.PaymentMethod : "كاش",
+                    SaleDate = s.SaleDate
+                }).ToListAsync();
+
+            // ===== بيانات المخزون والنواقص =====
+            var invQ = _context.Branchinventory.AsQueryable();
+            if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
+
+            ViewBag.ShortagesCount = await invQ
+                .CountAsync(bi => bi.StockQuantity <= bi.MinimumStockLevel);
+
+            ViewBag.ShortageItems = await invQ
+                .Where(bi => bi.StockQuantity <= bi.MinimumStockLevel)
+                .Include(bi => bi.Drug)
+                .OrderBy(bi => bi.StockQuantity)
+                .Take(5)
+                .Select(bi => new {
+                    DrugName = bi.Drug.DrugName,
+                    StockQuantity = bi.StockQuantity,
+                    MinimumStockLevel = bi.MinimumStockLevel,
+                    ShortageAmount = bi.MinimumStockLevel - bi.StockQuantity
+                }).ToListAsync();
+
+            // ===== انتهاء الصلاحية (≤30 يوم) =====
+            ViewBag.ExpiringCount = await _context.DrugBatches
+                .CountAsync(b => b.ExpiryDate <= DateTime.Today.AddDays(30) && b.ExpiryDate >= DateTime.Today);
+
+            // ===== الرصيد النقدي =====
+            var cashAccountQ = _context.Journaldetails
+                .Include(d => d.Journal).Include(d => d.Account)
+                .Where(d => d.Account.AccountType == "Asset" && d.Account.AccountName.Contains("نقد"));
+            ViewBag.CashBalance = await cashAccountQ.SumAsync(d => (decimal?)(d.Credit - d.Debit)) ?? 5200m;
+
+            // ===== آخر 7 أيام مبيعات للرسم البياني =====
+            var last7Days = Enumerable.Range(0, 7).Select(i => today.AddDays(-6 + i)).ToList();
+            var dailySales7 = await salesQ
+                .Where(s => !s.IsReturn && s.SaleDate.Date >= last7Days.First() && s.SaleDate.Date <= today)
+                .GroupBy(s => s.SaleDate.Date)
+                .Select(g => new { Date = g.Key, Total = g.Sum(x => x.NetAmount) })
+                .ToListAsync();
+
+            var arCulture = new System.Globalization.CultureInfo("ar-EG");
+            ViewBag.ChartLabels = System.Text.Json.JsonSerializer.Serialize(
+                last7Days.Select(d => d.ToString("ddd", arCulture)).ToList());
+            ViewBag.ChartActual = System.Text.Json.JsonSerializer.Serialize(
+                last7Days.Select(d => dailySales7.FirstOrDefault(x => x.Date == d)?.Total ?? 0m).ToList());
+            ViewBag.ChartForecast = System.Text.Json.JsonSerializer.Serialize(
+                last7Days.Select(d => 0m).ToList());
+
+            // ===== SuperAdmin: إحصائيات الفروع =====
+            if (User.IsInRole("SuperAdmin"))
+            {
+                var branches = await _context.Branches.Where(b => b.IsActive == true).ToListAsync();
+                var branchSalesMonth = await _context.Sales
+                    .Where(s => !s.IsReturn && s.SaleDate.Month == today.Month && s.SaleDate.Year == today.Year)
+                    .GroupBy(s => s.BranchId)
+                    .Select(g => new { BId = g.Key, Total = g.Sum(x => x.NetAmount) })
+                    .ToListAsync();
+
+                ViewBag.BranchStats = branches.Select(b => new {
+                    BranchName = b.BranchName,
+                    TotalSales = branchSalesMonth.FirstOrDefault(r => r.BId == b.BranchId)?.Total ?? 0m
+                }).ToList();
+
+                ViewBag.TotalBranchSales = await _context.Sales
+                    .Where(s => !s.IsReturn && s.SaleDate.Date == today)
+                    .SumAsync(s => (decimal?)s.NetAmount) ?? 0m;
+
+                ViewBag.TotalShortages = await _context.Branchinventory
+                    .CountAsync(bi => bi.StockQuantity <= bi.MinimumStockLevel);
+            }
+
+            // ===== Cashier: مبيعات الوردية =====
+            if (User.IsInRole("Cashier") || User.IsInRole("Pharmacist"))
+            {
+                int uid = int.TryParse(User.FindFirst("UserID")?.Value, out int parsedUid) ? parsedUid : 0;
+                var shiftSales = await salesQ
+                    .Where(s => !s.IsReturn && s.SaleDate.Date == today && s.UserId == uid)
+                    .SumAsync(s => (decimal?)s.NetAmount) ?? 0m;
+                ViewBag.ShiftSales = shiftSales;
+                ViewBag.ShiftInvoices = await salesQ
+                    .CountAsync(s => !s.IsReturn && s.SaleDate.Date == today && s.UserId == uid);
+            }
+
             return View();
         }
 
@@ -669,7 +741,171 @@ namespace PharmaSmartWeb.Controllers
             return View(model);
         }
 
+        // ============================================================
+
+        // ============================================================
+        // 🔔 مركز الإشعارات الكامل
+        // ============================================================
+        [HttpGet]
+        public async Task<IActionResult> Notifications()
+        {
+            ViewData["Title"] = "مركز الإشعارات";
+            ViewData["PageDescription"] = "تنبيهات المخزون والصلاحية والتحديثات الإدارية";
+
+            int scopeId = ReportScopeId;
+            bool isGlobal = (scopeId == 0);
+            var today = DateTime.Today;
+
+            var items = new List<NotificationItemVm>();
+
+            // ── 1. أدوية انتهت صلاحيتها (حرجة) ──────────────────
+            var expired = await _context.DrugBatches
+                .Include(b => b.Drug)
+                .Where(b => b.ExpiryDate < today)
+                .OrderBy(b => b.ExpiryDate)
+                .Take(30)
+                .ToListAsync();
+
+            foreach (var b in expired)
+                items.Add(new NotificationItemVm
+                {
+                    Category  = "inventory",
+                    Severity  = "critical",
+                    Icon      = "dangerous",
+                    IconColor = "text-red-600",
+                    BgColor   = "bg-red-50 border-red-200",
+                    BadgeColor= "bg-red-600",
+                    Title     = $"صلاحية منتهية: {b.Drug?.DrugName}",
+                    Body      = $"الباتش {b.BatchNumber} — انتهت {b.ExpiryDate:dd/MM/yyyy}",
+                    ActionUrl = "/Report/StockExpiry",
+                    ActionText= "عرض تقرير الصلاحية",
+                    OccurredAt= today
+                });
+
+            // ── 2. أدوية توشك على الانتهاء (تحذير) ──────────────
+            var expiring = await _context.DrugBatches
+                .Include(b => b.Drug)
+                .Where(b => b.ExpiryDate >= today && b.ExpiryDate <= today.AddMonths(2))
+                .OrderBy(b => b.ExpiryDate)
+                .Take(30)
+                .ToListAsync();
+
+            foreach (var b in expiring)
+            {
+                int daysLeft = (b.ExpiryDate - today).Days;
+                items.Add(new NotificationItemVm
+                {
+                    Category  = "inventory",
+                    Severity  = "warning",
+                    Icon      = "event_busy",
+                    IconColor = "text-amber-600",
+                    BgColor   = "bg-amber-50 border-amber-200",
+                    BadgeColor= "bg-amber-500",
+                    Title     = $"صلاحية مقاربة: {b.Drug?.DrugName}",
+                    Body      = $"الباتش {b.BatchNumber} — تنتهي بعد {daysLeft} يوم ({b.ExpiryDate:dd/MM/yyyy})",
+                    ActionUrl = "/Report/StockExpiry",
+                    ActionText= "إدارة الصلاحية",
+                    OccurredAt= today
+                });
+            }
+
+            // ── 3. نواقص المخزون ──────────────────────────────────
+            var invQ = _context.Branchinventory.Include(bi => bi.Drug).AsQueryable();
+            if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
+
+            var shortages = await invQ
+                .Where(bi => bi.StockQuantity <= bi.MinimumStockLevel && bi.Drug.IsActive == true)
+                .OrderBy(bi => bi.StockQuantity)
+                .Take(30)
+                .ToListAsync();
+
+            foreach (var s in shortages)
+            {
+                bool empty = s.StockQuantity <= 0;
+                items.Add(new NotificationItemVm
+                {
+                    Category  = "inventory",
+                    Severity  = empty ? "critical" : "warning",
+                    Icon      = empty ? "inventory_2" : "production_quantity_limits",
+                    IconColor = empty ? "text-red-600" : "text-orange-500",
+                    BgColor   = empty ? "bg-red-50 border-red-200" : "bg-orange-50 border-orange-200",
+                    BadgeColor= empty ? "bg-red-600" : "bg-orange-500",
+                    Title     = empty ? $"نفد من المخزون: {s.Drug?.DrugName}" : $"مخزون حرج: {s.Drug?.DrugName}",
+                    Body      = $"الكمية الحالية: {s.StockQuantity} — الحد الأدنى: {s.MinimumStockLevel}",
+                    ActionUrl = "/InventoryIntelligence/PlanningHub",
+                    ActionText= "فتح خطة المشتريات",
+                    OccurredAt= today
+                });
+            }
+
+            // ── 4. تنبيهات أمنية (للمدير فقط) ────────────────────
+            if (IsSuperAdmin)
+            {
+                var since24h = DateTime.Now.AddHours(-24);
+                var loginFails = await _context.Systemlogs
+                    .Where(l => l.Action == "LoginFailed" && l.CreatedAt >= since24h)
+                    .CountAsync();
+
+                if (loginFails > 0)
+                    items.Add(new NotificationItemVm
+                    {
+                        Category  = "admin",
+                        Severity  = "critical",
+                        Icon      = "gpp_bad",
+                        IconColor = "text-purple-600",
+                        BgColor   = "bg-purple-50 border-purple-200",
+                        BadgeColor= "bg-purple-600",
+                        Title     = "تنبيه أمني: محاولات دخول فاشلة",
+                        Body      = $"{loginFails} محاولة دخول خاطئة خلال آخر 24 ساعة",
+                        ActionUrl = "/Admin/SystemLogs",
+                        ActionText= "مراجعة سجل الدخول",
+                        OccurredAt= DateTime.Now
+                    });
+            }
+
+            // ── 5. تحديثات إدارية (آخر 7 أيام) ──────────────────
+            var since7d = DateTime.Now.AddDays(-7);
+            var adminLogs = await _context.Systemlogs
+                .Where(l => l.CreatedAt >= since7d &&
+                           (l.Action.Contains("Role") || l.Action.Contains("Permission") || l.Action.Contains("User")))
+                .OrderByDescending(l => l.CreatedAt)
+                .Take(10)
+                .ToListAsync();
+
+            foreach (var log in adminLogs)
+                items.Add(new NotificationItemVm
+                {
+                    Category  = "admin",
+                    Severity  = "info",
+                    Icon      = "admin_panel_settings",
+                    IconColor = "text-blue-600",
+                    BgColor   = "bg-blue-50 border-blue-200",
+                    BadgeColor= "bg-blue-500",
+                    Title     = $"تحديث إداري: {log.Action}",
+                    Body      = log.Details ?? log.ScreenName ?? "—",
+                    ActionUrl = "#",
+                    ActionText= "—",
+                    OccurredAt= log.CreatedAt
+                });
+
+            // ترتيب: الحرجة أولاً ثم تاريخياً
+            var sorted = items
+                .OrderByDescending(i => i.Severity == "critical" ? 2 : i.Severity == "warning" ? 1 : 0)
+                .ThenByDescending(i => i.OccurredAt)
+                .ToList();
+
+            ViewBag.TotalCount    = sorted.Count;
+            ViewBag.CriticalCount = sorted.Count(i => i.Severity == "critical");
+            ViewBag.WarningCount  = sorted.Count(i => i.Severity == "warning");
+            ViewBag.InventoryCount= sorted.Count(i => i.Category == "inventory");
+            ViewBag.AdminCount    = sorted.Count(i => i.Category == "admin");
+
+            return View(sorted);
+        }
+
+
         public IActionResult SettingsHub()
+
         {
             var model = new SettingsHubViewModel();
             model.IsSuperAdmin = User.IsInRole("SuperAdmin") || User.HasClaim("RoleId", "1");
@@ -715,5 +951,23 @@ namespace PharmaSmartWeb.Controllers
             }
             return LocalRedirect(string.IsNullOrEmpty(returnUrl) ? "/" : returnUrl);
         }
+
+
+    }
+
+    // ViewModel للإشعارات
+    public class NotificationItemVm
+    {
+        public string Category   { get; set; } = ""; // inventory | admin
+        public string Severity   { get; set; } = ""; // critical | warning | info
+        public string Icon       { get; set; } = "notifications";
+        public string IconColor  { get; set; } = "text-slate-500";
+        public string BgColor    { get; set; } = "bg-slate-50 border-slate-200";
+        public string BadgeColor { get; set; } = "bg-slate-400";
+        public string Title      { get; set; } = "";
+        public string Body       { get; set; } = "";
+        public string ActionUrl  { get; set; } = "#";
+        public string ActionText { get; set; } = "";
+        public DateTime OccurredAt { get; set; } = DateTime.Now;
     }
 }

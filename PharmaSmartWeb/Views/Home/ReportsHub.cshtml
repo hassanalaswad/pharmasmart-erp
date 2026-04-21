@@ -1,7 +1,7 @@
 @model PharmaSmartWeb.Models.ReportsHubViewModel
 @using PharmaSmartWeb.Infrastructure
 @{
-    ViewData["Title"] = "مركز التقارير والإدارة العليا";
+    ViewData["Title"] = "مركز التقارير";
     ViewData["PageDescription"] = "تحليلات ذكية، قوائم ختامية، ومؤشرات الأداء (KPIs)";
 }
 
@@ -64,6 +64,19 @@
             </div>
         </form>
     </div>
+
+    <!-- Tabs Navigation -->
+    <div class="flex gap-2 border-b border-gray-300 pb-2 mb-4">
+        <button id="btnTabAnalytics" class="flex items-center gap-2 px-4 py-2 bg-white text-[#063955] font-bold border-b-2 border-[#063955] transition-colors" onclick="switchHubTab('analytics')">
+            <span class="material-symbols-outlined" style="font-size:18px;">analytics</span> منصة التحليلات
+        </button>
+        <button id="btnTabCatalog" class="flex items-center gap-2 px-4 py-2 bg-transparent text-gray-500 font-bold border-b-2 border-transparent hover:text-[#063955] transition-colors" onclick="switchHubTab('catalog')">
+            <span class="material-symbols-outlined" style="font-size:18px;">grid_view</span> فهرس التقارير الشامل
+        </button>
+    </div>
+
+    <!-- 1. ANALYTICS TAB CONTENT -->
+    <div id="tabAnalytics">
 
     <!-- 1. Executive KPIs (Top Level) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -173,12 +186,214 @@
             </div>
         </div>
     </div>
+    </div>
+    </div> <!-- END ANALYTICS TAB -->
+
+    <!-- 2. REPORTS CATALOG TAB CONTENT -->
+    <div id="tabCatalog" style="display: none;">
+        <!-- Global Search & Categories -->
+        <div class="enterprise-panel p-4 mb-4 flex flex-col md:flex-row gap-4 justify-between items-center bg-white shadow-sm">
+            <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-1" id="catalogCategories">
+                <button class="cat-btn active px-4 py-1.5 rounded-full bg-[#063955] text-white text-[12px] font-bold whitespace-nowrap" onclick="filterCatalog('all', this)">الكل</button>
+                <button class="cat-btn px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[12px] font-bold whitespace-nowrap hover:bg-slate-200" onclick="filterCatalog('financial', this)">مالية ومحاسبية</button>
+                <button class="cat-btn px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[12px] font-bold whitespace-nowrap hover:bg-slate-200" onclick="filterCatalog('inventory', this)">المخزون والصلاحية</button>
+                <button class="cat-btn px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[12px] font-bold whitespace-nowrap hover:bg-slate-200" onclick="filterCatalog('sales', this)">حركة المبيعات</button>
+                <button class="cat-btn px-4 py-1.5 rounded-full bg-slate-100 text-[#d97706] text-[12px] font-bold whitespace-nowrap hover:bg-orange-50 border border-[#fde68a]" onclick="filterCatalog('favorite', this)">
+                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">star</span> المفضلة
+                </button>
+            </div>
+            <div class="relative w-full md:w-[300px]">
+                <span class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400" style="font-size:18px;">search</span>
+                <input type="text" id="catalogSearch" onkeyup="searchCatalog()" placeholder="ابحث عن تقرير..." class="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-md text-[13px] outline-none focus:border-[#063955] transition-colors" />
+            </div>
+        </div>
+
+        <!-- Catalog Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="reportsGrid">
+            
+            <!-- Financial Reports -->
+            <a href="/Report/IncomeStatement" class="report-card financial block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="قائمة الدخل المبسطة">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'IncomeStatement')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">request_quote</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">قائمة الدخل</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">يعرض إجمالي الإيرادات، تكلفة البضاعة المباعة، والمصروفات وصولاً لصافي الربح.</p>
+            </a>
+
+            <a href="/Report/TrialBalance" class="report-card financial block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="ميزان المراجعة">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'TrialBalance')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">balance</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">ميزان المراجعة</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">مجاميع وأرصدة الدائن والمدين لكافة الحسابات الفرعية والرئيسية.</p>
+            </a>
+
+            <a href="/Report/DailyCashFlow" class="report-card financial block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="مطابقة الصندوق والسيولة">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'DailyCashFlow')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-orange-50 text-orange-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">account_balance_wallet</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">حركة الصندوق</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">تقرير السيولة النقدية، حركة كاشير اليوم، والمقبوضات/المدفوعات.</p>
+            </a>
+
+            <!-- Inventory Reports -->
+            <a href="/Report/StockExpiry" class="report-card inventory block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="رقابة تواريخ الصلاحية أدوية منتهية">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'StockExpiry')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">event_busy</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">رقابة الصلاحيات</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">تتبع الأدوية وشيكة الانتهاء أو المنتهية لتطبيق نظام (FEFO) والإرجاع.</p>
+            </a>
+
+            <a href="/Report/ShortageForecast" class="report-card inventory block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="النواقص التنبؤ بالطلب">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'ShortageForecast')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">تقرير نواقص الأدوية</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">اقتراح كميات الطلب بناءً على معدل الاستهلاك الشهري والمخزون الحالي.</p>
+            </a>
+
+            <a href="/Report/PharmacistSales" class="report-card sales block bg-white p-4 rounded-md border border-slate-200 shadow-sm hover:shadow-md transition-shadow hover:border-[#063955] group cursor-pointer relative" data-title="إنتاجية الفروع مقارنة مبيعات أرباح">
+                <button type="button" class="fav-btn absolute top-3 left-3 text-slate-300 hover:text-[#d97706]" onclick="toggleFavorite(window.event, 'BranchProductivity')"><span class="material-symbols-outlined text-[20px]">star</span></button>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-[#063955] group-hover:text-white transition-colors">
+                        <span class="material-symbols-outlined">storefront</span>
+                    </div>
+                    <div class="font-bold text-[#1e293b] text-[14px]">مقارنة أداء الفروع</div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">تحليل مبيعات ومصروفات وأرباح الفروع لتحديد الفرع الأقوى إنتاجية.</p>
+            </a>
+
+
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script src="~/lib/chart.js"></script>
     <script>
+        // --- TABS LOGIC ---
+        function switchHubTab(tabName) {
+            const btnAnalytics = document.getElementById('btnTabAnalytics');
+            const btnCatalog = document.getElementById('btnTabCatalog');
+            const tabAnalytics = document.getElementById('tabAnalytics');
+            const tabCatalog = document.getElementById('tabCatalog');
+
+            if(tabName === 'analytics') {
+                btnAnalytics.className = "flex items-center gap-2 px-4 py-2 bg-white text-[#063955] font-bold border-b-2 border-[#063955] transition-colors";
+                btnCatalog.className = "flex items-center gap-2 px-4 py-2 bg-transparent text-gray-500 font-bold border-b-2 border-transparent hover:text-[#063955] transition-colors";
+                tabAnalytics.style.display = 'block';
+                tabCatalog.style.display = 'none';
+            } else {
+                btnCatalog.className = "flex items-center gap-2 px-4 py-2 bg-white text-[#063955] font-bold border-b-2 border-[#063955] transition-colors";
+                btnAnalytics.className = "flex items-center gap-2 px-4 py-2 bg-transparent text-gray-500 font-bold border-b-2 border-transparent hover:text-[#063955] transition-colors";
+                tabAnalytics.style.display = 'none';
+                tabCatalog.style.display = 'block';
+                loadFavorites(); // Refresh favorites when catalog opens
+            }
+        }
+
+        // --- CATALOG LOGIC & FAVORITES ---
+        function filterCatalog(category, btnElement) {
+            // Update active states
+            const buttons = document.querySelectorAll('#catalogCategories .cat-btn');
+            buttons.forEach(btn => {
+                btn.className = "cat-btn px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[12px] font-bold whitespace-nowrap hover:bg-slate-200 border border-transparent";
+            });
+            if(category === 'favorite') {
+                btnElement.className = "cat-btn active px-4 py-1.5 rounded-full bg-orange-50 text-[#d97706] border border-[#fde68a] text-[12px] font-bold whitespace-nowrap";
+            } else {
+                btnElement.className = "cat-btn active px-4 py-1.5 rounded-full bg-[#063955] text-white text-[12px] font-bold whitespace-nowrap border border-transparent";
+            }
+
+            const cards = document.querySelectorAll('.report-card');
+            cards.forEach(card => {
+                if(category === 'all') {
+                    card.style.display = 'block';
+                } else if(category === 'favorite') {
+                    if(card.classList.contains('is-fav')) card.style.display = 'block';
+                    else card.style.display = 'none';
+                } else {
+                    if(card.classList.contains(category)) card.style.display = 'block';
+                    else card.style.display = 'none';
+                }
+            });
+            // Reset search
+            document.getElementById('catalogSearch').value = "";
+        }
+
+        function searchCatalog() {
+            const query = document.getElementById('catalogSearch').value.toLowerCase();
+            const cards = document.querySelectorAll('.report-card');
+            cards.forEach(card => {
+                const title = card.getAttribute('data-title').toLowerCase();
+                if(title.includes(query)) card.style.display = 'block';
+                else card.style.display = 'none';
+            });
+            // Reset categories to ALL visually
+            const buttons = document.querySelectorAll('#catalogCategories .cat-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-[#063955]', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-600');
+            });
+            buttons[0].classList.remove('bg-slate-100', 'text-slate-600');
+            buttons[0].classList.add('bg-[#063955]', 'text-white');
+        }
+
+        function toggleFavorite(event, reportId) {
+            event.preventDefault(); // Stop link navigation
+            event.stopPropagation();
+            
+            let favs = JSON.parse(localStorage.getItem('pharmaFavReports') || '[]');
+            const index = favs.indexOf(reportId);
+            if(index > -1) {
+                favs.splice(index, 1);
+            } else {
+                favs.push(reportId);
+            }
+            localStorage.setItem('pharmaFavReports', JSON.stringify(favs));
+            loadFavorites();
+        }
+
+        function loadFavorites() {
+            let favs = JSON.parse(localStorage.getItem('pharmaFavReports') || '[]');
+            const cards = document.querySelectorAll('.report-card');
+            cards.forEach(card => {
+                let rHref = card.getAttribute('href');
+                let isFav = false;
+                favs.forEach(f => { if(rHref.includes(f)) isFav = true; });
+                
+                const starIcon = card.querySelector('.fav-btn span');
+                if(isFav) {
+                    card.classList.add('is-fav');
+                    starIcon.classList.add('text-[#d97706]');
+                    starIcon.style.fontVariationSettings = "'FILL' 1"; // Make star solid
+                } else {
+                    card.classList.remove('is-fav');
+                    starIcon.classList.remove('text-[#d97706]');
+                    starIcon.style.fontVariationSettings = "'FILL' 0";
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            loadFavorites();
+
             Chart.defaults.font.family = "tahoma, sans-serif";
             Chart.defaults.font.size = 11; 
             Chart.defaults.color = '#475569'; 

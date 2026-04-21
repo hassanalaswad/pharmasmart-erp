@@ -348,7 +348,11 @@
 
     async function updatePlanDetail(detailId, approvedQty) {
         try {
-            await fetch(`/InventoryIntelligence/UpdatePlanDetail?detailId=${detailId}&approvedQuantity=${approvedQty}`, { method: 'POST' });
+            // ✅ إضافة CSRF Token — كان مفقوداً وكان سيُسبب 403 Forbidden
+            await fetch(`/InventoryIntelligence/UpdatePlanDetail?detailId=${detailId}&approvedQuantity=${approvedQty}`, {
+                method: 'POST',
+                headers: invIntelAntiForgeryHeaders()
+            });
             // تحديث الجدول كاملاً لإعادة احتساب الإجماليات
             await loadPlanDetails(currentPlanId);
         } catch(err) {

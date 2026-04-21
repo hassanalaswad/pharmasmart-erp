@@ -154,10 +154,10 @@
         </div>
         <div class="pos-header-actions">
             <a href="javascript:history.length > 1 ? history.back() : window.location.href='/Home/CommercialHub'" style="background:white; color:#ef4444; border:1px solid #fecaca; padding:10px 20px; border-radius:4px; font-size:13px; font-weight:900; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:6px;">
-                <span class="material-symbols-outlined" style="font-size:18px;">close</span> خروج من نقطة البيع
+                <span class="material-symbols-outlined" style="font-size:18px;">close</span> خروج
             </a>
             <button type="button" onclick="submitPOS()" id="btnSaveSales" disabled class="btn-submit">
-                <span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> حفظ وإصدار الفاتورة
+                <span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> حفظ الشراء
             </button>
         </div>
     </div>
@@ -421,6 +421,8 @@
         } else {
             resultsDiv.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:12px; font-weight:700;">غير موجود أو الرصيد صفر</div>';
             resultsDiv.style.display = 'block';
+            showToast('⚠️ الدواء غير معرف في قاعدة البيانات', 'warning');
+            searchInput.value = '';
         }
     });
 
@@ -432,7 +434,7 @@
         let existing = cart.find(i => i.id === drug.id && i.unitType === 'sub');
         if (existing) {
             if(existing.uiQty < drug.stock) existing.uiQty++;
-            else Swal.fire({toast: true, position: 'top-end', icon: 'warning', title: 'الكمية لا تكفي بالمخزن', showConfirmButton: false, timer: 2000});
+            else showToast(`⛔ لا يوجد رصيد كافٍ — المتوفر: ${drug.stock} فقط`, 'error');
         } else {
             cart.push({
                 uid: Date.now(), id: drug.id, name: drug.name,
@@ -470,7 +472,7 @@
             let val = parseFloat(value) || 1;
             let requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
             if (requiredPills > item.maxStock) {
-                Swal.fire({toast: true, position: 'top-end', icon: 'error', title: `⛔ الكمية المطلوبة (${val}) تتجاوز المخزون (${item.maxStock} ${item.subUnit})`, showConfirmButton: false, timer: 3000});
+                showToast(`⛔ الكمية المطلوبة (${val}) تتجاوز المخزون (${item.maxStock} ${item.subUnit})`, 'error');
                 item.uiQty = item.unitType === 'main' ? Math.floor(item.maxStock / item.conv) : item.maxStock;
                 if(item.uiQty < 1) item.uiQty = 1;
             } else {
@@ -482,7 +484,7 @@
             let requiredPills = item.unitType === 'main' ? (item.uiQty * item.conv) : item.uiQty;
             if (requiredPills > item.maxStock) {
                 item.uiQty = 1;
-                Swal.fire({toast: true, position: 'top-end', icon: 'info', title: 'تم تعديل الكمية لـ 1 لتناسب المخزون', showConfirmButton: false, timer: 2000});
+                showToast('تم تعديل الكمية لـ 1 لتناسب المخزون', 'info');
             }
             item._exceeded = false;
         }
@@ -903,4 +905,152 @@
         }
     });
 
+    // --- المرحلة 4: تقرير تسليم הوردية (Cash Flow Modal) عبر AJAX ---
+    async function openCashFlowModal() {
+        let overlay = document.getElementById('posModalOverlay');
+        let modal = document.getElementById('cashFlowModal');
+        let content = document.getElementById('cashFlowContent');
+        
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        content.innerHTML = '<div style="display:flex; height:200px; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:32px; animation:spin 1s linear infinite;">progress_activity</span></div>';
+        
+        try {
+            // Using layoutTheme=modal to leverage the partial view
+            const response = await fetch(`/Report/DailyCashFlow?layoutTheme=modal`);
+            if(response.ok) {
+                content.innerHTML = await response.text();
+            } else {
+                content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">حدث خطأ أثناء جلب تقرير الصندوق</div>';
+            }
+        } catch (error) {
+            content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">تعذر الاتصال بالخادم</div>';
+        }
+    }
+
+    function closePosModal() {
+        document.getElementById('posModalOverlay').classList.add('hidden');
+        document.getElementById('cashFlowModal').classList.add('hidden');
+        document.getElementById('cashFlowContent').innerHTML = '';
+    }
+
+    // --- المرحلة 5: نافذة النواقص القابلة للسحب (Draggable Shortages Modal) ---
+    async function openShortageModal() {
+        let modal = document.getElementById('shortageDraggableModal');
+        let content = document.getElementById('shortageContent');
+        
+        modal.style.display = 'flex';
+        content.innerHTML = '<div style="display:flex; height:150px; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:32px; animation:spin 1s linear infinite;">progress_activity</span></div>';
+        
+        try {
+            // Fetch shortages using layoutTheme=modal
+            const response = await fetch(`/Report/ShortageForecast?layoutTheme=modal`);
+            if(response.ok) {
+                content.innerHTML = await response.text();
+            } else {
+                content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">خطأ في جلب بيانات النواقص</div>';
+            }
+        } catch (error) {
+            content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">تعذر الاتصال بخادم التنبؤات</div>';
+        }
+    }
+
+    function closeShortageModal() {
+        document.getElementById('shortageDraggableModal').style.display = 'none';
+        document.getElementById('shortageContent').innerHTML = '';
+    }
+
+    // --- Vanilla JS Draggable Component Logic ---
+    let isDragging = false, dragStartX, dragStartY, initialX, initialY;
+    const draggableModal = document.getElementById('shortageDraggableModal');
+    const draggableHeader = document.getElementById('shortageDragHeader');
+
+    if(draggableHeader && draggableModal) {
+        draggableHeader.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            
+            // Get current transform or default to 0
+            const style = window.getComputedStyle(draggableModal);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            initialX = matrix.m41;
+            initialY = matrix.m42;
+            
+            draggableHeader.style.cursor = 'grabbing';
+            e.preventDefault(); // prevent text selection
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            draggableModal.style.transform = `translate(${initialX + dx}px, ${initialY + dy}px)`;
+        });
+
+        document.addEventListener('mouseup', function() {
+            if(isDragging) {
+                isDragging = false;
+                draggableHeader.style.cursor = 'grab';
+            }
+        });
+    }
+
+    // Wrap the original showToast to also trigger shortage prompt when it's an error about stock
+    const originalShowToast = window.showToast;
+    window.showToast = function(msg, icon) {
+        if(icon === 'error' && (msg.includes('رصيد') || msg.includes('تتجاوز') || msg.includes('مخزون'))) {
+            // Create a custom SweetAlert with action button instead of generic toast
+            Swal.fire({
+                title: 'تنبيه النواقص',
+                html: `<div style="font-size:14px; margin-bottom:15px; color:#e11d48; font-weight:bold;">${msg}</div>
+                       <button onclick="Swal.close(); openShortageModal();" style="background:#063955; color:white; padding:8px 16px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">analytics</span> فتح تحليل النواقص (التنبؤ الذكي)</button>`,
+                icon: 'warning',
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'إغلاق ومتابعة'
+            });
+        } else {
+            if(typeof originalShowToast === 'function') {
+                originalShowToast(msg, icon);
+            }
+        }
+    };
+
 </script>
+
+<!-- Modals HTML Overlays -->
+
+<!-- Cash Flow Overlay Modal (Phase 4) -->
+<div id="posModalOverlay" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closePosModal()"></div>
+<div id="cashFlowModal" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-4xl bg-white rounded-lg shadow-2xl z-[110] flex-col overflow-hidden max-h-[90vh]">
+    <div style="padding:16px; border-bottom:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-weight:900; color:#0f766e; display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+            مطابقة صندوق الكاشير (نهاية الوردية)
+        </h3>
+        <button onclick="closePosModal()" style="width:32px; height:32px; border-radius:4px; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+    </div>
+    <div id="cashFlowContent" style="flex:1; overflow-y:auto; padding:0; background:#f8fafc;">
+        <!-- AJAX Content Here -->
+    </div>
+</div>
+
+<!-- Draggable Shortage Forecast Modal (Phase 5) -->
+<div id="shortageDraggableModal" style="display:none; position:fixed; top:20%; right:20%; width:600px; max-height:500px; background:white; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.3); border:1px solid #cbd5e1; z-index:900; flex-direction:column; overflow:hidden;" class="draggable-modal">
+    <!-- Header acts as drag handle -->
+    <div id="shortageDragHeader" style="padding:12px 16px; background:linear-gradient(to right, #1e293b, #0f172a); color:white; font-weight:700; font-size:13px; display:flex; justify-content:space-between; align-items:center; cursor:grab;" title="اسحب لتحريك النافذة">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined" style="font-size:16px; color:#38bdf8;">drag_indicator</span>
+            <span>الذكاء الاصطناعي: التنبؤ بالنواقص</span>
+        </div>
+        <button onclick="closeShortageModal()" style="background:transparent; border:none; color:#cbd5e1; cursor:pointer; display:flex;">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+    </div>
+    <div id="shortageContent" style="flex:1; overflow-y:auto; background:#f8fafc;">
+        <!-- AJAX Content Here -->
+    </div>
+</div>
