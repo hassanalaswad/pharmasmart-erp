@@ -50,27 +50,33 @@ namespace PharmaSmartWeb.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
+        private bool IsSuperAdmin(ClaimsPrincipal user) => user.IsInRole("SuperAdmin") || user.HasClaim("RoleId", "1");
+        private bool IsBranchManager(ClaimsPrincipal user) => user.IsInRole("BranchManager") || user.HasClaim("RoleId", "2");
+
         public Task<List<MenuGroup>> GetAllowedMenusAsync(ClaimsPrincipal user)
         {
             var allowedGroups = new List<MenuGroup>();
+
+            bool superAdmin = IsSuperAdmin(user);
+            bool branchManager = IsBranchManager(user);
 
             // 1. العمليات التجارية (Commercial Operations)
             {
                 var group = new MenuGroup { Title = "العمليات التجارية", Icon = "storefront", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Sales.Create") || user.IsInRole("BranchManager") || user.IsInRole("Cashier") || user.IsInRole("Pharmacist"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "Sales.Create") || user.IsInRole("Cashier") || user.IsInRole("Pharmacist"))
                     group.Items.Add(new MenuItem { Title = "نقطة البيع السريعة (POS)", Url = "/Sales/Create", Icon = "point_of_sale" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Sales.View") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "Sales.View"))
                     group.Items.Add(new MenuItem { Title = "سجل المبيعات", Url = "/Sales/Index", Icon = "receipt_long" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "SalesReturn.View") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "SalesReturn.View"))
                     group.Items.Add(new MenuItem { Title = "مرتجع المبيعات", Url = "/SalesReturn/Index", Icon = "assignment_return" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Purchases.View") || user.IsInRole("BranchManager") || user.IsInRole("Storekeeper"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "Purchases.View") || user.IsInRole("Storekeeper"))
                     group.Items.Add(new MenuItem { Title = "سجل المشتريات", Url = "/Purchases/Index", Icon = "shopping_cart_checkout" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "PurchasesReturn.View") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "PurchasesReturn.View"))
                     group.Items.Add(new MenuItem { Title = "مرتجع المشتريات", Url = "/PurchasesReturn/Index", Icon = "remove_shopping_cart" });
 
                 if (group.Items.Any()) allowedGroups.Add(group);
@@ -82,10 +88,10 @@ namespace PharmaSmartWeb.Services
 
                 group.Items.Add(new MenuItem { Title = "لوحة تحكم المخزون", Url = "/Home/InventoryHub", Icon = "dashboard" });
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Drug.View") || user.IsInRole("Pharmacist") || user.IsInRole("Storekeeper"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "Drug.View") || user.IsInRole("Pharmacist") || user.IsInRole("Storekeeper"))
                     group.Items.Add(new MenuItem { Title = "الأدوية والمخزون", Url = "/Drugs/Index", Icon = "medication" });
 
-                if (user.IsInRole("SuperAdmin") || user.IsInRole("Storekeeper") || user.IsInRole("Pharmacist"))
+                if (superAdmin || branchManager || user.IsInRole("Storekeeper") || user.IsInRole("Pharmacist"))
                 {
                     group.Items.Add(new MenuItem { Title = "المجموعات العلاجية", Url = "/ItemGroups/Index", Icon = "category" });
                     group.Items.Add(new MenuItem { Title = "تسعير الأدوية (WAC)", Url = "/Pricing/Index", Icon = "price_change" });
@@ -95,7 +101,7 @@ namespace PharmaSmartWeb.Services
                     group.Items.Add(new MenuItem { Title = "طباعة الباركود", Url = "/Barcode/Index", Icon = "barcode_scanner" });
                 }
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "System.ChangeBranch"))
                 {
                     group.Items.Add(new MenuItem { Title = "نواقص الأدوية", Url = "/Inventory/Shortages", Icon = "warning_amber" });
                     group.Items.Add(new MenuItem { Title = "مراقبة الصلاحية", Url = "/Report/StockExpiry", Icon = "event_busy" });
@@ -108,7 +114,7 @@ namespace PharmaSmartWeb.Services
             {
                 var group = new MenuGroup { Title = "المالية والحسابات", Icon = "account_balance", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "Accounts.View") || user.IsInRole("Accountant") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "Accounts.View") || user.IsInRole("Accountant"))
                 {
                     group.Items.Add(new MenuItem { Title = "لوحة تحكم المالية", Url = "/Home/FinanceHub", Icon = "account_balance" });
                     group.Items.Add(new MenuItem { Title = "الدليل المحاسبي", Url = "/Accounting/Index", Icon = "account_tree" });
@@ -117,7 +123,7 @@ namespace PharmaSmartWeb.Services
                     group.Items.Add(new MenuItem { Title = "التحويلات المالية", Url = "/FundTransfers/Index", Icon = "currency_exchange" });
                 }
 
-                if (user.IsInRole("SuperAdmin") || user.IsInRole("Accountant") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.IsInRole("Accountant"))
                 {
                     group.Items.Add(new MenuItem { Title = "كشف الحساب", Url = "/Report/Ledger", Icon = "list_alt" });
                 }
@@ -129,7 +135,7 @@ namespace PharmaSmartWeb.Services
             {
                 var group = new MenuGroup { Title = "العلاقات التجارية", Icon = "groups", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin") || user.IsInRole("Accountant") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.IsInRole("Accountant"))
                 {
                     group.Items.Add(new MenuItem { Title = "إدارة العملاء", Url = "/Customers/Index", Icon = "person_add" });
                     group.Items.Add(new MenuItem { Title = "إدارة الموردين", Url = "/Suppliers/Index", Icon = "local_shipping" });
@@ -143,7 +149,7 @@ namespace PharmaSmartWeb.Services
             {
                 var group = new MenuGroup { Title = "التخطيط والتنبؤ", Icon = "auto_graph", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin") || user.IsInRole("BranchManager") || user.IsInRole("Accountant") || user.HasClaim("Permission", "System.ChangeBranch"))
+                if (superAdmin || branchManager || user.IsInRole("Accountant") || user.HasClaim("Permission", "System.ChangeBranch"))
                 {
                     group.Items.Add(new MenuItem { Title = "مركز التخطيط والتنبؤ", Url = "/InventoryIntelligence/PlanningHub", Icon = "auto_graph" });
                 }
@@ -155,7 +161,7 @@ namespace PharmaSmartWeb.Services
             {
                 var group = new MenuGroup { Title = "التقارير المركزية", Icon = "donut_large", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin") || user.HasClaim("Permission", "System.ChangeBranch") || user.IsInRole("BranchManager"))
+                if (superAdmin || branchManager || user.HasClaim("Permission", "System.ChangeBranch"))
                 {
                     group.Items.Add(new MenuItem { Title = "مركز التقارير (اللوحة الرئيسية)", Url = "/Home/ReportsHub", Icon = "dashboard" });
                     
@@ -177,7 +183,7 @@ namespace PharmaSmartWeb.Services
             {
                 var group = new MenuGroup { Title = "الإدارة المركزية", Icon = "admin_panel_settings", Items = new List<MenuItem>() };
 
-                if (user.IsInRole("SuperAdmin"))
+                if (superAdmin)
                 {
                     group.Items.Add(new MenuItem { Title = "إعدادات النظام العامة", Url = "/Admin/Index", Icon = "settings" });
                     group.Items.Add(new MenuItem { Title = "الإعدادات المالية", Url = "/FinancialSettings/Index", Icon = "settings_suggest" });
@@ -197,8 +203,6 @@ namespace PharmaSmartWeb.Services
 
         private string DetermineActiveUnit(string controller, string action)
         {
-            // هذه الدالة محتفظ بها للتوافق المستقبلي فقط
-            // منطق القائمة الجديد يعرض جميع الوحدات دائماً
             return "All";
         }
     }

@@ -20,9 +20,11 @@
     int totalShortages    = (int)(ViewBag.TotalShortages ?? 0);
     string bestBranch     = "الفرع الرئيسي";
 
-    bool isSuperAdmin     = User.IsInRole("SuperAdmin");
-    bool isBranchManager  = User.IsInRole("BranchManager");
-    bool isCashier        = User.IsInRole("Cashier") || User.IsInRole("Pharmacist");
+    string userRole       = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+    
+    bool isSuperAdmin     = userRole.Contains("SuperAdmin") || userRole.Contains("مدير النظام") || User.HasClaim("RoleID", "1") || User.HasClaim("RoleId", "1");
+    bool isBranchManager  = userRole.Contains("BranchManager") || userRole.Contains("مدير فرع") || User.HasClaim("RoleID", "2") || User.HasClaim("RoleId", "2");
+    bool isCashier        = userRole.Contains("Cashier") || userRole.Contains("Pharmacist") || userRole.Contains("كاشير") || userRole.Contains("صيدلي") || User.HasClaim("RoleID", "3") || User.HasClaim("RoleID", "4") || User.HasClaim("RoleId", "3") || User.HasClaim("RoleId", "4");
     bool hasNoRole        = !isSuperAdmin && !isBranchManager && !isCashier;
 }
 

@@ -723,7 +723,7 @@ namespace PharmaSmartWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult RunForecast([FromBody] ForecastRequestVm request)
+        public async Task<IActionResult> RunForecast([FromBody] ForecastRequestVm request)
         {
             if (request == null || request.items == null) return BadRequest("Invalid Data");
 
@@ -766,22 +766,48 @@ namespace PharmaSmartWeb.Controllers
 
             // Generate Chart Data based on model
             var arabicMonths = new[] { "يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر" };
-            var currentMonth = DateTime.Now.Month;
+            var today = DateTime.Today;
+            var currentMonth = today.Month;
             var chartLabels = new List<string>();
-            var chartActual = new List<decimal?>(); // Mock recent 6 months history
+            var chartActual = new List<decimal?>(); 
             var chartForecastList = new List<decimal>();
 
-            // Mock historical exactly 6 elements
+            // Get Real Historical Data for the last 6 months
+            int scopeId = ReportScopeId;
+            bool isGlobal = (scopeId == 0);
+            var sixMonthsAgo = today.AddMonths(-5);
+            var startOfSixMonths = new DateTime(sixMonthsAgo.Year, sixMonthsAgo.Month, 1);
+
+            var monthlySalesRaw = await _context.Saledetails
+                .Include(sd => sd.Sale)
+                .Where(sd => sd.Sale.SaleDate >= startOfSixMonths
+                          && (!isGlobal ? sd.Sale.BranchId == scopeId : true))
+                .GroupBy(sd => new { sd.Sale.SaleDate.Year, sd.Sale.SaleDate.Month })
+                .Select(g => new
+                {
+                    Year  = g.Key.Year,
+                    Month = g.Key.Month,
+                    Total = g.Sum(x => x.Quantity * x.UnitPrice)
+                })
+                .OrderBy(x => x.Year).ThenBy(x => x.Month)
+                .ToListAsync();
+
+            // Populate historical exactly 6 elements
             for(int i=5; i>=0; i--) {
-                int m = currentMonth - i;
-                if(m <= 0) m += 12;
+                int y = today.AddMonths(-i).Year;
+                int m = today.AddMonths(-i).Month;
                 chartLabels.Add(arabicMonths[m-1]);
-                decimal histVal = rnd.Next(10000, 50000); 
+                
+                var monthData = monthlySalesRaw.FirstOrDefault(x => x.Year == y && x.Month == m);
+                decimal histVal = monthData?.Total ?? 0m;
                 chartActual.Add(Math.Round(histVal, 2));
             }
 
-            // Mock future 'horizon' elements
+            // Calculate future 'horizon' elements based on real data
             decimal lastVal = chartActual.Last() ?? 0;
+            if (lastVal == 0 && chartActual.Any(x => x > 0))
+                lastVal = chartActual.Where(x => x > 0).Average() ?? 0;
+
             for(int i=1; i<=request.horizon; i++) {
                 int m = currentMonth + i;
                 if(m > 12) m -= 12;

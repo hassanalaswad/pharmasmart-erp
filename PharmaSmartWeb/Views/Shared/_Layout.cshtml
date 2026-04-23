@@ -240,9 +240,12 @@
           </a>
           <div class="border-t border-slate-100 my-0.5"></div>
          }
-      <a href="/Home/Index" class="w-full py-2.5 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
-      <span class="material-symbols-outlined text-[18px]">dashboard</span> لوحة التحكم
-      </a>
+      @if (!User.IsInRole("Cashier") && !User.IsInRole("Pharmacist") && !User.IsInRole("BranchManager"))
+      {
+          <a href="/Home/Index" class="w-full py-2.5 bg-[#063955] text-white rounded-sm font-bold flex items-center justify-center gap-2 hover:opacity-90 shadow-sm transition-transform active:scale-95 text-sm">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span> لوحة التحكم
+          </a>
+      }
      }
     else if (activeUnit == "Finance" && User.HasClaim("Permission", "JournalEntries.View"))
     {

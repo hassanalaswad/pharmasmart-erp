@@ -395,7 +395,7 @@
     
     <!-- Watermark -->
     <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);opacity:0.03;pointer-events:none;z-index:0;">
-        <img src="/images/Logo.png" style="width:500px;height:500px;object-fit:contain;">
+        <img src="@(!string.IsNullOrEmpty(Settings.CompanyLogoPath) ? Settings.CompanyLogoPath : "/images/Logo.png")" style="width:500px;height:500px;object-fit:contain;">
     </div>
 
     <!-- Top Bar -->

@@ -84,46 +84,50 @@ namespace PharmaSmartWeb.Controllers
             var role = await _context.Userroles.FindAsync(roleId);
             if (role == null) return NotFound();
 
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                try
+                using (var transaction = await _context.Database.BeginTransactionAsync())
                 {
-                    var oldPermissions = _context.Screenpermissions.Where(p => p.RoleId == roleId);
-                    _context.Screenpermissions.RemoveRange(oldPermissions);
-
-                    if (permissions != null)
+                    try
                     {
-                        foreach (var perm in permissions)
+                        var oldPermissions = _context.Screenpermissions.Where(p => p.RoleId == roleId);
+                        _context.Screenpermissions.RemoveRange(oldPermissions);
+
+                        if (permissions != null)
                         {
-                            perm.RoleId = roleId;
-                            if (perm.CanView || perm.CanAdd || perm.CanEdit || perm.CanDelete)
+                            foreach (var perm in permissions)
                             {
-                                _context.Screenpermissions.Add(perm);
+                                perm.RoleId = roleId;
+                                if (perm.CanView || perm.CanAdd || perm.CanEdit || perm.CanDelete)
+                                {
+                                    _context.Screenpermissions.Add(perm);
+                                }
                             }
                         }
+
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        // ─── ✅ مسح الكاش لكلا الطبقتين (ClaimsTransformer + HasPermissionFilter) ───
+                        // مفتاح ClaimsTransformer (يخزن List<CachedPermission>)
+                        _cache.Remove($"Permissions_Role_{roleId}");
+                        // مفتاح HasPermissionAttribute (يخزن List<Screenpermissions>)
+                        _cache.Remove($"Filter_Permissions_Role_{roleId}");
+
+                        await RecordLog("Update", "Permissions", $"تحديث صلاحيات: ({role.RoleArabicName ?? role.RoleName})");
+
+                        TempData["Success"] = $"✅ تم حفظ مصفوفة الصلاحيات بنجاح للمجموعة ({role.RoleArabicName ?? role.RoleName}). " +
+                                             "⚠️ المستخدمون الحاليون التابعون لهذه المجموعة سيحصلون على الصلاحيات الجديدة تلقائياً خلال 30 دقيقة، " +
+                                             "أو فوراً عند إعادة تسجيل الدخول.";
                     }
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    // ─── ✅ مسح الكاش لكلا الطبقتين (ClaimsTransformer + HasPermissionFilter) ───
-                    // مفتاح ClaimsTransformer (يخزن List<CachedPermission>)
-                    _cache.Remove($"Permissions_Role_{roleId}");
-                    // مفتاح HasPermissionAttribute (يخزن List<Screenpermissions>)
-                    _cache.Remove($"Filter_Permissions_Role_{roleId}");
-
-                    await RecordLog("Update", "Permissions", $"تحديث صلاحيات: ({role.RoleArabicName ?? role.RoleName})");
-
-                    TempData["Success"] = $"✅ تم حفظ مصفوفة الصلاحيات بنجاح للمجموعة ({role.RoleArabicName ?? role.RoleName}). " +
-                                         "⚠️ المستخدمون الحاليون التابعون لهذه المجموعة سيحصلون على الصلاحيات الجديدة تلقائياً خلال 30 دقيقة، " +
-                                         "أو فوراً عند إعادة تسجيل الدخول.";
+                    catch (System.Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        TempData["Error"] = "حدث خطأ أثناء حفظ البيانات: " + ex.Message + (ex.InnerException != null ? " | " + ex.InnerException.Message : "");
+                    }
                 }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    TempData["Error"] = "حدث خطأ أثناء حفظ البيانات.";
-                }
-            }
+            });
 
             return RedirectToAction(nameof(Index));
         }
