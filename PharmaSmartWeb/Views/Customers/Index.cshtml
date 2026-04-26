@@ -7,7 +7,7 @@
 
 <style>
     body { background-color: #f4f6f8; }
-    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+به    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
     .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; font-size: 13px; font-weight: 700; color: #063955; }
     .enterprise-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .enterprise-table th { background: #f1f5f9; padding: 8px 12px; border-bottom: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; color: #334155; font-weight: 700; text-align: right; }
@@ -144,6 +144,10 @@
             </h3>
             <span style="font-size:11px; color:rgba(255,255,255,0.6);">كشف الحساب التفصيلي للعميل | السنة الحالية</span>
         </div>
+        <button onclick="printLedgerDrawer()" style="display:flex; align-items:center; gap:5px; padding:6px 14px; border-radius:4px; background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.2); cursor:pointer; font-size:12px; font-weight:700;" title="طباعة كشف الحساب">
+            <span class="material-symbols-outlined" style="font-size:16px;">print</span>
+            طباعة
+        </button>
         <button onclick="closeLedgerDrawer()" style="width:32px; height:32px; border-radius:4px; background:rgba(255,255,255,0.1); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">close</span>
         </button>
@@ -181,5 +185,32 @@
             document.getElementById('ledgerDrawerOverlay').style.display = 'none';
             document.getElementById('ledgerDrawerContent').innerHTML = '';
         }, 350);
+    }
+    function printLedgerDrawer() {
+        const content = document.getElementById('ledgerDrawerContent').innerHTML;
+        const accountName = document.getElementById('ledgerDrawerTitle').innerText;
+        const win = window.open('', '_blank', 'width=900,height=700');
+        const css = [
+            '* { box-sizing: border-box; }',
+            'body { font-family: Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; color: #1e293b; font-size: 12px; }',
+            '.ph { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #063955; padding-bottom:12px; margin-bottom:16px; }',
+            '.ph h1 { font-size:16px; font-weight:800; color:#063955; margin:0; }',
+            '.ph p { font-size:11px; color:#64748b; margin:4px 0 0; }',
+            'table { width:100%; border-collapse:collapse; font-size:11px; }',
+            'th { background:#f1f5f9; padding:8px 10px; border:1px solid #cbd5e1; font-weight:700; text-align:right; color:#334155; }',
+            'td { padding:7px 10px; border:1px solid #e2e8f0; }',
+            '.no-print { display:none !important; }'
+        ].join(' ');
+        const html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>\u0643\u0634\u0641 \u062d\u0633\u0627\u0628 - ' + accountName + '<\/title>'
+            + '<style>' + css + '<\/style><\/head>'
+            + '<body><div class="ph">'
+            + '<div style="display:flex;align-items:center;gap:12px;">'
+            + '<img src="' + window.location.origin + '/images/logo1.png" style="height:44px;object-fit:contain;" onerror="this.style.display=\'none\'">'
+            + '<div><h1>\u0643\u0634\u0641 \u062d\u0633\u0627\u0628 \u062a\u0641\u0635\u064a\u0644\u064a<\/h1><p>\u062d\u0633\u0627\u0628: ' + accountName + '<\/p><\/div><\/div>'
+            + '<div style="text-align:left;font-size:11px;color:#64748b;"><div>\u062a\u0627\u0631\u064a\u062e: ' + new Date().toLocaleDateString('ar-SA') + '<\/div><div>PharmaSmart ERP<\/div><\/div>'
+            + '<\/div>' + content + '<\/body><\/html>';
+        win.document.write(html);
+        win.document.close(); win.focus();
+        setTimeout(function() { win.print(); win.close(); }, 600);
     }
 </script>

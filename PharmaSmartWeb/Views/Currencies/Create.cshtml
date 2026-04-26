@@ -22,12 +22,12 @@
     <div class="enterprise-row">
         <div>
             <label class="enterprise-label">اسم العملة <span style="color:#e11d48;">*</span></label>
-            <input type="text" asp-for="CurrencyName" required autocomplete="off" placeholder="مثال: ريال يمني" class="enterprise-input" />
+            <input type="text" asp-for="CurrencyName" required autocomplete="off" placeholder="أدخل اسم العملة..." class="enterprise-input" />
             <span asp-validation-for="CurrencyName" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
         <div>
             <label class="enterprise-label">كود العملة (ISO) <span style="color:#e11d48;">*</span></label>
-            <input type="text" asp-for="CurrencyCode" required autocomplete="off" placeholder="مثال: YER / USD / SAR" class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
+            <input type="text" asp-for="CurrencyCode" required autocomplete="off" placeholder="أدخل كود العملة..." class="enterprise-input" style="font-family:monospace;text-transform:uppercase;" />
             <span asp-validation-for="CurrencyCode" style="color:#e11d48;font-size:11px;display:block;margin-top:4px;"></span>
         </div>
     </div>

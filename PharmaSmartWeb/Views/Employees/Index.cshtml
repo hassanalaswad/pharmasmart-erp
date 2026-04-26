@@ -103,7 +103,7 @@
                         <td>@(emp.Branch?.BranchName ?? "غير محدد")</td>
                         @if (User.IsInRole("SuperAdmin") || User.HasClaim("Permission", "System.ChangeBranch"))
                         {
-                            <td style="font-weight:700;">@emp.Salary.ToString("N2") ر.ي</td>
+                            <td style="font-weight:700;">@emp.Salary.ToString("N2") @ViewBag.CurrencySymbol</td>
                         }
                         <td>
                             @if (emp.IsActive == true)

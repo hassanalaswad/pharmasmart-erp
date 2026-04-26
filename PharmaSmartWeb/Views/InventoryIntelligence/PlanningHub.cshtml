@@ -2,6 +2,7 @@
     Layout = "_Layout";
     ViewData["Title"] = "مركز التخطيط والتنبؤ الذكي";
     ViewData["PageDescription"] = "منصة متكاملة لخطة المشتريات الذكية مدعومة بـ Prophet AI / Vertex AI";
+    ViewData["HideLayoutBack"] = true;
 }
 
 <!-- Custom CSS for Planning Hub -->
@@ -68,16 +69,79 @@
     </div>
 </div>
 
+<!-- 📊 ملخص ذكاء القرار (Decision Intelligence Summary) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <!-- ABC Analysis Overview -->
+    <div class="glass-panel rounded-lg p-5 border-r-4 border-r-indigo-500">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-indigo-600">category</span>
+            </div>
+            <div>
+                <h4 class="text-sm font-black text-slate-800">تصنيف ABC (الأهمية)</h4>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">ABC Analysis & Prioritization</p>
+            </div>
+        </div>
+        <div class="flex items-end justify-between">
+            <div class="flex gap-1.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">A: @(ViewBag.CountA ?? 0)</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">B: @(ViewBag.CountB ?? 0)</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">C: @(ViewBag.CountC ?? 0)</span>
+            </div>
+            <span class="text-[10px] text-indigo-600 font-black">تحليل باريتو (80/20)</span>
+        </div>
+    </div>
+
+    <!-- EOQ Intelligence -->
+    <div class="glass-panel rounded-lg p-5 border-r-4 border-r-emerald-500">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-emerald-600">analytics</span>
+            </div>
+            <div>
+                <h4 class="text-sm font-black text-slate-800">كمية الطلب الاقتصادية (EOQ)</h4>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Economic Order Quantity Model</p>
+            </div>
+        </div>
+        <div class="flex items-center justify-between">
+            <div class="text-[11px] font-bold text-emerald-700">تقليل تكاليف التخزين والهدر</div>
+            <span class="material-symbols-outlined text-emerald-500 text-[18px]">verified</span>
+        </div>
+    </div>
+
+    <!-- Liquidity Check -->
+    <div class="glass-panel rounded-lg p-5 border-r-4 border-r-amber-500">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                <span class="material-symbols-outlined text-amber-600">account_balance_wallet</span>
+            </div>
+            <div>
+                <h4 class="text-sm font-black text-slate-800">تحقق السيولة النقدية</h4>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Liquidity Matching Engine</p>
+            </div>
+        </div>
+        <div class="flex items-center justify-between">
+            <div class="text-lg font-black text-amber-700">@(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) <small class="text-[10px]">@ViewBag.CurrencySymbol</small></div>
+            <div class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">متاح للشراء</div>
+        </div>
+    </div>
+</div>
+
 <!-- المنطقة B: لوحة تحكم المحرك والأُفق الزمني -->
 <div class="glass-panel rounded-lg p-5 mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
     <!-- 1. Data Source -->
     <div class="border-r border-slate-200 pr-4">
         @Html.AntiForgeryToken()
         <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary">database</span> مصدر البيانات</h3>
-        <button id="refreshDbBtn" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-2 rounded-sm text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-[16px] text-emerald-600">sync</span> تحديث من قاعدة البيانات
-        </button>
-        <div id="cloudUploadArea" class="hidden w-full border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-sm p-3 text-center cursor-pointer hover:bg-blue-50 transition drop-zone" onclick="document.getElementById('externalFileInput').click()">
+        <div class="flex flex-col gap-2">
+            <button id="refreshDbBtn" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-2 rounded-sm text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">sync</span> تحديث من قاعدة البيانات
+            </button>
+            <button id="recalcSafetyStockBtn" class="w-full bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 py-2 rounded-sm text-sm font-bold shadow-sm transition flex items-center justify-center gap-2" title="حساب حد الأمان تلقائياً بناءً على سرعة البيع">
+                <span class="material-symbols-outlined text-[16px]">psychology_alt</span> تحديث حد الأمان الذكي
+            </button>
+        </div>
+        <div id="cloudUploadArea" class="hidden mt-2 w-full border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-sm p-3 text-center cursor-pointer hover:bg-blue-50 transition drop-zone" onclick="document.getElementById('externalFileInput').click()">
             <span class="material-symbols-outlined text-blue-500 mb-1 block">upload_file</span>
             <span id="uploadAreaText" class="text-xs font-medium text-blue-700">اسحب وافلت أو انقر لاختيار ملف (CSV / Excel)</span>
             <input type="file" id="externalFileInput" class="hidden" accept=".csv, .xlsx, .xls">
@@ -177,7 +241,7 @@
         </li>
         <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-500">
             <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
-            <div><strong class="block text-indigo-300">Phase 6: المطابقة المالية</strong><span class="text-slate-400 text-xs">السيولة المتاحة: @(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) R.Y</span></div>
+            <div><strong class="block text-indigo-300">Phase 6: المطابقة المالية</strong><span class="text-slate-400 text-xs">السيولة المتاحة: @(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) @ViewBag.CurrencySymbol</span></div>
         </li>
         <li class="flex gap-4 opacity-0 -translate-x-4 transition-all duration-500 delay-600">
             <span class="material-symbols-outlined text-amber-500 animate-spin text-[16px] mt-0.5">hourglass_empty</span>
@@ -211,8 +275,8 @@
                 <tr class="text-slate-600">
                     <th class="px-3 py-3 w-8"><input type="checkbox" checked class="rounded border-slate-300"></th>
                     <th class="px-3 py-3 text-right font-black">الدواء (التصنيف والأولوية)</th>
-                    <th class="px-3 py-3 text-center font-bold">الرصيد <span class="font-normal text-xs">/الحد</span></th>
-                    <th class="px-3 py-3 text-center font-bold">الطلب المتوقع <span class="text-[10px] block text-slate-400">(الذكاء الاصطناعي)</span></th>
+                    <th class="px-3 py-3 text-center font-bold">الرصيد <span class="font-normal text-xs">/ <span class="text-primary font-black">حد الأمان 🤖</span></span></th>
+                    <th class="px-3 py-3 text-center font-bold">الكمية المباعة سابقاً <span class="text-[10px] block text-slate-400">(بناء التنبؤ)</span></th>
                     <th class="px-3 py-3 text-center font-bold" title="الكمية التي تقلل تكاليف التخزين">الكمية المُثلى المقترحة</th>
                     <th class="px-3 py-3 text-center font-black bg-emerald-100 text-emerald-800 border-x border-emerald-200">الكمية للتوريد (للتعديل)</th>
                     <th class="px-3 py-3 text-center font-bold">المطابقة المالية</th>
@@ -229,15 +293,15 @@
         <div class="flex items-center gap-4">
             <div class="text-left font-black text-slate-800 bg-white px-4 py-2 rounded border border-slate-200 shadow-sm flex flex-col justify-center">
                 <span class="text-[10px] text-slate-500 tracking-wider">السيولة النقدية المتوفرة</span>
-                <span id="totalLiquidityDisplay" class="text-lg text-emerald-600">@(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) R.Y</span>
+                <span id="totalLiquidityDisplay" class="text-lg text-emerald-600">@(((decimal?)ViewBag.TotalLiquidity ?? 0m).ToString("N0")) @ViewBag.CurrencySymbol</span>
             </div>
             <div id="costContainer" class="text-left font-black text-slate-800 bg-white px-4 py-2 rounded border border-slate-200 shadow-sm flex flex-col justify-center transition-colors">
                 <span class="text-[10px] text-slate-500 tracking-wider">إجمالي تكلفة الخطة</span>
-                <span id="totalExpectedCost" class="text-lg text-primary">0.00 R.Y</span>
+                <span id="totalExpectedCost" class="text-lg text-primary">0.00 @ViewBag.CurrencySymbol</span>
             </div>
             <div id="deficitWarning" class="hidden text-left font-black bg-rose-50 border border-rose-200 px-4 py-2 rounded shadow-sm flex-col justify-center animate-pulse">
                 <span class="text-[10px] text-rose-600 tracking-wider flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">warning</span> عجز مالي متوقع</span>
-                <span id="deficitAmount" class="text-lg text-rose-700">0.00 R.Y</span>
+                <span id="deficitAmount" class="text-lg text-rose-700">0.00 @ViewBag.CurrencySymbol</span>
             </div>
         </div>
         
@@ -271,7 +335,7 @@
             
             <div class="bg-slate-50 rounded p-2 mb-4 text-xs">
                 <div class="flex justify-between mb-1"><span class="text-slate-500">عدد الأصناف:</span><span class="font-bold">14 صنف</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">التكلفة التقديرية:</span><span class="font-bold">14,500 R.Y</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">التكلفة التقديرية:</span><span class="font-bold">14,500 @ViewBag.CurrencySymbol</span></div>
             </div>
 
             <div class="flex gap-2">
@@ -353,30 +417,20 @@
             
             <!-- Modal Body: Mapping Forms -->
             <div class="p-4 md:p-5 overflow-y-auto max-h-[60vh]">
-                <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold px-3 py-2 rounded mb-4 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[16px]">info</span>
-                    يرجى تحديد العمود المناسب من ملفك لكل حقل من الحقول أدناه لضمان دقة التنبؤ.
-                </div>
-                
-                <div class="space-y-4" id="mappingFieldsContainer">
+                <div class="space-y-5 bg-slate-50 p-4 rounded-lg border border-slate-100" id="mappingFieldsContainer">
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">اسم الدواء (Drug Name) <span class="text-red-500">*</span></label>
-                        <select id="mapDrugName" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                        <label class="block text-sm font-bold text-slate-800 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-slate-400">medication</span> اسم الدواء (Drug Name) <span class="text-red-500">*</span></label>
+                        <select id="mapDrugName" class="w-full border-slate-300 rounded-md focus:ring-primary focus:border-primary text-sm p-2.5 shadow-sm bg-white"></select>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">الرصيد الحالي (Current Stock) <span class="text-red-500">*</span></label>
-                        <select id="mapCurrentStock" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">الطلب المتوقع / المبيعات (Demand) <span class="text-red-500">*</span></label>
-                        <select id="mapExpectedQty" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">تكلفة الوحدة / السعر (Unit Cost) <span class="text-red-500">*</span></label>
-                        <select id="mapUnitCost" class="w-full border-slate-300 rounded focus:ring-primary focus:border-primary text-sm"></select>
+                        <label class="block text-sm font-bold text-slate-800 mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[16px] text-slate-400">shopping_cart</span> الكمية المباعة سابقاً (Sold Qty) <span class="text-red-500">*</span></label>
+                        <select id="mapExpectedQty" class="w-full border-slate-300 rounded-md focus:ring-primary focus:border-primary text-sm p-2.5 shadow-sm bg-white"></select>
                     </div>
                 </div>
-                <div id="mappingError" class="hidden text-rose-500 text-xs font-bold mt-2">يرجى اختيار أعمدة مختلفة لكل حقل إلزامي.</div>
+                <div id="mappingError" class="hidden bg-rose-50 border border-rose-200 text-rose-600 p-3 rounded-md text-xs font-bold mt-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">error</span>
+                    <span id="mappingErrorText">يرجى اختيار أعمدة مختلفة لكل حقل إلزامي.</span>
+                </div>
             </div>
 
             <!-- Modal Footer -->
@@ -430,7 +484,7 @@
                     </label>
                     <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
                         <input type="checkbox" id="col_expected" value="expectedQty" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
-                        الطلب المتوقع
+                        الكمية المباعة سابقاً
                     </label>
                     <label class="flex items-center gap-2 text-sm text-slate-700 font-bold bg-slate-50 p-2 rounded border border-slate-200 cursor-pointer hover:bg-slate-100 transition">
                         <input type="checkbox" id="col_optimal" value="optimalQty" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"> 
@@ -456,9 +510,18 @@
                 <button type="button" onclick="closePrintModal()" class="text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 font-bold rounded-sm text-sm px-4 py-2 shadow-sm transition">
                     إلغاء
                 </button>
-                <button type="button" onclick="generateCustomPdf()" class="text-white bg-rose-600 hover:bg-rose-700 font-bold rounded-sm text-sm px-6 py-2 shadow transition flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> إنشاء وطباعة
-                </button>
+                <div class="flex gap-2">
+                    <button type="button" onclick="savePlan()" class="text-white bg-emerald-600 hover:bg-emerald-700 font-bold rounded-sm text-sm px-4 py-2 shadow transition flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">save</span> حفظ الخطة
+                    </button>
+                    <button type="button" onclick="generateCustomPdf()" class="text-white bg-slate-600 hover:bg-slate-700 font-bold rounded-sm text-sm px-4 py-2 shadow transition flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">print</span> طباعة
+                    </button>
+                    <button type="button" onclick="sharePlanViaWhatsApp()" class="text-white bg-green-500 hover:bg-green-600 font-bold rounded-sm text-sm px-4 py-2 shadow transition flex items-center gap-1">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 0C5.383 0 0 5.383 0 12.031c0 2.124.553 4.195 1.603 6.01L.22 24l6.103-1.603a11.967 11.967 0 005.708 1.45h.005c6.646 0 12.029-5.382 12.029-12.031S18.679 0 12.031 0zM12.03 21.84c-1.802 0-3.565-.483-5.111-1.401l-.367-.217-3.8.997 1.015-3.705-.238-.378A10.021 10.021 0 012.008 12.03c0-5.523 4.496-10.02 10.022-10.02 2.677 0 5.195 1.042 7.086 2.935 1.892 1.892 2.934 4.41 2.934 7.087 0 5.525-4.496 10.02-10.02 10.02zm5.495-7.508c-.302-.15-1.785-.88-2.062-.982-.277-.101-.479-.15-.68.15-.202.302-.781.983-.957 1.184-.176.201-.353.226-.655.076-.302-.15-1.275-.47-2.428-1.5-1.127-.1-1.616-.201-1.817-.502-.201-.301-.022-.464.128-.615.136-.135.302-.352.453-.528.15-.176.201-.302.302-.502.101-.202.05-.378-.025-.528-.075-.15-.68-1.642-.931-2.25-.246-.593-.496-.512-.68-.52-.176-.008-.378-.008-.579-.008-.201 0-.528.075-.805.378-.277.302-1.057 1.03-1.057 2.512s1.082 2.913 1.233 3.114c.15.201 2.124 3.242 5.143 4.544 2.164.933 2.905.996 3.963.856 1.137-.15 3.322-1.356 3.789-2.668.467-1.313.467-2.438.327-2.668-.139-.23-.515-.356-.817-.506z"/></svg> 
+                        مشاركة
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -477,6 +540,7 @@
                 appState.chartLabels = @Html.Raw(ViewBag.ChartLabels ?? "[]");
                 appState.chartActual = @Html.Raw(ViewBag.ChartActual ?? "[]");
                 appState.chartForecast = @Html.Raw(ViewBag.ChartForecast ?? "[]");
+                appState.currencySymbol = '@ViewBag.CurrencySymbol';
                 
                 // Re-init chart and grid with the real data
                 if(typeof initChart === 'function') initChart();

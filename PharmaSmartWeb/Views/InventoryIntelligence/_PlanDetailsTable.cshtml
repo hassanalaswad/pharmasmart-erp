@@ -110,6 +110,6 @@
     <div>
         <span class="plan-total-label">الإجمالي المبدئي المعتمد: </span>
         <span id="totalApprovedCost" class="plan-total-value">@Model.Sum(x => x.TotalCost).ToString("N2")</span>
-        <span style="font-size: 13px; color: #64748b; margin-right: 4px;">ر.ي</span>
+        <span style="font-size: 13px; color: #64748b; margin-right: 4px;">@ViewBag.CurrencySymbol</span>
     </div>
 </div>

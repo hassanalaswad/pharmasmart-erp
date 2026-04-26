@@ -57,17 +57,17 @@
     <div class="stat-card" style="border-right: 4px solid #059669;">
         <div class="kpi-title">إجمالي المدفوع نقداً/بنك</div>
         <div class="kpi-value" style="color:#059669;">@ViewBag.TotalPaid.ToString("N2")</div>
-        <div style="font-size:10px; color:#94a3b8;">ر.ي — من إجمالي المشتريات</div>
+        <div style="font-size:10px; color:#94a3b8;">@ViewBag.CurrencySymbol — من إجمالي المشتريات</div>
     </div>
     <div class="stat-card" style="border-right: 4px solid #e11d48;">
         <div class="kpi-title">الديون المستحقة للموردين</div>
         <div class="kpi-value" style="color:#e11d48;">@ViewBag.TotalUnpaid.ToString("N2")</div>
-        <div style="font-size:10px; color:#94a3b8;">ر.ي — @ViewBag.UnpaidCount فواتير معلقة السداد</div>
+        <div style="font-size:10px; color:#94a3b8;">@ViewBag.CurrencySymbol — @ViewBag.UnpaidCount فواتير معلقة السداد</div>
     </div>
     <div class="stat-card">
         <div class="kpi-title">إجمالي الفواتير المسجلة</div>
         <div class="kpi-value">@ViewBag.TotalPurchasesCount</div>
-        <div style="font-size:10px; color:#94a3b8;">فاتورة — الإجمالي الدفتري: @ViewBag.TotalAmountAll.ToString("N2") ر.ي</div>
+        <div style="font-size:10px; color:#94a3b8;">فاتورة — الإجمالي الدفتري: @ViewBag.TotalAmountAll.ToString("N2") @ViewBag.CurrencySymbol</div>
     </div>
 </div>
 
@@ -126,8 +126,8 @@
                                 <span class="status-unpaid">غير مدفوعة (آجل)</span>
                             }
                         </td>
-                        <td style="text-align:center; font-family:monospace; color:#64748b;">@item.TotalAmount.ToString("N2") ر.ي</td>
-                        <td style="text-align:center; font-family:monospace; font-weight:700; color:#063955;">@item.NetAmount.ToString("N2") ر.ي</td>
+                        <td style="text-align:center; font-family:monospace; color:#64748b;">@item.TotalAmount.ToString("N2") @ViewBag.CurrencySymbol</td>
+                        <td style="text-align:center; font-family:monospace; font-weight:700; color:#063955;">@item.NetAmount.ToString("N2") @ViewBag.CurrencySymbol</td>
                         <td style="text-align:center;">
                             <div style="display:flex; justify-content:center; gap:5px;">
                                 <a href="/Purchases/Details/@item.PurchaseId" class="btn-sm btn-view">

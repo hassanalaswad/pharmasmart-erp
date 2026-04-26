@@ -50,9 +50,9 @@
 }
 
 @section Summary {
-    <div><span>إجمالي المبيعات:</span><span style="font-weight:bold; color:#0284c7;">@ViewBag.GrandTotalSales?.ToString("N2")</span></div>
-    <div><span>إجمالي المصروفات:</span><span style="font-weight:bold; color:#dc2626;">@ViewBag.TotalExpenses?.ToString("N2")</span></div>
-    <div><span>صافي الأرباح:</span><span style="font-weight:bold; color:#059669;">@ViewBag.TotalProfits?.ToString("N2")</span></div>
+    <div><span>إجمالي المبيعات:</span><span style="font-weight:bold; color:#0284c7;">@ViewBag.GrandTotalSales?.ToString("N2") @ViewBag.CurrencySymbol</span></div>
+    <div><span>إجمالي المصروفات:</span><span style="font-weight:bold; color:#dc2626;">@ViewBag.TotalExpenses?.ToString("N2") @ViewBag.CurrencySymbol</span></div>
+    <div><span>صافي الأرباح:</span><span style="font-weight:bold; color:#059669;">@ViewBag.TotalProfits?.ToString("N2") @ViewBag.CurrencySymbol</span></div>
 }
 
 @{
@@ -87,10 +87,10 @@
                     <td>@rowNum</td>
                     <td style="text-align:right; font-weight:bold; color:#063955;">@item.BranchName</td>
                     <td style="font-family:monospace; font-weight:bold;">@item.InvoiceCount</td>
-                    <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.TotalSales.ToString("N2")</td>
-                    <td style="font-family:monospace; font-weight:bold; color:#dc2626;">@item.TotalExpenses.ToString("N2")</td>
-                    <td style="font-family:monospace;">@item.COGS.ToString("N2")</td>
-                    <td style="font-family:monospace; font-weight:bold; color:#059669; background:#ecfdf5;">@item.NetProfit.ToString("N2")</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#0284c7;">@item.TotalSales.ToString("N2") @ViewBag.CurrencySymbol</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#dc2626;">@item.TotalExpenses.ToString("N2") @ViewBag.CurrencySymbol</td>
+                    <td style="font-family:monospace;">@item.COGS.ToString("N2") @ViewBag.CurrencySymbol</td>
+                    <td style="font-family:monospace; font-weight:bold; color:#059669; background:#ecfdf5;">@item.NetProfit.ToString("N2") @ViewBag.CurrencySymbol</td>
                     <td style="color:#059669; font-weight:bold;">@item.ContributionPercentage.ToString("N1")%</td>
                 </tr>
                 rowNum++;
@@ -111,23 +111,23 @@ else
         <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:30px;">
             <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #0284c7; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">إجمالي المبيعات</h4>
-                <div style="font-size:26px; font-weight:bold; color:#0284c7;">@branch.TotalSales.ToString("N2")</div>
+                <div style="font-size:26px; font-weight:bold; color:#0284c7;">@branch.TotalSales.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#94a3b8;">@ViewBag.CurrencySymbol</span></div>
                 <div style="font-size:12px; margin-top:5px; color:#94a3b8; font-family:monospace;">عدد الفواتير: @branch.InvoiceCount</div>
             </div>
             
             <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #dc2626; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">إجمالي المصروفات</h4>
-                <div style="font-size:26px; font-weight:bold; color:#dc2626;">@branch.TotalExpenses.ToString("N2")</div>
+                <div style="font-size:26px; font-weight:bold; color:#dc2626;">@branch.TotalExpenses.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#94a3b8;">@ViewBag.CurrencySymbol</span></div>
             </div>
 
             <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #d97706; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">تكلفة البضاعة المباعة (COGS)</h4>
-                <div style="font-size:26px; font-weight:bold; color:#d97706;">@branch.COGS.ToString("N2")</div>
+                <div style="font-size:26px; font-weight:bold; color:#d97706;">@branch.COGS.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#94a3b8;">@ViewBag.CurrencySymbol</span></div>
             </div>
 
             <div style="background:#fff; padding:20px; border-radius:8px; border-bottom:4px solid #059669; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 <h4 style="color:#64748b; font-size:13px; margin:0 0 5px 0;">صافي الأرباح</h4>
-                <div style="font-size:26px; font-weight:bold; color:#059669;">@branch.NetProfit.ToString("N2")</div>
+                <div style="font-size:26px; font-weight:bold; color:#059669;">@branch.NetProfit.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#94a3b8;">@ViewBag.CurrencySymbol</span></div>
             </div>
         </div>
 

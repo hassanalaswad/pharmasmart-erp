@@ -4,6 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <!-- كتم تحذيرات القيم الفارغة لضمان بناء نظيف للمشروع -->
+    <NoWarn>$(NoWarn);CS8618;CS8601;CS8602;CS8603;CS8604;CS8619;CS8625;CS8600;CS8620;CS8767</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

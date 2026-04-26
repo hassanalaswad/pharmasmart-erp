@@ -395,24 +395,14 @@
     
     <!-- Watermark -->
     <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);opacity:0.03;pointer-events:none;z-index:0;">
-        <img src="@(!string.IsNullOrEmpty(Settings.CompanyLogoPath) ? Settings.CompanyLogoPath : "/images/Logo.png")" style="width:500px;height:500px;object-fit:contain;">
+        <img src="/images/logo1.png" style="width:500px;height:500px;object-fit:contain;">
     </div>
 
     <!-- Top Bar -->
     <div class="top-bar" style="position:relative;z-index:10;padding-bottom:16px;border-bottom:2px solid #f1f5f9;margin-bottom:16px;">
         <div class="brand">
-            @if (!string.IsNullOrEmpty(Settings.CompanyLogoPath) && Settings.CompanyLogoPath != "/images/Logo.png")
-            {
-                <img src="@Settings.CompanyLogoPath" alt="@Settings.CompanyName" onerror="this.style.display='none'; this.nextElementSibling.style.fontSize='20px'">
-                <div class="name" style="font-size:16px;">@Settings.CompanyName</div>
-            }
-            else
-            {
-                <div style="width:44px;height:44px;background:#063955;display:flex;align-items:center;justify-content:center;border-radius:4px;">
-                    <span style="color:white;font-size:20px;">💊</span>
-                </div>
-                <div class="name">@Settings.CompanyName</div>
-            }
+            <img src="/images/logo1.png" alt="@Settings.CompanyName" style="height:44px; width:auto; object-fit:contain;" onerror="this.style.display='none'">
+            <div class="name" style="font-size:16px;">@Settings.CompanyName</div>
         </div>
         <div class="report-tag">OFFICIAL REPORT</div>
     </div>
@@ -487,7 +477,7 @@
     <div class="footer" style="position: relative; z-index: 10;">
         <div>@Settings.CompanyName &copy; @DateTime.Now.Year</div>
         <div class="sys-logo">
-            <img src="/images/Logo.png" alt="PharmaSmart" style="height: 18px;">
+            <img src="/images/logo1.png" alt="PharmaSmart" style="height: 18px;">
             نظام فارما سمارت ERP
         </div>
     </div>

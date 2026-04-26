@@ -103,8 +103,8 @@
     <div class="rpt-info">
         <div class="rpt-info-cell">
             <strong>اسم المؤسسة:</strong> @Settings.CompanyName<br>
-            <strong>إجمالي الإيرادات:</strong> @totalRev.ToString("N2") @Settings.Currency<br>
-            <strong>إجمالي المصروفات:</strong> @totalExp.ToString("N2") @Settings.Currency<br>
+            <strong>إجمالي الإيرادات:</strong> @totalRev.ToString("N2") @ViewBag.CurrencySymbol<br>
+            <strong>إجمالي المصروفات:</strong> @totalExp.ToString("N2") @ViewBag.CurrencySymbol<br>
             <strong>تم بواسطة:</strong> @(User.Identity?.Name ?? "النظام")
         </div>
         <div class="rpt-info-cell">
@@ -159,7 +159,7 @@
             <div style="font-size:11px; font-weight:bold; color:#64748b; text-transform:uppercase;">صافي الربح المالي (Net Profit)</div>
         </div>
         <div style="font-size:26px; font-weight:900; color:@(netProfit >= 0 ? "#059669" : "#e11d48"); font-family:monospace;" dir="ltr">
-            @netProfit.ToString("N2") @Settings.Currency
+            @netProfit.ToString("N2") @ViewBag.CurrencySymbol
         </div>
     </div>
 

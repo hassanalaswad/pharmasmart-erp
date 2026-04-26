@@ -60,7 +60,7 @@
     <div class="enterprise-kpi" style="border-right:4px solid #e11d48;">
         <div class="kpi-title">إجمالي قيمة المرتجعات</div>
         <div class="kpi-value" style="color:#e11d48;">@total.ToString("N2")</div>
-        <div style="font-size:10px; color:#94a3b8;">ر.ي</div>
+        <div style="font-size:10px; color:#94a3b8;">@ViewBag.CurrencySymbol</div>
     </div>
     <div class="enterprise-kpi" style="background:#063955;">
         <div class="kpi-title" style="color:#94a3b8;">وصول سريع</div>
@@ -111,7 +111,7 @@
                         <td style="font-weight:600;">@(item.Supplier?.SupplierName ?? "مورد محذوف")</td>
                         <td style="font-size:11px; color:#64748b;" dir="ltr">@item.PurchaseDate.ToString("yyyy/MM/dd")</td>
                         <td style="text-align:center; font-weight:700; font-family:monospace; color:#e11d48;">
-                            @item.NetAmount.ToString("N2") ر.ي
+                            @item.NetAmount.ToString("N2") @ViewBag.CurrencySymbol
                         </td>
                         <td style="text-align:center;">
                             <span style="font-size:11px; color:#475569;">@(item.User?.Username ?? "System")</span>

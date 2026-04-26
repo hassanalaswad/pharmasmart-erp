@@ -1,0 +1,1107 @@
+﻿@model PharmaSmartWeb.Models.Sales
+
+@{
+    ViewData["Title"] = "طھط³ط¬ظٹظ„ ظپط§طھظˆط±ط© ط¨ظٹط¹ / ظ†ظ‚ط·ط© ط§ظ„ط¨ظٹط¹";
+}
+
+<script src="~/lib/sweetalert2.js"></script>
+<script src="~/js/offline-db.js"></script>
+
+<!-- ط´ط±ظٹط· ط­ط§ظ„ط© ط§ظ„ط§طھطµط§ظ„ -->
+<div id="offlineBar" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999; padding:10px 20px; font-size:13px; font-weight:700; text-align:center;"></div>
+<style>
+    body { background-color: #f4f6f8; }
+    .enterprise-panel { background: white; border: 1px solid #d1d5db; border-radius: 2px; }
+    .enterprise-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; font-size: 13px; font-weight: 700; color: #063955; display: flex; justify-content: space-between; align-items: center; }
+    
+    .form-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-control { width: 100%; border: 1px solid #cbd5e1; border-radius: 2px; padding: 9px 12px; font-size: 13px; background: #f8fafc; font-weight:700;}
+    .form-control:focus { outline: none; border-color: #063955; background: white; }
+    .input-icon-container { position: relative; }
+    .input-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    .form-control-with-icon { padding-right: 36px; }
+
+    .btn-submit { background: linear-gradient(135deg, #00314e 0%, #004870 100%); color: white; border: none; padding: 10px 24px; border-radius: 2px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.1s; }
+    .btn-submit:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { transform: scale(0.98); }
+    .btn-cancel { background: white; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 2px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    
+    .search-big { width: 100%; border: 2px dashed #063955; background: #f0f9ff; border-radius: 2px; padding: 16px 48px 16px 16px; font-size: 16px; font-weight: 700; color: #063955; outline: none; }
+    .search-big::placeholder { color: #7dd3fc; }
+    
+    .summary-box { background: #063955; color: white; border-radius: 2px; padding: 20px; position: relative; overflow: hidden; margin-bottom: 24px; }
+    .summary-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
+    .summary-value { font-size: 32px; font-weight: 900; font-family: monospace; line-height: 1; }
+    
+    .payment-box { padding: 12px; border: 1px solid #cbd5e1; border-radius: 2px; background: #f8fafc; margin-bottom: 12px; }
+    .payment-inner { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .payment-inner label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .payment-input { width: 100px; text-align: center; border: 1px solid #cbd5e1; background: white; border-radius: 2px; padding: 4px; font-family: monospace; font-weight: 700; font-size: 13px; outline: none; }
+    .payment-input:focus { border-color: #063955; }
+    
+    .cart-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .cart-table th { background: #f1f5f9; color: #64748b; padding: 10px 8px; text-align: right; font-weight: 700; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+    .cart-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .cart-input { width: 100%; border: none; border-bottom: 1px solid #cbd5e1; background: transparent; padding: 4px; text-align: center; font-family: monospace; font-weight: 700; outline: none; }
+    .cart-input:focus { border-bottom-color: #063955; }
+    
+    .btn-icon { background: transparent; color: #94a3b8; border: none; cursor: pointer; display: inline-flex; justify-content: center; align-items: center;}
+    .btn-icon:hover { color: #ef4444; }
+
+    /* ==========================================
+       ًں“± RESPONSIVE LAYOUT
+    ========================================== */
+
+    /* ط§ظ„ط´ط§ط´ط© ط§ظ„ظƒط¨ظٹط±ط© (Desktop) - ط§ظ„ط¹ط±ط¶ ط§ظ„ط£طµظ„ظٹ */
+    .pos-grid { display: grid; grid-template-columns: 1fr 350px; gap: 24px; }
+    .pos-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+    .pos-header-actions { display: flex; gap: 12px; }
+
+    /* ط§ظ„ط´ط§ط´ط© ط§ظ„ظ…طھظˆط³ط·ط© (Tablet â‰¤ 1024px) */
+    @@media (max-width: 1024px) {
+        .pos-grid { grid-template-columns: 1fr 300px; gap: 16px; }
+    }
+
+    /* ط§ظ„ظ‡ط§طھظپ ظˆط§ظ„ط´ط§ط´ط§طھ ط§ظ„طµط؛ظٹط±ط© (â‰¤ 768px) */
+    @@media (max-width: 768px) {
+        .pos-grid { grid-template-columns: 1fr; gap: 16px; }
+        .pos-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .pos-header-actions { width: 100%; }
+        .pos-header-actions .btn-submit { flex: 1; justify-content: center; }
+        .pos-header-actions .btn-cancel { flex: 1; justify-content: center; }
+        .pos-title { font-size: 18px !important; }
+        .search-big { font-size: 14px; padding: 12px 40px 12px 12px; }
+        .cart-table th:nth-child(3), .cart-table td:nth-child(3) { display: none; }
+        .summary-value { font-size: 40px; }
+        .payment-input { width: 80px; }
+    }
+
+    /* ط§ظ„ظ‡ط§طھظپ ط§ظ„طµط؛ظٹط± ط¬ط¯ط§ظ‹ (â‰¤ 480px) */
+    @@media (max-width: 480px) {
+        .pos-grid { gap: 12px; }
+        .summary-value { font-size: 36px; }
+        .cart-table th:nth-child(4), .cart-table td:nth-child(4) { display: none; }
+    }
+
+    /* ==========================================
+       ًں“± ط²ط± POS ط¹ط§ط¦ظ… ط¹ظ„ظ‰ ط§ظ„ظ‡ط§طھظپ
+    ========================================== */
+    .btn-submit-float {
+        display: none;
+    }
+    @@media (max-width: 768px) {
+        /* ط²ط± ط­ظپط¸ ط¹ط§ط¦ظ… ط«ط§ط¨طھ ظپظٹ ط£ط³ظپظ„ ط§ظ„ط´ط§ط´ط© ط¹ظ„ظ‰ ط§ظ„ظ‡ط§طھظپ */
+        .btn-submit-float {
+            display: flex;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, #00314e 0%, #004870 100%);
+            color: white;
+            padding: 16px 24px;
+            font-size: 15px;
+            font-weight: 900;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+        }
+        .btn-submit-float:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        /* ظ…ط³ط§ط­ط© ظپظٹ ط§ظ„ط£ط³ظپظ„ ط­طھظ‰ ظ„ط§ ظٹظڈط؛ط·ظٹ ط§ظ„ط²ط± ط§ظ„ط¹ط§ط¦ظ… ط§ظ„ظ…ط­طھظˆظ‰ */
+        .pos-mobile-bottom-space { height: 70px; }
+    }
+    /* ط²ط± ط§ظ„طھط­ظ…ظٹظ„ (Loading State) */
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .btn-submit:disabled { background: #94a3b8 !important; cursor: not-allowed; }
+</style>
+
+<form id="salesForm" asp-action="Create" method="post" style="max-width:1200px; margin:0 auto; padding: 24px 16px;">
+    @Html.AntiForgeryToken()
+    <div id="hiddenInputsContainer"></div>
+
+    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+    {
+        <div id="serverErrorBanner" style="background:#fef2f2; border:2px solid #dc2626; border-radius:4px; padding:14px 20px; margin-bottom:16px; color:#dc2626; font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;">
+            <span class="material-symbols-outlined">error</span>
+            <span>@ViewBag.Error</span>
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ظپط´ظ„ ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط©',
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px;">${@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Error))}</div>`,
+                    confirmButtonText: 'ط­ط³ظ†ط§ظ‹ â€” ط³ط£ط±ط§ط¬ط¹ ط§ظ„ظپط§طھظˆط±ط©',
+                    confirmButtonColor: '#dc2626'
+                });
+            });
+        </script>
+    }
+
+    <!-- Header Actions -->
+    <div class="pos-header">
+        <div>
+            <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:4px;">ط§ظ„ظ…ط¨ظٹط¹ط§طھ / طھط³ط¬ظٹظ„ ظپط§طھظˆط±ط© ط¨ظٹط¹</div>
+            <h2 class="pos-title" style="font-size:24px; font-weight:900; color:#063955; margin:0;">ظپط§طھظˆط±ط© ظ…ط¨ظٹط¹ط§طھ ط¬ط¯ظٹط¯ط©</h2>
+        </div>
+        <div class="pos-header-actions">
+            <a href="javascript:history.length > 1 ? history.back() : window.location.href='/Home/CommercialHub'" style="background:white; color:#ef4444; border:1px solid #fecaca; padding:10px 20px; border-radius:4px; font-size:13px; font-weight:900; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:18px;">close</span> ط®ط±ظˆط¬
+            </a>
+            <button type="button" onclick="submitPOS()" id="btnSaveSales" disabled class="btn-submit">
+                <span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> ط­ظپط¸ ط§ظ„ط´ط±ط§ط،
+            </button>
+        </div>
+    </div>
+
+    <div class="pos-grid">
+        
+        <!-- Main Form Column -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+            
+            <div class="enterprise-panel" style="padding:24px; border-top:4px solid #063955;">
+                <div style="display:flex; flex-direction:column; gap:24px; margin-bottom:24px;">
+                    <div>
+                        <label class="form-label">
+                            <span>ط§ظ„ط¹ظ…ظٹظ„ / ظ…ط¨ظٹط¹ط§طھ ط¢ط¬ظ„ط©</span>
+                            <span style="color:#64748b;">* (ط§ط®طھظٹط§ط±ظٹ ظ„ظ„ظ†ظ‚ط¯ظٹطŒ ط¥ظ„ط²ط§ظ…ظٹ ظ„ظ„ط¢ط¬ظ„)</span>
+                        </label>
+                        <div class="input-icon-container">
+                            <select asp-for="CustomerId" asp-items="ViewBag.Customers" id="CustomerId" onchange="validatePayments()" class="form-control form-control-with-icon">
+                                <option value="">-- ط¹ظ…ظٹظ„ ظ…ط¨ظٹط¹ط§طھ ظ†ظ‚ط¯ظٹط© (ط³ط±ظٹط¹ط©) --</option>
+                            </select>
+                            <span class="material-symbols-outlined input-icon">person_search</span>
+                        </div>
+                        <button type="button" onclick="openCustomerModal()" style="margin-top:6px; display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:2px; padding:5px 10px; cursor:pointer; white-space:nowrap;">
+                            <span class="material-symbols-outlined" style="font-size:13px;">person_add</span> ط¥ط¶ط§ظپط© ط¹ظ…ظٹظ„ ط³ط±ظٹط¹
+                        </button>
+                    </div>
+                </div>
+
+                <div style="position:relative;">
+                    <label class="form-label">ط¨ط­ط« ط³ط±ظٹط¹ ط¨ط§ط³طھط®ط¯ط§ظ… ط§ظ„ط¨ط§ط±ظƒظˆط¯ ط£ظˆ ط§ط³ظ… ط§ظ„ط¯ظˆط§ط،</label>
+                    <div class="input-icon-container">
+                        <input type="text" id="barcodeScanner" autofocus autocomplete="off" class="search-big" placeholder="ط§ظ…ط³ط­ ط§ظ„ط¨ط§ط±ظƒظˆط¯ ط£ظˆ ط§ط¯ط®ظ„ ط§ط³ظ… ط§ظ„ظ…ظ†طھط¬..." />
+                        <span class="material-symbols-outlined input-icon" style="color:#0284c7; right:16px;">barcode_scanner</span>
+                    </div>
+                    <div id="searchResults" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; border-radius:2px; box-shadow:0 10px 25px rgba(0,0,0,0.1); max-height:250px; overflow-y:auto; z-index:50;"></div>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="overflow:hidden;">
+                <div class="enterprise-header">
+                    <span>طھظپط§طµظٹظ„ ط§ظ„ط£طµظ†ط§ظپ ط§ظ„ظ…ط¨ط§ط¹ط©</span>
+                </div>
+                
+                <div style="min-height:250px; position:relative;">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>ط§ظ„طµظ†ظپ</th>
+                                <th style="width:140px; text-align:center;">ط§ظ„ظƒظ…ظٹط© ظˆط§ظ„ظˆط­ط¯ط©</th>
+                                <th style="width:100px; text-align:left;">ط§ظ„ط³ط¹ط±</th>
+                                <th style="width:120px; text-align:left;">ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartBody"></tbody>
+                    </table>
+                    
+                    <div id="emptyCartMsg" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; background:white;">
+                        <span class="material-symbols-outlined" style="font-size:48px; opacity:0.3;">qr_code_scanner</span>
+                        <p style="font-weight:700; font-size:13px; margin-top:8px;">ط§ظ„ط³ظ„ط© ظپط§ط±ط؛ط©طŒ ظ‚ظ… ط¨ظ…ط³ط­ ط¨ط§ط±ظƒظˆط¯ ط§ظ„ظ…ظ†طھط¬ ظ„ط¥ط¶ط§ظپطھظ‡</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar / Summary Column -->
+        <div>
+            
+            <div class="summary-box">
+                <div class="summary-title">ط§ظ„طµط§ظپظٹ ط§ظ„ظ…ط·ظ„ظˆط¨ ظ…ظ† ط§ظ„ط¹ظ…ظٹظ„</div>
+                <div class="summary-value" id="lblNetTotal">0.00</div>
+                
+                <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.2); padding-top:16px;">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+                        <span style="opacity:0.8;">ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ ظ‚ط¨ظ„ ط§ظ„طھط®ظپظٹط¶:</span>
+                        <span id="lblSubTotal" style="font-family:monospace; font-weight:700;">0.00</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:700; color:#fde047;">ط·ط±ط­ ط®طµظ… ط¥ط¶ط§ظپظٹ (-):</span>
+                        <input type="number" step="0.01" id="inputDiscount" value="0" oninput="calculateTotals()" onfocus="this.select()" style="width:60px; text-align:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white; font-family:monospace; font-weight:700; padding:2px; border-radius:2px; outline:none;" />
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center;">
+                        <span style="font-weight:700; color:#fde047;">ط¥ط¶ط§ظپط© ط¶ط±ظٹط¨ط© (+):</span>
+                        <input type="number" step="0.01" id="inputTax" value="0" oninput="calculateTotals()" onfocus="this.select()" style="width:60px; text-align:center; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:white; font-family:monospace; font-weight:700; padding:2px; border-radius:2px; outline:none;" />
+                    </div>
+                </div>
+                
+                <div style="position:absolute; right:-20px; bottom:-20px; font-size:120px; opacity:0.05; pointer-events:none;">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                </div>
+            </div>
+
+            <div class="enterprise-panel" style="padding:16px;">
+                <h4 style="font-size:12px; font-weight:900; color:#063955; margin-bottom:16px; display:flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">payments</span> ط§ظ„طھظˆط¬ظٹظ‡ ط§ظ„ظ…ط§ظ„ظٹ (ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹)
+                </h4>
+
+                <!-- Cash -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#059669;"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> ظ†ظ‚ط¯ط§ظ‹</label>
+                        <input type="number" step="0.01" name="CashAmount" id="valCash" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-emerald-700" />
+                    </div>
+                    <select name="CashAccountId" id="accCash" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- ط§ظ„طµظ†ط¯ظˆظ‚ --</option>
+                        @foreach (var acc in ViewBag.CashAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                </div>
+
+                <!-- Bank -->
+                <div class="payment-box">
+                    <div class="payment-inner">
+                        <label style="color:#0284c7;"><span class="material-symbols-outlined" style="font-size:14px;">account_balance</span> ط´ط¨ظƒط©/ط¨ظ†ظƒ</label>
+                        <input type="number" step="0.01" name="BankAmount" id="valBank" value="0" oninput="validatePayments()" onfocus="this.select()" class="payment-input text-sky-700" />
+                    </div>
+                    <select name="BankAccountId" id="accBank" onchange="validatePayments()" class="form-control" style="font-size:11px; padding:6px;">
+                        <option value="">-- ط§ظ„ط¨ظ†ظƒ ط§ظ„ظ…طھظ„ظ‚ظٹ --</option>
+                        @foreach (var acc in ViewBag.BankAccounts) { <option value="@acc.AccountId">@acc.AccountName</option> }
+                    </select>
+                </div>
+
+                <!-- Credit -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:2px;">
+                    <label style="font-size:12px; font-weight:700; color:#dc2626; display:flex; align-items:center; gap:4px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">history_edu</span> ظ…طھط¨ظ‚ظٹ ط¢ط¬ظ„ (ط¯ظٹظ†)
+                    </label>
+                    <span id="lblCredit" style="font-family:monospace; font-weight:900; color:#dc2626; font-size:16px;">0.00</span>
+                </div>
+
+                <div id="paymentWarning" style="display:none; background:#fee2e2; color:#ef4444; padding:8px; border-radius:2px; font-size:11px; font-weight:700; text-align:center; margin-top:12px;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ط²ط± ط¹ط§ط¦ظ… ظ„ظ„ظ‡ط§طھظپ ظپظ‚ط· -->
+    <div class="pos-mobile-bottom-space"></div>
+</form>
+
+<!-- ط²ط± ط§ظ„ط­ظپط¸ ط§ظ„ط¹ط§ط¦ظ… (ظٹط¸ظ‡ط± ظپظ‚ط· ط¹ظ„ظ‰ ط§ظ„ظ‡ط§طھظپ) -->
+<button type="button" onclick="submitPOS()" id="btnSaveSalesFloat" disabled class="btn-submit-float">
+    <span class="material-symbols-outlined">receipt_long</span> ط­ظپط¸ ظˆط¥طµط¯ط§ط± ط§ظ„ظپط§طھظˆط±ط©
+</button>
+
+<!-- Modal ط¥ط¶ط§ظپط© ط¹ظ…ظٹظ„ -->
+<div id="customerModal" style="display:none; position:fixed; inset:0; background:rgba(6,28,44,0.65); z-index:9000; align-items:flex-start; justify-content:center; padding:24px 16px; overflow-y:auto;">
+    <div style="background:white; width:100%; max-width:520px; border-radius:4px; box-shadow:0 20px 60px rgba(0,0,0,0.3); border-top:4px solid #063955; margin:auto; position:relative; top:0;">
+        <!-- Header -->
+        <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="color:#063955; font-size:20px;">person_add</span>
+                <span style="font-size:15px; font-weight:800; color:#063955;">ط¥ط¶ط§ظپط© ط¹ظ…ظٹظ„ ط¬ط¯ظٹط¯</span>
+            </div>
+            <button type="button" onclick="closeCustomerModal()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; align-items:center; width:32px; height:32px; justify-content:center; border-radius:4px; transition:background 0.15s;">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <!-- Content -->
+        <div id="quickCustomerForm" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+            @Html.AntiForgeryToken()
+            <div id="quickCustomerError" style="display:none; background:#fee2e2; border-right:4px solid #ef4444; color:#b91c1c; padding:10px 14px; border-radius:2px; font-size:12px; font-weight:700;"></div>
+
+            <!-- ط§ظ„ط§ط³ظ… -->
+            <div>
+                <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:5px;">
+                    ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„ / ط§ط³ظ… ط§ظ„ط´ط±ظƒط© <span style="color:#ef4444;">*</span>
+                </label>
+                <input id="qc-name" required placeholder="ظ…ط«ط§ظ„: ط£ط­ظ…ط¯ ظ…ط­ظ…ط¯ ط§ظ„ط²ظ‡ط±ط§ظ†ظٹ" 
+                       style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:9px 12px; font-size:13px; background:#f8fafc; box-sizing:border-box; outline:none; font-family:inherit;"
+                       onfocus="this.style.borderColor='#063955'; this.style.background='white';"
+                       onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+            </div>
+
+            <!-- ط§ظ„ط¬ظˆط§ظ„ -->
+            <div>
+                <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:5px;">
+                    ط±ظ‚ظ… ط§ظ„ط¬ظˆط§ظ„ <span style="color:#94a3b8;">(ط§ط®طھظٹط§ط±ظٹ)</span>
+                </label>
+                <input id="qc-phone" dir="ltr" placeholder="05XXXXXXXX" 
+                       style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:9px 12px; font-size:13px; background:#f8fafc; box-sizing:border-box; outline:none; font-family:monospace; text-align:right;"
+                       onfocus="this.style.borderColor='#063955'; this.style.background='white';"
+                       onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+            </div>
+
+            <!-- ط§ظ„ط¹ظ†ظˆط§ظ† -->
+            <div>
+                <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:5px;">
+                    ط§ظ„ط¹ظ†ظˆط§ظ† <span style="color:#94a3b8;">(ط§ط®طھظٹط§ط±ظٹ)</span>
+                </label>
+                <input id="qc-address" placeholder="ط§ظ„ظ…ط¯ظٹظ†ط©طŒ ط§ظ„ط­ظٹطŒ ط§ظ„ط´ط§ط±ط¹" 
+                       style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:9px 12px; font-size:13px; background:#f8fafc; box-sizing:border-box; outline:none; font-family:inherit;"
+                       onfocus="this.style.borderColor='#063955'; this.style.background='white';"
+                       onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+            </div>
+
+            <!-- ط§ظ„ط­ط¯ ط§ظ„ط§ط¦طھظ…ط§ظ†ظٹ -->
+            <div>
+                <label style="font-size:11px; font-weight:700; color:#334155; display:block; margin-bottom:5px;">
+                    ط§ظ„ط­ط¯ ط§ظ„ط§ط¦طھظ…ط§ظ†ظٹ (ط§ظ„ط¯ظٹظˆظ† ط§ظ„ظ…ط³ظ…ظˆط­ط©) <span style="color:#94a3b8;">(ط§ط®طھظٹط§ط±ظٹ)</span>
+                </label>
+                <input id="qc-credit" type="number" step="0.01" min="0" value="0" 
+                       style="width:100%; border:1px solid #cbd5e1; border-radius:2px; padding:9px 12px; font-size:13px; background:#f8fafc; box-sizing:border-box; outline:none; font-family:monospace;"
+                       onfocus="this.style.borderColor='#063955'; this.style.background='white'; this.select();"
+                       onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+            </div>
+
+            <!-- ط£ط²ط±ط§ط± ط§ظ„ط¥ط¬ط±ط§ط، -->
+            <div style="display:flex; gap:12px; margin-top:8px; padding-top:16px; border-top:1px solid #e2e8f0;">
+                <button type="button" onclick="closeCustomerModal()" 
+                        style="flex:1; background:white; color:#475569; border:1px solid #cbd5e1; padding:9px; border-radius:2px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">
+                    ط¥ظ„ط؛ط§ط،
+                </button>
+                <button type="button" onclick="submitQuickCustomer()" id="btnQuickCustomerSave" 
+                        style="flex:2; background:#063955; color:white; border:none; padding:9px; border-radius:2px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span>
+                    طھط³ط¬ظٹظ„ ظˆط¥ط¶ط§ظپط© ظ„ظ„ظ‚ط§ط¦ظ…ط©
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const systemCurrency = '@Settings.Currency';
+    const inventoryDrugs = @Html.Raw(ViewBag.DrugsJson ?? "[]");
+    let cart = [];
+
+    const searchInput = document.getElementById('barcodeScanner');
+    const resultsDiv = document.getElementById('searchResults');
+
+    // ط¨ط­ط« ظˆط¨ط§ط±ظƒظˆط¯ ط³ط±ظٹط¹
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        if (!query) { resultsDiv.style.display = 'none'; return; }
+
+        const matches = inventoryDrugs.filter(d =>
+            d.name.toLowerCase().includes(query) ||
+            (d.barcode && d.barcode.toLowerCase() === query) ||
+            d.id.toString() === query
+        );
+
+        if (matches.length === 1 && (query === matches[0].barcode?.toLowerCase() || query === matches[0].id.toString())) {
+            addToCart(matches[0]);
+            return;
+        }
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(d => `
+                <div onclick='addToCart(${JSON.stringify(d).replace(/'/g, "&#39;")})' style="padding:12px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:700; font-size:13px; color:#0f172a;">${d.name}</div>
+                    <div style="text-align:left;">
+                        <div style="color:#063955; font-family:monospace; font-weight:900; font-size:14px;">${d.price.toFixed(2)}</div>
+                        <div style="font-size:10px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:10px; margin-top:4px;">ط§ظ„ظ…ط®ط²ظˆظ†: ${d.stock} ${d.subUnit}</div>
+                    </div>
+                </div>
+            `).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.innerHTML = '<div style="padding:16px; text-align:center; color:#94a3b8; font-size:12px; font-weight:700;">ط؛ظٹط± ظ…ظˆط¬ظˆط¯ ط£ظˆ ط§ظ„ط±طµظٹط¯ طµظپط±</div>';
+            resultsDiv.style.display = 'block';
+            showToast('âڑ ï¸ڈ ط§ظ„ط¯ظˆط§ط، ط؛ظٹط± ظ…ط¹ط±ظپ ظپظٹ ظ‚ط§ط¹ط¯ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ', 'warning');
+            searchInput.value = '';
+        }
+    });
+
+    document.addEventListener('click', (e) => { 
+        if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) resultsDiv.style.display = 'none'; 
+    });
+
+    function addToCart(drug) {
+        let existing = cart.find(i => i.id === drug.id && i.unitType === 'sub');
+        if (existing) {
+            if(existing.uiQty < drug.stock) existing.uiQty++;
+            else showToast(`â›” ظ„ط§ ظٹظˆط¬ط¯ ط±طµظٹط¯ ظƒط§ظپظچ â€” ط§ظ„ظ…طھظˆظپط±: ${drug.stock} ظپظ‚ط·`, 'error');
+        } else {
+            cart.push({
+                uid: Date.now(), id: drug.id, name: drug.name,
+                packPrice: drug.price, packCost: drug.cost,
+                mainUnit: drug.mainUnit, subUnit: drug.subUnit,
+                conv: drug.convFactor, maxStock: drug.stock,
+                uiQty: 1, unitType: 'sub'
+            });
+        }
+        searchInput.value = ''; searchInput.focus(); resultsDiv.style.display = 'none';
+        renderCart();
+    }
+
+    // âœ… ط§ظ„طھط­ظ‚ظ‚ ط§ظ„ظپظˆط±ظٹ ظ…ظ† ط§ظ„ظ…ط®ط²ظˆظ† ط¹ظ†ط¯ طھط؛ظٹظٹط± ط§ظ„ظƒظ…ظٹط©
+    function checkStockOnInput(uid, inputEl) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+        const val = parseFloat(inputEl.value) || 0;
+        const requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
+        const exceeded = requiredPills > item.maxStock;
+        inputEl.style.border = exceeded ? '2px solid #dc2626' : '1px solid #cbd5e1';
+        inputEl.style.background = exceeded ? '#fef2f2' : '';
+        inputEl.title = exceeded ? `âڑ ï¸ڈ ط§ظ„ظ…ط®ط²ظˆظ† ط§ظ„ظ…طھط§ط­: ${item.maxStock} ${item.subUnit} ظپظ‚ط·` : '';
+        // ظ†ط­ط¯ظ‘ط« ط§ظ„ط¹ظ†طµط± ظپظٹ ط§ظ„ظ€ cart ط¨ط§ظ„ظ‚ظٹظ…ط© ط§ظ„ظ…ط¤ظ‚طھط© (ط­طھظ‰ طھظڈط­ط³ط¨ validatePayments ط¨ط´ظƒظ„ طµط­ظٹط­)
+        item._pendingQty = val;
+        item._exceeded = exceeded;
+        validatePayments();
+    }
+
+    function updateItem(uid, field, value) {
+        const item = cart.find(i => i.uid === uid);
+        if (!item) return;
+
+        if (field === 'uiQty') {
+            let val = parseFloat(value) || 1;
+            let requiredPills = item.unitType === 'main' ? (val * item.conv) : val;
+            if (requiredPills > item.maxStock) {
+                showToast(`â›” ط§ظ„ظƒظ…ظٹط© ط§ظ„ظ…ط·ظ„ظˆط¨ط© (${val}) طھطھط¬ط§ظˆط² ط§ظ„ظ…ط®ط²ظˆظ† (${item.maxStock} ${item.subUnit})`, 'error');
+                item.uiQty = item.unitType === 'main' ? Math.floor(item.maxStock / item.conv) : item.maxStock;
+                if(item.uiQty < 1) item.uiQty = 1;
+            } else {
+                item.uiQty = val;
+            }
+            item._exceeded = false;
+        } else if (field === 'unitType') {
+            item[field] = value;
+            let requiredPills = item.unitType === 'main' ? (item.uiQty * item.conv) : item.uiQty;
+            if (requiredPills > item.maxStock) {
+                item.uiQty = 1;
+                showToast('طھظ… طھط¹ط¯ظٹظ„ ط§ظ„ظƒظ…ظٹط© ظ„ظ€ 1 ظ„طھظ†ط§ط³ط¨ ط§ظ„ظ…ط®ط²ظˆظ†', 'info');
+            }
+            item._exceeded = false;
+        }
+        renderCart();
+    }
+
+    function removeItem(uid) { cart = cart.filter(i => i.uid !== uid); renderCart(); }
+
+    function renderCart() {
+        const tbody = document.getElementById('cartBody');
+        const emptyMsg = document.getElementById('emptyCartMsg');
+        const hiddenContainer = document.getElementById('hiddenInputsContainer');
+
+        if (cart.length === 0) { 
+            tbody.innerHTML = ''; 
+            emptyMsg.style.display = 'flex'; 
+            hiddenContainer.innerHTML = ''; 
+            calculateTotals(); 
+            return; 
+        }
+
+        emptyMsg.style.display = 'none';
+        let html = '', hiddenHtml = '';
+
+        cart.forEach((item, index) => {
+            let isMain = item.unitType === 'main';
+            let displayPrice = isMain ? item.packPrice : (item.packPrice / item.conv);
+            let subTotal = item.uiQty * displayPrice;
+            let serverQty = isMain ? (item.uiQty * item.conv) : item.uiQty;
+            let serverUnitPrice = item.packPrice / item.conv;
+
+            // ط­ط³ط§ط¨ ط§ظ„ط±طµظٹط¯ ط§ظ„ظ…طھط¨ظ‚ظٹ ظ„ط¹ط±ط¶ظ‡
+            let requiredPills_r = isMain ? (item.uiQty * item.conv) : item.uiQty;
+            let stockExceeded_r = requiredPills_r > item.maxStock;
+            let remainingStock = item.maxStock - requiredPills_r;
+            let stockColor = stockExceeded_r ? '#dc2626' : (remainingStock < 5 ? '#d97706' : '#059669');
+            let stockBg    = stockExceeded_r ? '#fef2f2' : 'transparent';
+
+            html += `
+                <tr style="background:${stockBg}; transition:background 0.2s;">
+                    <td>
+                        <strong style="color:#063955; font-size:13px;">${item.name}</strong>
+                        <div style="font-size:10px; color:${stockColor}; font-weight:700; margin-top:2px;">
+                            ${stockExceeded_r 
+                                ? `â›” ظٹطھط¬ط§ظˆط² ط§ظ„ظ…ط®ط²ظˆظ†! ط§ظ„ظ…طھط§ط­: ${item.maxStock} ${item.subUnit}`
+                                : `âœ” ظ…طھط¨ظ‚ظٹ ظپظٹ ط§ظ„ظ…ط®ط²ظˆظ†: ${remainingStock} ${item.subUnit}`
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display:flex; justify-content:center; align-items:center; gap:4px;">
+                            <input type="number" min="1" value="${item.uiQty}"
+                                oninput="checkStockOnInput(${item.uid}, this)"
+                                onchange="updateItem(${item.uid}, 'uiQty', this.value)"
+                                style="width:60px; text-align:center; padding:4px; border:${stockExceeded_r ? '2px solid #dc2626' : '1px solid #cbd5e1'}; border-radius:2px; font-family:monospace; font-weight:700; outline:none; background:${stockExceeded_r ? '#fef2f2' : 'white'};" />
+                            <select onchange="updateItem(${item.uid}, 'unitType', this.value)" style="padding:4px; border:1px solid #cbd5e1; background:#f1f5f9; border-radius:2px; font-size:11px; font-weight:700; outline:none; cursor:pointer;">
+                                <option value="sub" ${!isMain ? 'selected' : ''}>${item.subUnit}</option>
+                                <option value="main" ${isMain ? 'selected' : ''}>${item.mainUnit}</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td style="text-align:left; font-family:monospace; font-size:14px; font-weight:700; color:#64748b;">${displayPrice.toFixed(2)}</td>
+                    <td style="text-align:left; font-family:monospace; font-size:15px; font-weight:900; color:${stockExceeded_r ? '#dc2626' : '#063955'};">${subTotal.toFixed(2)}</td>
+                    <td style="text-align:center;">
+                        <button type="button" onclick="removeItem(${item.uid})" class="btn-icon">
+                            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            hiddenHtml += `
+                <input type="hidden" name="Saledetails[${index}].DrugId" value="${item.id}" />
+                <input type="hidden" name="Saledetails[${index}].Quantity" value="${serverQty}" />
+                <input type="hidden" name="Saledetails[${index}].UnitPrice" value="${serverUnitPrice}" />
+            `;
+        });
+
+        tbody.innerHTML = html; hiddenContainer.innerHTML = hiddenHtml; calculateTotals();
+    }
+
+    function calculateTotals() {
+        let subTotal = 0;
+        cart.forEach(item => {
+            let isMain = item.unitType === 'main';
+            let displayPrice = isMain ? item.packPrice : (item.packPrice / item.conv);
+            subTotal += (item.uiQty * displayPrice);
+        });
+
+        const discount = parseFloat(document.getElementById('inputDiscount').value) || 0;
+        const tax = parseFloat(document.getElementById('inputTax').value) || 0;
+
+        let netTotal = subTotal - discount + tax;
+        if(netTotal < 0) netTotal = 0;
+
+        document.getElementById('lblSubTotal').innerText = subTotal.toFixed(2);
+        document.getElementById('lblNetTotal').innerText = netTotal.toFixed(2);
+
+        let cashInput = document.getElementById('valCash');
+        let bankInput = document.getElementById('valBank');
+        if (parseFloat(cashInput.value) === 0 && parseFloat(bankInput.value) === 0 && netTotal > 0) {
+            cashInput.value = netTotal.toFixed(2);
+        }
+
+        validatePayments(netTotal);
+    }
+
+    function validatePayments(passedNet = null) {
+        const net = passedNet !== null ? passedNet : parseFloat(document.getElementById('lblNetTotal').innerText) || 0;
+        const cash = parseFloat(document.getElementById('valCash').value) || 0;
+        const bank = parseFloat(document.getElementById('valBank').value) || 0;
+        const customerId = document.getElementById('CustomerId').value;
+        const accCash = document.getElementById('accCash').value;
+        const accBank = document.getElementById('accBank').value;
+
+        const warningBox = document.getElementById('paymentWarning');
+        const btnSave = document.getElementById('btnSaveSales');
+
+        let credit = net - (cash + bank);
+        if (credit < 0.01) credit = 0;
+        document.getElementById('lblCredit').innerText = credit.toFixed(2);
+
+        let isValid = true, errorMsg = "";
+
+        // âœ… ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ظ…ط®ط²ظˆظ† ظ„ط¬ظ…ظٹط¹ ط£طµظ†ط§ظپ ط§ظ„ط³ظ„ط©
+        const exceededItems = cart.filter(i => {
+            let req = i.unitType === 'main' ? (i.uiQty * i.conv) : i.uiQty;
+            return req > i.maxStock || i._exceeded === true;
+        });
+
+        if (cart.length === 0) isValid = false;
+        else if (exceededItems.length > 0) { 
+            isValid = false; 
+            errorMsg = `â›” ${exceededItems.map(i => i.name).join('طŒ ')} â€” ط§ظ„ظƒظ…ظٹط© ط§ظ„ظ…ط·ظ„ظˆط¨ط© طھطھط¬ط§ظˆط² ط§ظ„ظ…ط®ط²ظˆظ† ط§ظ„ظ…طھط§ط­!`; 
+        }
+        else if ((cash + bank) - net > 0.01) { isValid = false; errorMsg = "ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط¯ظپظˆط¹ ط£ظƒط¨ط± ظ…ظ† ط§ظ„ظپط§طھظˆط±ط©!"; }
+        else if (cash > 0 && !accCash) { isValid = false; errorMsg = "ط§ظ„ط±ط¬ط§ط، طھط­ط¯ظٹط¯ طµظ†ط¯ظˆظ‚ ط§ظ„ظ†ظ‚ط¯!"; }
+        else if (bank > 0 && !accBank) { isValid = false; errorMsg = "ط§ظ„ط±ط¬ط§ط، طھط­ط¯ظٹط¯ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ط¨ظ†ظƒظٹ!"; }
+        else if (credit > 0 && !customerId) { isValid = false; errorMsg = "ظٹط¬ط¨ ط§ط®طھظٹط§ط± ط§ظ„ط¹ظ…ظٹظ„ ط¹ظ†ط¯ ظˆط¬ظˆط¯ ظ…طھط¨ظ‚ظچ ط¢ط¬ظ„!"; }
+
+        if (isValid) {
+            btnSave.disabled = false;
+            const floatBtn = document.getElementById('btnSaveSalesFloat');
+            if (floatBtn) floatBtn.disabled = false;
+            warningBox.style.display = 'none';
+        } else {
+            btnSave.disabled = true;
+            const floatBtn = document.getElementById('btnSaveSalesFloat');
+            if (floatBtn) floatBtn.disabled = true;
+            if (errorMsg && cart.length > 0) { 
+                warningBox.innerText = errorMsg; 
+                warningBox.style.display = 'block'; 
+            } else {
+                warningBox.style.display = 'none';
+            }
+        }
+    }
+
+    // =======================================
+    // ًںŒگ ظ…ظ†ط·ظ‚ ط§ظ„ط£ظˆظپظ„ط§ظٹظ† ظˆط§ظ„ظ…ط²ط§ظ…ظ†ط©
+    // =======================================
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    function updateOfflineBar() {
+        const bar = document.getElementById('offlineBar');
+        if (!navigator.onLine) {
+            bar.style.display = 'block';
+            bar.style.background = '#fef2f2';
+            bar.style.color = '#dc2626';
+            bar.style.borderBottom = '2px solid #fca5a5';
+            bar.innerHTML = 'âڑ ï¸ڈ ط£ظ†طھ ظپظٹ ظˆط¶ط¹ ط¹ط¯ظ… ط§ظ„ط§طھطµط§ظ„ - ط§ظ„ظپظˆط§طھظٹط± ط³طھظڈط­ظپط¸ ظ…ط­ظ„ظٹط§ظ‹ ظˆطھظڈط²ط§ظ…ظ† ط¹ظ†ط¯ ط¹ظˆط¯ط© ط§ظ„ط¥ظ†طھط±ظ†طھ';
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    // ط¹ظ†ط¯ ط¹ظˆط¯ط© ط§ظ„ط¥ظ†طھط±ظ†طھ - ط§ط¨ط¯ط£ ط§ظ„ظ…ط²ط§ظ…ظ†ط© طھظ„ظ‚ط§ط¦ظٹط§ظ‹
+    window.addEventListener('online', async () => {
+        updateOfflineBar();
+        const count = await getPendingSalesCount();
+        if (count > 0) {
+            const bar = document.getElementById('offlineBar');
+            bar.style.display = 'block';
+            bar.style.background = '#ecfdf5';
+            bar.style.color = '#065f46';
+            bar.style.borderBottom = '2px solid #6ee7b7';
+            bar.innerHTML = `ًں”„ ط¬ط§ط±ظٹ ظ…ط²ط§ظ…ظ†ط© ${count} ظپط§طھظˆط±ط© ظ…ط¹ظ„ظ‚ط© ظ…ط¹ ط§ظ„ط®ط§ط¯ظ…...`;
+
+            const result = await syncPendingSales(antiForgeryToken);
+            
+            if (result.synced > 0) {
+                bar.innerHTML = `âœ… طھظ…طھ ظ…ط²ط§ظ…ظ†ط© ${result.synced} ظپط§طھظˆط±ط© ط¨ظ†ط¬ط§ط­!`;
+                setTimeout(() => { bar.style.display = 'none'; }, 4000);
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+    });
+
+    window.addEventListener('offline', () => updateOfflineBar());
+
+    // طھط­ظ…ظٹظ„ ط§ظ„ظƒط§ط´ ظپظ‚ط· ط¥ط°ط§ ظƒظ†ط§ ط£ظˆظپظ„ط§ظٹظ†
+    (async () => {
+        if (!navigator.onLine) {
+            const cached = await getDrugsFromCache();
+            if (cached && cached.length > 0) {
+                inventoryDrugs.length = 0;
+                cached.forEach(d => inventoryDrugs.push(d));
+            }
+        } else if (inventoryDrugs.length > 0) {
+            // طھط­ط¯ظٹط« ط§ظ„ظƒط§ط´ ط¨ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¬ط¯ظٹط¯ط© ظ„ظ„ظپط±ط¹ ط§ظ„ط­ط§ظ„ظٹ
+            saveDrugsToCache(inventoryDrugs).catch(() => {});
+        } else {
+            // ط¥ط°ط§ ظƒظ†ط§ ط£ظˆظ†ظ„ط§ظٹظ† ظˆظ„ظƒظ† ط§ظ„ظپط±ط¹ ط§ظ„ط­ط§ظ„ظٹ ظ„ظٹط³ ظ„ط¯ظٹظ‡ ط£ظٹ ط£طµظ†ط§ظپطŒ ظٹط¬ط¨ طھظپط±ظٹط؛ ط§ظ„ظƒط§ط´ ط§ظ„ظ‚ط¯ظٹظ…
+            // ظ„ظ…ظ†ط¹ طھط¯ط§ط®ظ„ ط£ط¯ظˆظٹط© ظپط±ط¹ ط¢ط®ط± ط¹ظ†ط¯ ط§ظ†ظ‚ط·ط§ط¹ ط§ظ„ظ†طھ ظپظٹ ظ‡ط°ظ‡ ط§ظ„ط¬ظ„ط³ط©
+            openOfflineDB().then(db => {
+                const tx = db.transaction('drugs_cache', 'readwrite');
+                tx.objectStore('drugs_cache').clear();
+            }).catch(() => {});
+        }
+        updateOfflineBar();
+    })();
+
+    // =======================================
+    // ًں’¾ ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط© (ط£ظˆظ†ظ„ط§ظٹظ† ط£ظˆ ط£ظˆظپظ„ط§ظٹظ†)
+    // =======================================
+    async function submitPOS() {
+        const btn = document.getElementById('btnSaveSales');
+        if (btn.disabled) return;
+
+        // طھط£ظƒظٹط¯ ظ‚ط¨ظ„ ط§ظ„ط­ظپط¸
+        const confirm = await Swal.fire({
+            icon: 'question',
+            title: 'طھط£ظƒظٹط¯ ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط©',
+            html: `<div style="text-align:right; font-family:Tajawal,sans-serif;">ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط¥طµط¯ط§ط± ظ‡ط°ظ‡ ط§ظ„ظپط§طھظˆط±ط©طں ظ„ط§ ظٹظ…ظƒظ† ط§ظ„طھط±ط§ط¬ط¹ ط¨ط¹ط¯ ط§ظ„ط­ظپط¸.</div>`,
+            showCancelButton: true,
+            confirmButtonText: 'âœ… ظ†ط¹ظ… â€” ط£طµط¯ط± ط§ظ„ظپط§طھظˆط±ط©',
+            cancelButtonText: 'ط¥ظ„ط؛ط§ط،',
+            confirmButtonColor: '#063955',
+            cancelButtonColor: '#94a3b8'
+        });
+        if (!confirm.isConfirmed) return;
+
+        // ط¥ط¸ظ‡ط§ط± ط­ط§ظ„ط© ط§ظ„طھط­ظ…ظٹظ„ ط¹ظ„ظ‰ ط§ظ„ط²ط±
+        const btnOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;animation:spin 1s linear infinite;">progress_activity</span> ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸...';
+
+        const cashVal   = parseFloat(document.getElementById('valCash').value)  || 0;
+        const bankVal   = parseFloat(document.getElementById('valBank').value)   || 0;
+        const accCash   = parseInt(document.getElementById('accCash').value)     || 0;
+        const accBank   = parseInt(document.getElementById('accBank').value)     || 0;
+
+        if (navigator.onLine) {
+            try {
+                const form = document.getElementById('salesForm');
+                // ط¥ط¶ط§ظپط© ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ظ…ط®ظپظٹط© ظ„ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹
+                ['CashAmount','BankAmount','CashAccountId','BankAccountId'].forEach(n => {
+                    form.querySelectorAll(`input[name="${n}"]`).forEach(el => el.remove());
+                });
+                form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAmount" value="${cashVal}" />`);
+                form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAmount" value="${bankVal}" />`);
+                if (cashVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="CashAccountId" value="${accCash}" />`);
+                if (bankVal > 0) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="BankAccountId" value="${accBank}" />`);
+
+                // ط¥ط±ط³ط§ظ„ ظƒظ€ FormData ط¹ط¨ط± fetch ظ„ظ†طھط¹ط§ظ…ظ„ ظ…ط¹ ط§ظ„ط±ط¯
+                const formData = new FormData(form);
+                const response = await fetch(form.action, { 
+                    method: 'POST', 
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // ًںڑ€ ظ†ط¬ط­ ط§ظ„ط­ظپط¸ â€” ط¬ظ„ط¨ ط¹ط±ط¶ ط§ظ„ظپط§طھظˆط±ط© ظˆط¹ط±ط¶ظ‡ ظپظٹ ط§ظ„ظ…ظˆط¯ط§ظ„
+                    const partialRes = await fetch(`/Sales/PrintPartial/${data.saleId}`);
+                    if (partialRes.ok) {
+                        const html = await partialRes.text();
+                        document.getElementById('invoiceContent').innerHTML = html;
+                        document.getElementById('invoiceModal').style.display = 'flex';
+                        
+                        // طھظ†ط¨ظٹظ‡ ط¨ظ†ط¬ط§ط­ ط§ظ„ط­ظپط¸
+                        Swal.fire({
+                            toast: true, position: 'top-end', icon: 'success', 
+                            title: 'طھظ… ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط© ط¨ظ†ط¬ط§ط­ âœ“', showConfirmButton: false, timer: 2000
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'â›” ظپط´ظ„ ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط©',
+                        html: `<div style="text-align:right; font-family:Tajawal,sans-serif; font-size:15px; line-height:2;">${data.message || 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…ط¹ط±ظˆظپ.'}</div>`,
+                        confirmButtonText: 'ط­ط³ظ†ط§ظ‹ â€” ط³ط£ط±ط§ط¬ط¹ ط§ظ„ظپط§طھظˆط±ط©',
+                        confirmButtonColor: '#dc2626'
+                    });
+                }
+
+                // ط§ط³طھط¹ط§ط¯ط© ط§ظ„ط²ط±
+                btn.innerHTML = btnOriginal;
+                btn.disabled = false;
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'â›” ط®ط·ط£ ظپظٹ ط§ظ„ط§طھطµط§ظ„',
+                    html: `<div style="text-align:right; font-family:Tajawal,sans-serif;">طھط¹ط°ظ‘ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط®ط§ط¯ظ…. طھط­ظ‚ظ‚ ظ…ظ† ط§طھطµط§ظ„ ط§ظ„ط´ط¨ظƒط©.<br><small style="color:#94a3b8">${err.message}</small></div>`,
+                    confirmButtonText: 'ط­ط³ظ†ط§ظ‹',
+                    confirmButtonColor: '#dc2626'
+                });
+                btn.innerHTML = btnOriginal;
+                btn.disabled = false;
+            }
+        } else {
+            // â†گ ظˆط¶ط¹ ط§ظ„ط£ظˆظپظ„ط§ظٹظ†: ط§ط­ظپط¸ ظپظٹ IndexedDB
+            const saleData = {
+                CustomerId: customerId,
+                Discount: discount,
+                TaxAmount: tax,
+                CashAmount: cashVal,
+                CashAccountId: accCash,
+                BankAmount: bankVal,
+                BankAccountId: accBank,
+                Items: cart.map(item => {
+                    const isMain = item.unitType === 'main';
+                    const serverQty = isMain ? (item.uiQty * item.conv) : item.uiQty;
+                    const serverUnitPrice = item.packPrice / item.conv;
+                    return { DrugId: item.id, Quantity: serverQty, UnitPrice: serverUnitPrice };
+                })
+            };
+
+            try {
+                await savePendingSale(saleData);
+                const count = await getPendingSalesCount();
+                cart = [];
+                renderCart();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'âœ… طھظ… ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط© ظ…ط­ظ„ظٹط§ظ‹',
+                    html: `ط§ظ„ظپط§طھظˆط±ط© ط±ظ‚ظ… <b>#offline-${count}</b> ظ…ط­ظپظˆط¸ط© ظˆط³طھظڈط²ط§ظ…ظ† طھظ„ظ‚ط§ط¦ظٹط§ظ‹ ط¹ظ†ط¯ ط¹ظˆط¯ط© ط§ظ„ط¥ظ†طھط±ظ†طھ.<br><small style="color:#64748b">ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ط¹ظ„ظ‚ط©: ${count}</small>`,
+                    confirmButtonText: 'ط­ط³ظ†ط§ظ‹',
+                    confirmButtonColor: '#059669'
+                });
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'ط®ط·ط£', text: 'ظپط´ظ„ ط­ظپط¸ ط§ظ„ظپط§طھظˆط±ط© ظ…ط­ظ„ظٹط§ظ‹.' });
+            }
+        }
+    }
+
+
+    function openCustomerModal() {
+        document.getElementById('customerModal').style.display = 'flex';
+        document.getElementById('qc-name').value = '';
+        document.getElementById('qc-phone').value = '';
+        document.getElementById('qc-address').value = '';
+        document.getElementById('qc-credit').value = '0';
+        document.getElementById('quickCustomerError').style.display = 'none';
+        setTimeout(() => document.getElementById('qc-name').focus(), 100);
+    }
+    
+    function closeCustomerModal() {
+        document.getElementById('customerModal').style.display = 'none';
+    }
+
+    async function submitQuickCustomer() {
+        const name = document.getElementById('qc-name').value.trim();
+        const phone = document.getElementById('qc-phone').value.trim();
+        const address = document.getElementById('qc-address').value.trim();
+        const credit = parseFloat(document.getElementById('qc-credit').value) || 0;
+        const errorDiv = document.getElementById('quickCustomerError');
+        const btn = document.getElementById('btnQuickCustomerSave');
+
+        if (!name) {
+            errorDiv.textContent = 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ط³ظ… ط§ظ„ط¹ظ…ظٹظ„ ط£ظˆ ط§ظ„ط´ط±ظƒط©.';
+            errorDiv.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;animation:spin 1s linear infinite;">progress_activity</span> ط¬ط§ط±ظٹ ط§ظ„ط­ظپط¸...';
+
+        try {
+            const token = document.querySelector('#quickCustomerForm input[name="__RequestVerificationToken"]').value;
+            const res = await fetch('/Customers/QuickCreate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ fullName: name, phone: phone, address: address, creditLimit: credit })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeCustomerModal();
+                let listRes = await fetch('/Sales/GetCustomersList');
+                if (listRes.ok) {
+                    let customers = await listRes.json();
+                    let select = document.getElementById('CustomerId');
+                    select.innerHTML = '<option value="">-- ط¹ظ…ظٹظ„ ظ†ظ‚ط¯ظٹط© (ط³ط±ظٹط¹ط©) --</option>';
+                    customers.forEach(c => {
+                        let opt = document.createElement('option');
+                        opt.value = c.id; opt.textContent = c.name;
+                        if (c.id === data.customerId) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    validatePayments();
+                }
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'طھظ…طھ ط¥ط¶ط§ظپط© ط§ظ„ط¹ظ…ظٹظ„ ط¨ظ†ط¬ط§ط­ âœ“', showConfirmButton: false, timer: 2500 });
+            } else {
+                errorDiv.textContent = data.message || 'ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط­ظپط¸.';
+                errorDiv.style.display = 'block';
+            }
+        } catch(err) {
+            errorDiv.textContent = 'طھط¹ط°ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط®ط§ط¯ظ…. طھط£ظƒط¯ ظ…ظ† ط§ظ„ط§طھطµط§ظ„ ظˆط£ط¹ط¯ ط§ظ„ظ…ط­ط§ظˆظ„ط©.';
+            errorDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'طھط³ط¬ظٹظ„ ظˆط¥ط¶ط§ظپط©';
+        }
+    }
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "F12" || event.keyCode === 123) {
+            event.preventDefault(); submitPOS();
+        }
+    });
+
+    // --- ط§ظ„ظ…ط±ط­ظ„ط© 4: طھظ‚ط±ظٹط± طھط³ظ„ظٹظ… ×”ظˆط±ط¯ظٹط© (Cash Flow Modal) ط¹ط¨ط± AJAX ---
+    async function openCashFlowModal() {
+        let overlay = document.getElementById('posModalOverlay');
+        let modal = document.getElementById('cashFlowModal');
+        let content = document.getElementById('cashFlowContent');
+        
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        content.innerHTML = '<div style="display:flex; height:200px; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:32px; animation:spin 1s linear infinite;">progress_activity</span></div>';
+        
+        try {
+            // Using layoutTheme=modal to leverage the partial view
+            const response = await fetch(`/Report/DailyCashFlow?layoutTheme=modal`);
+            if(response.ok) {
+                content.innerHTML = await response.text();
+            } else {
+                content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط¬ظ„ط¨ طھظ‚ط±ظٹط± ط§ظ„طµظ†ط¯ظˆظ‚</div>';
+            }
+        } catch (error) {
+            content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">طھط¹ط°ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ط®ط§ط¯ظ…</div>';
+        }
+    }
+
+    function closePosModal() {
+        document.getElementById('posModalOverlay').classList.add('hidden');
+        document.getElementById('cashFlowModal').classList.add('hidden');
+        document.getElementById('cashFlowContent').innerHTML = '';
+    }
+
+    // --- ط§ظ„ظ…ط±ط­ظ„ط© 5: ظ†ط§ظپط°ط© ط§ظ„ظ†ظˆط§ظ‚طµ ط§ظ„ظ‚ط§ط¨ظ„ط© ظ„ظ„ط³ط­ط¨ (Draggable Shortages Modal) ---
+    async function openShortageModal() {
+        let modal = document.getElementById('shortageDraggableModal');
+        let content = document.getElementById('shortageContent');
+        
+        modal.style.display = 'flex';
+        content.innerHTML = '<div style="display:flex; height:150px; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:32px; animation:spin 1s linear infinite;">progress_activity</span></div>';
+        
+        try {
+            // Fetch shortages using layoutTheme=modal
+            const response = await fetch(`/Report/ShortageForecast?layoutTheme=modal`);
+            if(response.ok) {
+                content.innerHTML = await response.text();
+            } else {
+                content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">ط®ط·ط£ ظپظٹ ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ†ظˆط§ظ‚طµ</div>';
+            }
+        } catch (error) {
+            content.innerHTML = '<div style="padding:20px; color:#ef4444; text-align:center;">طھط¹ط°ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط®ط§ط¯ظ… ط§ظ„طھظ†ط¨ط¤ط§طھ</div>';
+        }
+    }
+
+    function closeShortageModal() {
+        document.getElementById('shortageDraggableModal').style.display = 'none';
+        document.getElementById('shortageContent').innerHTML = '';
+    }
+
+    // --- Vanilla JS Draggable Component Logic ---
+    let isDragging = false, dragStartX, dragStartY, initialX, initialY;
+    const draggableModal = document.getElementById('shortageDraggableModal');
+    const draggableHeader = document.getElementById('shortageDragHeader');
+
+    if(draggableHeader && draggableModal) {
+        draggableHeader.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            
+            // Get current transform or default to 0
+            const style = window.getComputedStyle(draggableModal);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            initialX = matrix.m41;
+            initialY = matrix.m42;
+            
+            draggableHeader.style.cursor = 'grabbing';
+            e.preventDefault(); // prevent text selection
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            draggableModal.style.transform = `translate(${initialX + dx}px, ${initialY + dy}px)`;
+        });
+
+        document.addEventListener('mouseup', function() {
+            if(isDragging) {
+                isDragging = false;
+                draggableHeader.style.cursor = 'grab';
+            }
+        });
+    }
+
+    // Wrap the original showToast to also trigger shortage prompt when it's an error about stock
+    const originalShowToast = window.showToast;
+    window.showToast = function(msg, icon) {
+        if(icon === 'error' && (msg.includes('ط±طµظٹط¯') || msg.includes('طھطھط¬ط§ظˆط²') || msg.includes('ظ…ط®ط²ظˆظ†'))) {
+            // Create a custom SweetAlert with action button instead of generic toast
+            Swal.fire({
+                title: 'طھظ†ط¨ظٹظ‡ ط§ظ„ظ†ظˆط§ظ‚طµ',
+                html: `<div style="font-size:14px; margin-bottom:15px; color:#e11d48; font-weight:bold;">${msg}</div>
+                       <button onclick="Swal.close(); openShortageModal();" style="background:#063955; color:white; padding:8px 16px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">analytics</span> ظپطھط­ طھط­ظ„ظٹظ„ ط§ظ„ظ†ظˆط§ظ‚طµ (ط§ظ„طھظ†ط¨ط¤ ط§ظ„ط°ظƒظٹ)</button>`,
+                icon: 'warning',
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'ط¥ط؛ظ„ط§ظ‚ ظˆظ…طھط§ط¨ط¹ط©'
+            });
+        } else {
+            if(typeof originalShowToast === 'function') {
+                originalShowToast(msg, icon);
+            }
+        }
+    };
+
+    // ًںڑ€ طھطµظپظٹط± ط§ظ„ط´ط§ط´ط© ظ„ظ„ط¨ط¯ط، ط¨ظپط§طھظˆط±ط© ط¬ط¯ظٹط¯ط©
+    function resetPOS() {
+        cart = [];
+        document.getElementById('inputDiscount').value = 0;
+        document.getElementById('inputTax').value = 0;
+        document.getElementById('valCash').value = 0;
+        document.getElementById('valBank').value = 0;
+        document.getElementById('accCash').selectedIndex = 0;
+        document.getElementById('accBank').selectedIndex = 0;
+        document.getElementById('CustomerId').selectedIndex = 0;
+        document.getElementById('invoiceModal').style.display = 'none';
+        renderCart();
+        setTimeout(() => document.getElementById('barcodeScanner').focus(), 200);
+    }
+
+    function printInvoice() {
+        window.print();
+    }
+</script>
+
+<!-- Modals HTML Overlays -->
+
+<!-- Cash Flow Overlay Modal (Phase 4) -->
+<div id="posModalOverlay" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closePosModal()"></div>
+<div id="cashFlowModal" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-4xl bg-white rounded-lg shadow-2xl z-[110] flex-col overflow-hidden max-h-[90vh]">
+    <div style="padding:16px; border-bottom:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-weight:900; color:#0f766e; display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+            ظ…ط·ط§ط¨ظ‚ط© طµظ†ط¯ظˆظ‚ ط§ظ„ظƒط§ط´ظٹط± (ظ†ظ‡ط§ظٹط© ط§ظ„ظˆط±ط¯ظٹط©)
+        </h3>
+        <button onclick="closePosModal()" style="width:32px; height:32px; border-radius:4px; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+    </div>
+    <div id="cashFlowContent" style="flex:1; overflow-y:auto; padding:0; background:#f8fafc;">
+        <!-- AJAX Content Here -->
+    </div>
+</div>
+
+<!-- Draggable Shortage Forecast Modal (Phase 5) -->
+<div id="shortageDraggableModal" style="display:none; position:fixed; top:20%; right:20%; width:600px; max-height:500px; background:white; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,0.3); border:1px solid #cbd5e1; z-index:900; flex-direction:column; overflow:hidden;" class="draggable-modal">
+    <!-- Header acts as drag handle -->
+    <div id="shortageDragHeader" style="padding:12px 16px; background:linear-gradient(to right, #1e293b, #0f172a); color:white; font-weight:700; font-size:13px; display:flex; justify-content:space-between; align-items:center; cursor:grab;" title="ط§ط³ط­ط¨ ظ„طھط­ط±ظٹظƒ ط§ظ„ظ†ط§ظپط°ط©">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined" style="font-size:16px; color:#38bdf8;">drag_indicator</span>
+            <span>ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ: ط§ظ„طھظ†ط¨ط¤ ط¨ط§ظ„ظ†ظˆط§ظ‚طµ</span>
+        </div>
+        <button onclick="closeShortageModal()" style="background:transparent; border:none; color:#cbd5e1; cursor:pointer; display:flex;">
+            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+    </div>
+    <div id="shortageContent" style="flex:1; overflow-y:auto; background:#f8fafc;">
+        <!-- AJAX Content Here -->
+    </div>
+</div>
+<!-- ?? مودال عرض الفاتورة والطباعة السريع (SPA Experience) -->
+<div id="invoiceModal" style="display:none; position:fixed; inset:0; background:rgba(6,28,44,0.8); z-index:10000; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:white; width:100%; max-width:450px; border-radius:4px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); display:flex; flex-direction:column; max-height:95vh;">
+        <!-- Header -->
+        <div style="background:#063955; color:white; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <span style="font-weight:900; font-size:14px;">فاتورة البيع المكتملة</span>
+            </div>
+            <button onclick="resetPOS()" style="background:none; border:none; color:white; cursor:pointer;"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        
+        <!-- Content Area -->
+        <div id="invoiceContent" style="flex:1; overflow-y:auto; padding:20px; background:#f1f5f9;">
+            <!-- Partial View Content Loaded Here -->
+        </div>
+
+        <!-- Footer Actions -->
+        <div style="padding:16px; background:white; border-top:1px solid #e2e8f0; display:flex; gap:12px;" class="no-print">
+            <button onclick="printInvoice()" style="flex:1; background:#063955; color:white; border:none; padding:12px; border-radius:2px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+                <span class="material-symbols-outlined">print</span> طباعة الفاتورة
+            </button>
+            <button onclick="resetPOS()" style="flex:1; background:#059669; color:white; border:none; padding:12px; border-radius:2px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+                <span class="material-symbols-outlined">add_shopping_cart</span> فاتورة جديدة
+            </button>
+        </div>
+    </div>
+</div>

@@ -71,7 +71,7 @@ namespace PharmaSmartWeb.Services
             get
             {
                 var settings = GetSettings();
-                return settings?.CompanyLogoPath ?? "/images/Logo.png";
+                return settings?.CompanyLogoPath ?? "/images/logo1.png";
             }
         }
     }

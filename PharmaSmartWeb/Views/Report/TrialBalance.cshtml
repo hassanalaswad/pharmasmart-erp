@@ -47,11 +47,11 @@
 <div class="kpi-row">
     <div class="kpi-card" style="border-top:3px solid #059669;">
         <div style="font-size:11px; color:#64748b; font-weight:bold;">إجمالي المدين</div>
-        <div style="font-size:22px; font-weight:900; color:#059669; font-family:monospace;">@totalDebit.ToString("N2")</div>
+        <div style="font-size:22px; font-weight:900; color:#059669; font-family:monospace;">@totalDebit.ToString("N2") @ViewBag.CurrencySymbol</div>
     </div>
     <div class="kpi-card" style="border-top:3px solid #e11d48;">
         <div style="font-size:11px; color:#64748b; font-weight:bold;">إجمالي الدائن</div>
-        <div style="font-size:22px; font-weight:900; color:#e11d48; font-family:monospace;">@totalCredit.ToString("N2")</div>
+        <div style="font-size:22px; font-weight:900; color:#e11d48; font-family:monospace;">@totalCredit.ToString("N2") @ViewBag.CurrencySymbol</div>
     </div>
     <div class="kpi-card" style="border-top:3px solid #063955; background:#063955;">
         <div style="font-size:11px; color:#94a3b8; font-weight:bold;">حالة الميزان</div>
@@ -86,8 +86,8 @@
             <tr class="group-row">
                 <td style="font-family:monospace;">@typeIndex</td>
                 <td style="text-align:right; font-size:13px;">@GetArabicTypeName(group.Key)</td>
-                <td style="font-family:monospace; color:#059669;">@(groupDebit > 0 ? groupDebit.ToString("N2") : "0")</td>
-                <td style="font-family:monospace; color:#e11d48;">@(groupCredit > 0 ? groupCredit.ToString("N2") : "0")</td>
+                <td style="font-family:monospace; color:#059669;">@(groupDebit > 0 ? groupDebit.ToString("N2") : "0") @ViewBag.CurrencySymbol</td>
+                <td style="font-family:monospace; color:#e11d48;">@(groupCredit > 0 ? groupCredit.ToString("N2") : "0") @ViewBag.CurrencySymbol</td>
                 <td><span style="font-size:10px; font-weight:bold; padding:2px 6px; background:#dbeafe; color:#063955; border:1px solid #bfdbfe; border-radius:2px;">رئيسي</span></td>
             </tr>
 
@@ -104,10 +104,10 @@
                     <td style="font-family:monospace; font-size:11px; color:#64748b;">@acc.AccountCode</td>
                     <td style="text-align:right; font-weight:@(isMain ? "bold" : "normal"); color:#1e293b;">@acc.AccountName</td>
                     <td style="font-family:monospace; color:@(displayDebit > 0 ? "#059669" : "#94a3b8"); font-weight:@(isMain ? "bold" : "normal");">
-                        @(displayDebit > 0 ? displayDebit.ToString("N2") : "0")
+                        @(displayDebit > 0 ? displayDebit.ToString("N2") : "0") @ViewBag.CurrencySymbol
                     </td>
                     <td style="font-family:monospace; color:@(displayCredit > 0 ? "#e11d48" : "#94a3b8"); font-weight:@(isMain ? "bold" : "normal");">
-                        @(displayCredit > 0 ? displayCredit.ToString("N2") : "0")
+                        @(displayCredit > 0 ? displayCredit.ToString("N2") : "0") @ViewBag.CurrencySymbol
                     </td>
                     <td></td>
                 </tr>
@@ -118,8 +118,8 @@
     <tfoot>
         <tr class="footer-row">
             <td colspan="2" style="text-align:right; font-size:13px;">الإجماليات النهائية</td>
-            <td style="font-family:monospace; font-size:14px;">@totalDebit.ToString("N2")</td>
-            <td style="font-family:monospace; font-size:14px;">@totalCredit.ToString("N2")</td>
+            <td style="font-family:monospace; font-size:14px;">@totalDebit.ToString("N2") @ViewBag.CurrencySymbol</td>
+            <td style="font-family:monospace; font-size:14px;">@totalCredit.ToString("N2") @ViewBag.CurrencySymbol</td>
             <td style="font-size:11px; font-weight:bold;">@(isBalanced ? "متعادل" : "فرق")</td>
         </tr>
     </tfoot>

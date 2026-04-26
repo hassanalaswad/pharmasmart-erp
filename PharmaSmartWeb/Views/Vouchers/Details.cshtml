@@ -153,7 +153,7 @@
                 <div class="flex-1 py-4">
                     <p class="text-xs font-bold text-slate-500 mb-2">المبلغ المكتوب رقماً:</p>
                     <p class="text-2xl font-bold text-[#00314e]/80 italic leading-relaxed font-mono">
-                        @amount.ToString("N2") ريال سعودي
+                        @amount.ToString("N2") @ViewBag.CurrencySymbol
                     </p>
                 </div>
                 <!-- Amount Badge -->

@@ -13,7 +13,7 @@
  <link rel="stylesheet" href="~/css/local-fonts.css" />
  <!-- Chart.js -->
  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
- <style>
+  <style>
     .sidebar-group-btn { transition: all 0.2s; }
     .sidebar-group-btn:hover { background-color: rgba(var(--md-sys-color-surface-variant-rgb, 241 245 249) / 0.6); }
     .submenu-item { transition: all 0.15s; }
@@ -32,6 +32,123 @@
     }
     /* Sidebar search */
     #sidebarSearch:focus { outline: none; box-shadow: 0 0 0 2px rgba(6,57,85,0.15); }
+
+    /* ─── Dark Mode (Premium Teal-Midnight Palette) ──────────────── */
+    *, *::before, *::after { transition: background-color 0.25s ease, color 0.2s ease, border-color 0.2s ease; }
+
+    body.dark-mode {
+        background-color: #041c2c !important; /* Deep Midnight Teal */
+        color: #f0f9ff !important;
+    }
+    body.dark-mode main        { background-color: #041c2c !important; }
+    body.dark-mode aside       { background-color: #06283d !important; border-color: #0c4a6e !important; }
+    body.dark-mode header      { background-color: #06283d !important; border-color: #0c4a6e !important; }
+
+    /* Cards, panels, tables, and specific containers */
+    body.dark-mode .enterprise-panel,
+    body.dark-mode .bg-white,
+    body.dark-mode [class*="bg-white"],
+    body.dark-mode .glass-panel,
+    body.dark-mode .glass-card,
+    body.dark-mode [class*="bg-surface-container"] { 
+        background-color: #06283d !important; 
+        border-color: #0c4a6e !important; 
+        color: #f0f9ff !important;
+    }
+    
+    /* Neutralizing all light-colored banners and boxes */
+    body.dark-mode .bg-slate-50, 
+    body.dark-mode .bg-indigo-50, 
+    body.dark-mode .bg-blue-50, 
+    body.dark-mode .bg-emerald-50,
+    body.dark-mode .bg-rose-50,
+    body.dark-mode .bg-amber-50,
+    body.dark-mode .bg-gray-50,
+    body.dark-mode .bg-surface,
+    body.dark-mode [class*="bg-slate-50"],
+    body.dark-mode [class*="bg-indigo-50"] { 
+        background-color: #083344 !important; 
+        border-color: #0c4a6e !important;
+        color: #bae6fd !important;
+    }
+    
+    body.dark-mode .bg-slate-100, 
+    body.dark-mode .bg-gray-100, 
+    body.dark-mode .bg-indigo-100,
+    body.dark-mode .bg-blue-100,
+    body.dark-mode .bg-emerald-100,
+    body.dark-mode [class*="bg-slate-100"] { 
+        background-color: #0c4a6e !important; 
+        color: #f0f9ff !important;
+    }
+
+    /* Text */
+    body.dark-mode .text-slate-800,
+    body.dark-mode .text-slate-700,
+    body.dark-mode .text-indigo-800,
+    body.dark-mode .text-blue-800,
+    body.dark-mode .text-emerald-800,
+    body.dark-mode .text-on-surface,
+    body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4 { color: #f0f9ff !important; }
+    
+    body.dark-mode .text-slate-500,
+    body.dark-mode .text-slate-600,
+    body.dark-mode .text-indigo-600,
+    body.dark-mode .text-blue-600 { color: #bae6fd !important; }
+    
+    body.dark-mode .text-slate-400 { color: #7dd3fc !important; }
+
+    /* Borders */
+    body.dark-mode .border-slate-200,
+    body.dark-mode .border-slate-100,
+    body.dark-mode .border-indigo-200,
+    body.dark-mode .border-blue-200,
+    body.dark-mode .border-gray-200,
+    body.dark-mode .border-gray-100 { border-color: #0c4a6e !important; }
+
+    /* Tables */
+    body.dark-mode table thead, body.dark-mode .bg-slate-50, body.dark-mode thead tr { background-color: #06283d !important; }
+    body.dark-mode table th { background-color: #06283d !important; color: #38bdf8 !important; border-color: #0c4a6e !important; }
+    body.dark-mode table td { border-color: #0c4a6e !important; color: #f0f9ff !important; }
+    body.dark-mode table tr:hover td { background-color: #083344 !important; }
+
+    /* Charts */
+    body.dark-mode canvas { filter: brightness(0.9) contrast(1.1); }
+
+    /* Inputs */
+    body.dark-mode input:not([type=checkbox]):not([type=radio]),
+    body.dark-mode select,
+    body.dark-mode textarea {
+        background-color: #041c2c !important;
+        color: #f0f9ff !important;
+        border-color: #0c4a6e !important;
+    }
+    body.dark-mode input:focus, body.dark-mode select:focus {
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 0 1px #38bdf8 !important;
+    }
+
+    /* Dark mode toggle button effect */
+    body.dark-mode #darkModeBtn {
+        background-color: #06283d !important;
+        color: #fbbf24 !important; /* Amber for sun icon */
+        border-color: #0c4a6e !important;
+    }
+    body.dark-mode #darkModeBtn:hover { background-color: #0c4a6e !important; }
+
+    /* Sidebar items in dark */
+    body.dark-mode .sidebar-group-btn:hover { background-color: rgba(255,255,255,0.06) !important; }
+    body.dark-mode .active-sidebar-item { background-color: rgba(56, 189, 248, 0.15) !important; color: #38bdf8 !important; border-right-color: #38bdf8 !important; }
+
+    /* Modals/drawers/SweetAlert */
+    body.dark-mode [id*="Drawer"],
+    body.dark-mode [id*="drawer"],
+    body.dark-mode [id*="Modal"],
+    body.dark-mode [id*="modal"],
+    body.dark-mode .swal2-popup { background-color: #06283d !important; color: #f0f9ff !important; }
+    body.dark-mode .swal2-title, body.dark-mode .swal2-content { color: #f0f9ff !important; }
+    /* ──────────────────────────────────────────────────────────── */
+    /* ──────────────────────────────────────────────────────────── */
  </style>
 </head>
 <body class="text-on-surface flex rtl">
@@ -145,7 +262,7 @@
     <!-- Header: Logo + Company Name -->
     <div class="p-5 border-b border-slate-100 flex items-center gap-3 sticky top-0 bg-white z-10">
         <a href="/Home/Index" class="flex items-center gap-3 flex-1 min-w-0">
-            <img src="/images/Logo.png" class="h-8 max-w-[32px] object-contain" alt="Logo" onerror="this.style.display='none'" />
+            <img src="/images/logo1.png" class="h-8 max-w-[32px] object-contain" alt="Logo" onerror="this.style.display='none'" />
             <span class="font-bold text-base text-primary tracking-tight truncate">@Settings.CompanyName</span>
         </a>
         <span class="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-auto font-bold">v3.0</span>
@@ -351,6 +468,13 @@
   </div>
   }
 
+  <!-- 🌙 Dark Mode Toggle -->
+  <button id="darkModeBtn" onclick="toggleDarkMode()"
+    class="w-9 h-9 flex items-center justify-center rounded-full bg-slate-50 hover:bg-surface-container-highest transition-all text-secondary border border-slate-200" 
+    title="تبديل الوضع الليلي">
+    <span id="darkModeIcon" class="material-symbols-outlined text-[20px]">dark_mode</span>
+  </button>
+
   <!-- 🔔 Bell Button + Dropdown -->
   <div class="relative" id="bellDropdownWrapper">
    <button id="bellBtn" onclick="toggleBellDropdown(event)"
@@ -373,57 +497,27 @@
     </div>
     <div id="bellDropdownItems" class="divide-y divide-slate-100 max-h-72 overflow-y-auto">
      @{
-      int shortCnt = ViewBag.ShortagesCount ?? 0;
-      int expCnt = ViewBag.ExpiringCount ?? 0;
-      int loginFail = ViewBag.LoginFailuresCount ?? 0;
+      var topNotifs = ViewBag.TopNotifications as IEnumerable<PharmaSmartWeb.Models.SystemNotification> ?? Enumerable.Empty<PharmaSmartWeb.Models.SystemNotification>();
      }
-     @if (shortCnt > 0)
+     @foreach (var n in topNotifs)
      {
-      <a href="/Inventory/Shortages" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
-       <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <span class="material-symbols-outlined text-red-500 text-[16px]">inventory_2</span>
+      <a href="@n.ActionUrl" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
+       <div class="w-8 h-8 rounded-full @(n.IconColor.Replace("text-", "bg-").Replace("600", "100").Replace("500", "100")) flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span class="material-symbols-outlined @n.IconColor text-[16px]">@n.Icon</span>
        </div>
-       <div>
-        <p class="text-sm font-bold text-slate-800">نواقص مخزون حرجة</p>
-        <p class="text-xs text-slate-500 font-medium">@shortCnt صنف وصل للحد الأدنى</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
+       <div class="flex-1 min-w-0">
+        <p class="text-[13px] font-bold text-slate-800 truncate">@n.Title</p>
+        <p class="text-[11px] text-slate-500 font-medium truncate">@n.Body</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">@n.CreatedAt.ToString("HH:mm")</p>
        </div>
-       <div class="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+       <div class="w-2 h-2 rounded-full @n.BadgeColor mt-2 flex-shrink-0"></div>
       </a>
      }
-     @if (expCnt > 0)
-     {
-      <a href="/Report/StockExpiry" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
-       <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <span class="material-symbols-outlined text-amber-500 text-[16px]">event_busy</span>
-       </div>
-       <div>
-        <p class="text-sm font-bold text-slate-800">صلاحيات مقاربة للانتهاء</p>
-        <p class="text-xs text-slate-500 font-medium">@expCnt تشغيلة تنتهي خلال شهرين</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
-       </div>
-       <div class="w-2 h-2 rounded-full bg-amber-500 mt-2 flex-shrink-0"></div>
-      </a>
-     }
-     @if (loginFail > 0)
-     {
-      <a href="/Admin/SystemLogs" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors block">
-       <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <span class="material-symbols-outlined text-purple-500 text-[16px]">gpp_bad</span>
-       </div>
-       <div>
-        <p class="text-sm font-bold text-slate-800">تنبيه أمني</p>
-        <p class="text-xs text-slate-500 font-medium">@loginFail محاولة دخول فاشلة (24 ساعة)</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">الآن</p>
-       </div>
-       <div class="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-      </a>
-     }
-     @if ((ViewBag.NotificationCount ?? 0) == 0)
+     @if (!topNotifs.Any())
      {
       <div class="flex flex-col items-center justify-center py-8 text-center">
        <span class="material-symbols-outlined text-slate-300 text-[48px]">notifications_off</span>
-       <p class="text-sm font-bold text-slate-400 mt-2">لا توجد تنبيهات حالياً</p>
+       <p class="text-sm font-bold text-slate-400 mt-2">لا توجد تنبيهات جديدة</p>
       </div>
      }
     </div>
@@ -665,7 +759,7 @@
   const reportLinks = document.querySelectorAll('aside a[href*="/Report/"], aside a[href*="/InventoryIntelligence/"], aside a[href*="/Inventory/Shortages"]');
   reportLinks.forEach(link => {
    const url = link.getAttribute('href');
-   if(!url || url.includes('Index') || url.includes('AccountReports') || url.includes('BranchReports')) return; 
+   if(!url || url.includes('Index') || url.includes('PlanningHub') || url.includes('AccountReports') || url.includes('BranchReports')) return; 
    link.addEventListener('click', (e) => {
     e.preventDefault();
     window.openSystemReportModal(url);
@@ -869,5 +963,41 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 }
  </div> <!-- /End Flex App Wrapper -->
+
+<script>
+// ─── Dark Mode ──────────────────────────────────────────────────────
+(function() {
+    // Apply immediately on load to prevent FOUC
+    if (localStorage.getItem('darkMode') === 'on') {
+        document.body.classList.add('dark-mode');
+    }
+})();
+
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDark ? 'on' : 'off');
+    updateDarkModeIcon(isDark);
+}
+
+function updateDarkModeIcon(isDark) {
+    const icon = document.getElementById('darkModeIcon');
+    const btn  = document.getElementById('darkModeBtn');
+    if (!icon) return;
+    if (isDark) {
+        icon.textContent = 'light_mode';
+        if (btn) btn.title = 'التبديل إلى الوضع المضيء';
+    } else {
+        icon.textContent = 'dark_mode';
+        if (btn) btn.title = 'التبديل إلى الوضع الليلي';
+    }
+}
+
+// Sync icon state after page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updateDarkModeIcon(document.body.classList.contains('dark-mode'));
+});
+// ─────────────────────────────────────────────────────────────────────
+</script>
+
 </body>
 </html>

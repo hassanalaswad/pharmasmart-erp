@@ -83,12 +83,17 @@ namespace PharmaSmartWeb.Controllers
                     if (existingSettings != null)
                     {
                         existingSettings.CompanyName = model.CompanyName;
+                        existingSettings.Address = model.Address;
+                        existingSettings.Phone = model.Phone;
+                        existingSettings.Email = model.Email;
+                        existingSettings.OwnerWhatsApp = model.OwnerWhatsApp;
+
                         if (logoFile != null)
                         {
                             existingSettings.CompanyLogoPath = uniqueFileName;
                         }
                         _context.Update(existingSettings);
-                        await RecordLog("UpdateSettings", "Admin", $"تم تحديث إعدادات المؤسسة: {model.CompanyName}");
+                        await RecordLog("UpdateSettings", "Admin", $"تم تحديث إعدادات المؤسسة ورقم تنبيهات الواتساب: {model.CompanyName}");
                     }
                     else
                     {

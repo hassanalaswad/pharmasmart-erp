@@ -29,8 +29,8 @@ namespace PharmaSmartWeb.Models
         [Display(Name = "البريد الإلكتروني")]
         public string? Email { get; set; }
 
-        [StringLength(100)]
-        [Display(Name = "الرقم الضريبي")]
-        public string? TaxNumber { get; set; }
+        [StringLength(50)]
+        [Display(Name = "واتساب المالك (للتنبيهات)")]
+        public string? OwnerWhatsApp { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +53,7 @@ namespace PharmaSmartWeb.Models
         // ==========================================================
         public virtual DbSet<PurchasePlan> PurchasePlans { get; set; }
         public virtual DbSet<PurchasePlanDetail> PurchasePlanDetails { get; set; }
+        public virtual DbSet<SystemNotification> SystemNotifications { get; set; }
 
         // ==========================================================
         // ≡اـ ╪د┘╪ش╪»╪د┘ê┘ ╪د┘╪ش╪»┘è╪»╪ر (╪د┘╪╣┘à┘╪د╪ز╪î ╪د┘┘à╪│╪ز┘ê╪»╪╣╪د╪ز╪î ╪د┘╪ذ╪د╪▒┘â┘ê╪»╪î ╪د┘╪»┘╪╣ ╪د┘┘à╪ز╪╣╪»╪»)

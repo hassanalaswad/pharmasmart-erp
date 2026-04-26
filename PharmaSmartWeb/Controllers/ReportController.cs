@@ -601,9 +601,16 @@ namespace PharmaSmartWeb.Controllers
         // 📖 9. تقرير كشف الحساب التفصيلي (Ledger)
         // ==========================================
         [HttpGet]
-        [HasPermission("Accounting", "View")]
         public async Task<IActionResult> Ledger(int? accountId, DateTime? fromDate, DateTime? toDate, string returnUrl = null, string layoutTheme = null)
         {
+            // 🔒 التحقق من الصلاحيات: يسمح لمسؤولي المحاسبة، أو الموردين، أو العملاء بالوصول لهذا التقرير
+            bool canView = User.IsInRole("SuperAdmin") || 
+                           User.HasClaim("Permission", "Accounting.View") || 
+                           User.HasClaim("Permission", "Suppliers.View") || 
+                           User.HasClaim("Permission", "Customers.View");
+
+            if (!canView) return Forbid();
+
             ViewBag.ReturnUrl = returnUrl;
             ViewBag.LayoutTheme = layoutTheme;
             ViewBag.Accounts = await _context.Accounts
@@ -630,6 +637,8 @@ namespace PharmaSmartWeb.Controllers
                 .Select(a => a.AccountId)
                 .ToListAsync();
 
+            int scopeId = ReportScopeId; // استخدام نطاق التقرير (0 يعني الكل للمشرف)
+
             var transactions = await _context.Journaldetails
                 .AsNoTracking()
                 .Include(d => d.Journal)
@@ -637,8 +646,8 @@ namespace PharmaSmartWeb.Controllers
                 .Where(d => targetAccountIds.Contains(d.AccountId) &&
                             d.Journal.JournalDate >= start &&
                             d.Journal.JournalDate <= end &&
-                            d.Journal.IsPosted == true &&
-                            d.Journal.BranchId == ActiveBranchId)
+                            (d.Journal.IsPosted == true || layoutTheme == "drawer") &&
+                            (scopeId == 0 || d.Journal.BranchId == scopeId))
                 .OrderBy(d => d.Journal.JournalDate)
                 .ToListAsync();
 
@@ -646,16 +655,16 @@ namespace PharmaSmartWeb.Controllers
                 .Include(d => d.Journal)
                 .Where(d => targetAccountIds.Contains(d.AccountId) &&
                             d.Journal.JournalDate < start &&
-                            d.Journal.IsPosted == true &&
-                            d.Journal.BranchId == ActiveBranchId)
+                            (d.Journal.IsPosted == true || layoutTheme == "drawer") &&
+                            (scopeId == 0 || d.Journal.BranchId == scopeId))
                 .SumAsync(d => (decimal?)d.Debit) ?? 0m;
 
             decimal openingCredit = await _context.Journaldetails
                 .Include(d => d.Journal)
                 .Where(d => targetAccountIds.Contains(d.AccountId) &&
                             d.Journal.JournalDate < start &&
-                            d.Journal.IsPosted == true &&
-                            d.Journal.BranchId == ActiveBranchId)
+                            (d.Journal.IsPosted == true || layoutTheme == "drawer") &&
+                            (scopeId == 0 || d.Journal.BranchId == scopeId))
                 .SumAsync(d => (decimal?)d.Credit) ?? 0m;
 
             if (selectedAccount.AccountNature)

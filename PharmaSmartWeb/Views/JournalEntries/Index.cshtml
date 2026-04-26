@@ -43,7 +43,7 @@
     <div class="enterprise-kpi" style="border-right: 4px solid #063955;">
         <div class="kpi-title">إجمالي حجم التعاملات</div>
         <div class="kpi-value">@ViewBag.TotalVolume.ToString("N2")</div>
-        <div style="font-size:10px; color:#94a3b8;">ر.ي</div>
+        <div style="font-size:10px; color:#94a3b8;">@ViewBag.CurrencySymbol</div>
     </div>
     <div class="enterprise-kpi">
         <div class="kpi-title">إجمالي القيود</div>
@@ -100,7 +100,7 @@
                             </div>
                         </td>
                         <td style="font-weight:700; font-family:monospace;">
-                            @entryTotal.ToString("N2") ر.ي
+                            @entryTotal.ToString("N2") @ViewBag.CurrencySymbol
                         </td>
                         <td style="text-align:center;">
                             @if (item.IsPosted)

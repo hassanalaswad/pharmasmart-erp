@@ -236,6 +236,36 @@
             document.getElementById('ledgerDrawerContent').innerHTML = ''; 
         }, 300);
     }
+
+    function printLedgerDrawer() {
+        const content = document.getElementById('ledgerDrawerContent').innerHTML;
+        const accountName = document.getElementById('ledgerAccountName').innerText;
+        const win = window.open('', '_blank', 'width=900,height=700');
+        const css = [
+            '* { box-sizing: border-box; }',
+            'body { font-family: Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; color: #1e293b; font-size: 12px; }',
+            '.ph { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0284c7; padding-bottom:12px; margin-bottom:16px; }',
+            '.ph h1 { font-size:16px; font-weight:800; color:#063955; margin:0; }',
+            '.ph p { font-size:11px; color:#64748b; margin:4px 0 0; }',
+            'table { width:100%; border-collapse:collapse; font-size:11px; }',
+            'th { background:#f1f5f9; padding:8px 10px; border:1px solid #cbd5e1; font-weight:700; text-align:right; color:#334155; }',
+            'td { padding:7px 10px; border:1px solid #e2e8f0; }',
+            '.no-print { display:none !important; }',
+            '@@media print { body { padding:10px; } }'
+        ].join(' ');
+        const html = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>\u0643\u0634\u0641 \u062d\u0633\u0627\u0628 - ' + accountName + '<\/title>'
+            + '<style>' + css + '<\/style><\/head>'
+            + '<body><div class="ph">'
+            + '<div style="display:flex;align-items:center;gap:12px;">'
+            + '<img src="' + window.location.origin + '/images/logo1.png" style="height:44px;object-fit:contain;" onerror="this.style.display=\'none\'">'
+            + '<div><h1>\u0643\u0634\u0641 \u062d\u0633\u0627\u0628 \u062a\u0641\u0635\u064a\u0644\u064a<\/h1><p>\u062d\u0633\u0627\u0628: ' + accountName + '<\/p><\/div><\/div>'
+            + '<div style="text-align:left;font-size:11px;color:#64748b;"><div>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0637\u0628\u0627\u0639\u0629: ' + new Date().toLocaleDateString('ar-SA') + '<\/div><div>PharmaSmart ERP<\/div><\/div>'
+            + '<\/div>' + content + '<\/body><\/html>';
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(function() { win.print(); win.close(); }, 600);
+    }
 </script>
 
 <div id="ledgerDrawerOverlay" class="fixed inset-0 bg-slate-900/40 z-[100] hidden transition-opacity opacity-0" onclick="closeLedgerDrawer()"></div>
@@ -245,9 +275,15 @@
             <span class="material-symbols-outlined" style="color:#0284c7;">receipt_long</span>
             كشف حساب: <span id="ledgerAccountName" style="color:#0284c7;"></span>
         </h3>
-        <button onclick="closeLedgerDrawer()" style="width:32px; height:32px; border-radius:4px; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
-            <span class="material-symbols-outlined" style="font-size:18px;">close</span>
-        </button>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <button onclick="printLedgerDrawer()" style="display:flex; align-items:center; gap:5px; padding:6px 14px; border-radius:4px; background:#0f172a; color:white; border:none; cursor:pointer; font-size:12px; font-weight:700;" title="طباعة كشف الحساب">
+                <span class="material-symbols-outlined" style="font-size:16px;">print</span>
+                طباعة
+            </button>
+            <button onclick="closeLedgerDrawer()" style="width:32px; height:32px; border-radius:4px; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer;">
+                <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+            </button>
+        </div>
     </div>
     <div id="ledgerDrawerContent" style="flex:1; overflow-y:auto; background:#f8fafc; position:relative;">
         </div>

@@ -1,0 +1,133 @@
+@model PharmaSmartWeb.Models.Sales
+
+@{
+    Layout = null;
+    var settings = ViewBag.SystemSettings as PharmaSmartWeb.Models.CompanySettings;
+    string orgName = settings?.CompanyName ?? "فارما سمارت";
+    string orgLogo = string.IsNullOrEmpty(settings?.CompanyLogoPath) ? "" : settings.CompanyLogoPath;
+    string brName = ViewBag.ActiveBranchName ?? "—";
+}
+
+<div class="receipt-paper" id="printableInvoice">
+    <style>
+        .receipt-paper {
+            background: white;
+            padding: 20px;
+            font-family: 'Tajawal', sans-serif;
+            color: #0f172a;
+            max-width: 400px;
+            margin: 0 auto;
+            border: 1px solid #e2e8f0;
+        }
+        .receipt-header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 15px; }
+        .receipt-title { font-size: 18px; font-weight: 900; margin: 0; }
+        .receipt-subtitle { font-size: 11px; color: #64748b; margin-top: 4px; }
+        
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 12px; }
+        .meta-item { display: flex; flex-direction: column; }
+        .meta-label { font-size: 9px; color: #64748b; text-transform: uppercase; }
+        .meta-value { font-size: 12px; font-weight: 700; font-family: monospace; }
+        
+        .items-table { width: 100%; font-size: 11px; margin-bottom: 20px; border-collapse: collapse; }
+        .items-table th { text-align: right; padding: 6px 0; border-bottom: 2px solid #e2e8f0; color: #64748b; }
+        .items-table td { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+        
+        .total-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; font-weight: 700; }
+        .total-row.net { border-top: 2px dashed #cbd5e1; padding-top: 10px; margin-top: 10px; font-size: 15px; font-weight: 900; }
+        
+        .payment-info { background: #f8fafc; padding: 10px; margin-bottom: 15px; border-radius: 2px; }
+        .payment-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #475569; }
+        
+        .receipt-footer { text-align: center; margin-top: 15px; }
+        
+        @@media print {
+            body * { visibility: hidden; }
+            #printableInvoice, #printableInvoice * { visibility: visible; }
+            #printableInvoice { position: absolute; left: 0; top: 0; width: 100%; border: none; }
+        }
+    </style>
+
+    <div class="receipt-header">
+        @if (!string.IsNullOrEmpty(orgLogo))
+        {
+            <img src="@orgLogo" alt="Logo" style="width:50px; height:50px; object-fit:contain; margin-bottom:8px;" />
+        }
+        <h2 class="receipt-title">@brName</h2>
+        <div class="receipt-subtitle">@orgName</div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-item">
+            <span class="meta-label">رقم الفاتورة</span>
+            <span class="meta-value">#INV-@Model.SaleId.ToString("D5")</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">التاريخ</span>
+            <span class="meta-value">@Model.SaleDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">الكاشير</span>
+            <span class="meta-value">@(Model.User?.Username ?? "System")</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">العميل</span>
+            <span class="meta-value">@(Model.Customer != null ? Model.Customer.FullName : "عميل نقدي")</span>
+        </div>
+    </div>
+
+    <table class="items-table" dir="rtl">
+        <thead>
+            <tr>
+                <th style="width:50%;">الصنف</th>
+                <th style="width:20%; text-align:center;">الكمية</th>
+                <th style="width:30%; text-align:left;">الإجمالي</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Saledetails)
+            {
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">@item.Drug.DrugName</div>
+                        <div style="font-family:monospace; font-size:9px; color:#64748b;">@item.UnitPrice.ToString("N2")</div>
+                    </td>
+                    <td style="text-align:center; font-family:monospace;">@item.Quantity</td>
+                    <td style="text-align:left; font-family:monospace; font-weight:700;">@((item.Quantity * item.UnitPrice).ToString("N2"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="totals-section">
+        <div class="total-row">
+            <span>المجموع:</span>
+            <span style="font-family:monospace;">@Model.TotalAmount.ToString("N2")</span>
+        </div>
+        @if (Model.Discount > 0)
+        {
+            <div class="total-row" style="color:#dc2626;">
+                <span>الخصم:</span>
+                <span style="font-family:monospace;">-@Model.Discount.ToString("N2")</span>
+            </div>
+        }
+        <div class="total-row net">
+            <span>الصافي النهائي:</span>
+            <span style="font-family:monospace;">@Model.NetAmount.ToString("N2")</span>
+        </div>
+    </div>
+
+    <div class="payment-info">
+        @foreach (var p in Model.SalePayments)
+        {
+            <div class="payment-row">
+                <span>@(p.PaymentMethod == "Cash" ? "نقدي" : (p.PaymentMethod == "Bank" ? "شبكة" : "آجل"))</span>
+                <span style="font-family:monospace;">@p.Amount.ToString("N2")</span>
+            </div>
+        }
+    </div>
+
+    <div class="receipt-footer">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=INV:@Model.SaleId|Total:@Model.NetAmount" style="width:60px; height:60px; margin-bottom:10px;" />
+        <p style="font-size:9px; color:#64748b; font-weight:700;">شكراً لتعاملكم معنا</p>
+    </div>
+</div>

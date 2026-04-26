@@ -21,15 +21,18 @@ namespace PharmaSmartWeb.Controllers
     public class InventoryIntelligenceController : BaseController
     {
         private readonly IForecastApiService _forecastService;
+        private readonly IWhatsAppService _whatsappService;
         private readonly ILogger<InventoryIntelligenceController> _logger;
 
         public InventoryIntelligenceController(
             ApplicationDbContext context,
             IForecastApiService forecastService,
+            IWhatsAppService whatsappService,
             ILogger<InventoryIntelligenceController> logger)
             : base(context)
         {
             _forecastService = forecastService;
+            _whatsappService = whatsappService;
             _logger = logger;
         }
 
@@ -501,6 +504,139 @@ namespace PharmaSmartWeb.Controllers
         }
 
         // ══════════════════════════════════════════════════════════════════════
+        //  POST /InventoryIntelligence/ReceiveGoods
+        //  استلام البضاعة: يزيد المخزون + ينشئ قيد محاسبي + يغلق الخطة
+        // ══════════════════════════════════════════════════════════════════════
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReceiveGoods([FromBody] ReceiveGoodsVm vm)
+        {
+            if (vm == null || vm.Items == null || !vm.Items.Any())
+                return Json(new { success = false, message = "لا توجد أصناف للاستلام." });
+
+            int branchId = ActiveBranchId;
+            int userId   = int.Parse(User.FindFirst("UserID")?.Value ?? "0");
+            var today    = DateTime.Now;
+
+            using var tx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                decimal totalCost = 0;
+
+                // ── 1. إنشاء فاتورة مشتريات ───────────────────────────────────
+                // InvoiceNumber & SupplierId مطلوبان في نموذج Purchases
+                var autoInvoice = $"AUTO-{today:yyyyMMddHHmm}";
+                var purchase = new Purchases
+                {
+                    BranchId      = branchId,
+                    PurchaseDate  = today,
+                    UserId        = userId,
+                    InvoiceNumber = autoInvoice,
+                    SupplierId    = 1,           // مورد افتراضي — يمكن تحديده لاحقاً
+                    TotalAmount   = 0,
+                    Notes         = $"استلام خطة شراء ذكية — {today:yyyy-MM-dd}"
+                };
+                _context.Purchases.Add(purchase);
+                await _context.SaveChangesAsync();
+
+                foreach (var item in vm.Items)
+                {
+                    if (item.DrugId <= 0 || item.ReceivedQty <= 0) continue;
+
+                    int receivedQty   = item.ReceivedQty;
+                    decimal cost      = item.UnitCost;
+                    decimal lineTotal = receivedQty * cost;
+                    totalCost += lineTotal;
+
+                    // ── 2. زيادة المخزون ─────────────────────────────────────
+                    var inv = await _context.Branchinventory
+                        .FirstOrDefaultAsync(bi => bi.DrugId == item.DrugId && bi.BranchId == branchId);
+                    if (inv != null)
+                    {
+                        inv.StockQuantity += receivedQty;
+                        inv.AverageCost    = cost;
+                    }
+
+                    // ── 3. تفصيل فاتورة المشتريات ────────────────────────────
+                    // TotalCost غير موجودة — نستخدم SubTotal
+                    _context.Purchasedetails.Add(new Purchasedetails
+                    {
+                        PurchaseId  = purchase.PurchaseId,
+                        DrugId      = item.DrugId,
+                        Quantity    = receivedQty,
+                        CostPrice   = cost,
+                        SubTotal    = lineTotal,
+                        BatchNumber = item.BatchNumber ?? $"AUTO-{today:yyyyMMdd}",
+                        ExpiryDate  = item.ExpiryDate ?? today.AddYears(2)
+                    });
+
+                    // ── 4. سجل الباتش ────────────────────────────────────────
+                    // DrugBatches لا تحتوي على Quantity/CostPrice — فقط BatchNumber/ExpiryDate
+                    _context.DrugBatches.Add(new DrugBatches
+                    {
+                        DrugId      = item.DrugId,
+                        BatchNumber = item.BatchNumber ?? $"AUTO-{today:yyyyMMdd}",
+                        ExpiryDate  = item.ExpiryDate ?? today.AddYears(2)
+                    });
+                }
+
+                purchase.TotalAmount = totalCost;
+                await _context.SaveChangesAsync();
+
+                // ── 5. القيد المحاسبي ────────────────────────────────────────
+                var inventoryAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.AccountName.Contains("مخزون") || a.AccountName.Contains("بضاعة"));
+                var payableAccount = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.AccountName.Contains("موردين") || a.AccountName.Contains("دائنون"));
+
+                if (inventoryAccount != null && payableAccount != null)
+                {
+                    // ✅ الاسم الصحيح: Journalentries (ليس Journal)
+                    var journal = new Journalentries
+                    {
+                        JournalDate   = today,
+                        Description   = $"استلام مشتريات — فاتورة #{purchase.PurchaseId}",
+                        ReferenceType = "Purchase",
+                        ReferenceNo   = $"{purchase.PurchaseId}",  // string وليس int
+                        BranchId      = branchId,
+                        CreatedBy     = userId,
+                        IsPosted      = true
+                    };
+                    _context.Journalentries.Add(journal);
+                    await _context.SaveChangesAsync();
+
+                    // ✅ الاسم الصحيح: Journaldetails (ليس Journaldetail)
+                    // Journaldetails لا تحتوي على Description
+                    _context.Journaldetails.AddRange(new[]
+                    {
+                        new Journaldetails { JournalId = journal.JournalId, AccountId = inventoryAccount.AccountId, Debit = totalCost,  Credit = 0          },
+                        new Journaldetails { JournalId = journal.JournalId, AccountId = payableAccount.AccountId,   Debit = 0,          Credit = totalCost  }
+                    });
+                    await _context.SaveChangesAsync();
+                }
+
+                // ── 6. إغلاق الخطة ──────────────────────────────────────────
+                if (vm.PlanId > 0)
+                {
+                    var plan = await _context.PurchasePlans.FindAsync(vm.PlanId);
+                    if (plan != null) { plan.Status = "Executed"; await _context.SaveChangesAsync(); }
+                }
+
+                await tx.CommitAsync();
+                await RecordLog("ReceiveGoods", "InventoryIntelligence",
+                    $"استلام {vm.Items.Count} صنف — إجمالي {totalCost:N2} — فاتورة #{purchase.PurchaseId}");
+
+                return Json(new { success = true, message = $"✅ تم استلام البضاعة وزيادة المخزون. إجمالي الفاتورة: {totalCost:N2}", purchaseId = purchase.PurchaseId });
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                _logger.LogError(ex, "ReceiveGoods: خطأ أثناء الاستلام.");
+                return Json(new { success = false, message = $"فشل الاستلام: {ex.Message}" });
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
         //  Helpers (Private)
         // ══════════════════════════════════════════════════════════════════════
 
@@ -561,6 +697,16 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.ExpiringSoonCount  = await _context.DrugBatches
                 .CountAsync(b => b.ExpiryDate <= today.AddMonths(2) && b.ExpiryDate >= today);
 
+            // -- حساب إحصائيات ABC للنطاق الحالي --
+            var abcStats = await invQuery
+                .GroupBy(bi => bi.Abccategory)
+                .Select(g => new { Category = g.Key, Count = g.Count() })
+                .ToListAsync();
+            
+            ViewBag.CountA = abcStats.FirstOrDefault(x => x.Category == "A")?.Count ?? 0;
+            ViewBag.CountB = abcStats.FirstOrDefault(x => x.Category == "B")?.Count ?? 0;
+            ViewBag.CountC = abcStats.FirstOrDefault(x => x.Category == "C")?.Count ?? 0;
+
             // ── 2. آخر خطة معتمدة ─────────────────────────────────
             ViewBag.LastForecastDate = await _context.Systemlogs
                 .Where(l => l.Action == "PlanApproved")
@@ -585,12 +731,16 @@ namespace PharmaSmartWeb.Controllers
             var inventoryData = await _context.Branchinventory
                 .Include(bi => bi.Drug)
                 .Where(bi => bi.Drug.IsActive == true && (!isGlobal ? bi.BranchId == scopeId : true))
-                .GroupBy(bi => new { bi.DrugId, bi.Drug.DrugName, bi.MinimumStockLevel })
+                .GroupBy(bi => new { bi.DrugId, bi.Drug.DrugName, bi.MinimumStockLevel, bi.Drug.IsLifeSaving, bi.Drug.MainUnit, bi.Drug.SubUnit, bi.Drug.ConversionFactor })
                 .Select(g => new
                 {
                     DrugId       = g.Key.DrugId,
                     DrugName     = g.Key.DrugName,
                     MinStock     = g.Key.MinimumStockLevel,
+                    IsLifeSaving = g.Key.IsLifeSaving ?? false,
+                    MainUnit     = g.Key.MainUnit ?? "باكت",
+                    SubUnit      = g.Key.SubUnit ?? "شريط",
+                    ConversionFactor = g.Key.ConversionFactor,
                     CurrentStock = g.Sum(x => x.StockQuantity),
                     AvgCost      = g.Average(x => (decimal?)(x.AverageCost ?? 0)) ?? 0m
                 })
@@ -634,40 +784,53 @@ namespace PharmaSmartWeb.Controllers
             // ── 6. بناء قائمة التخطيط النهائية ───────────────────
             var planningItems = itemsWithValue.Select(x =>
             {
-                var item       = x.item;
-                decimal avg    = x.avgMonthly;
-                decimal annual = avg * 12m;
-                decimal eoq    = annual > 0 ? (decimal)Math.Round(Math.Sqrt((double)(2m * annual * 50m / 0.2m))) : 0;
-                decimal proposed = Math.Max(eoq, avg * 2m - item.CurrentStock);
-                proposed = proposed < 0 ? 0 : Math.Round(proposed);
-                decimal unitCost   = Math.Round(item.AvgCost, 2);
-                decimal totalCost  = Math.Round(proposed * unitCost, 2);
-                string  abcClass   = abcDict.ContainsKey(item.DrugId) ? abcDict[item.DrugId] : "C";
-                string  priorityLabel = abcClass == "A" ? "قصوى" : (abcClass == "B" ? "متوسطة" : "عادية");
-                bool isLifeSaving = abcClass == "A" && (item.DrugId % 2 == 0); // Simulated
-                string measureUnit = item.DrugId % 3 == 0 ? "عبوة" : "شريط";
-                
-                // If life saving, AI proposes double
-                if (isLifeSaving) proposed = Math.Max(proposed, avg * 3m - item.CurrentStock);
-                
-                string  status     = item.CurrentStock <= item.MinStock
+                var item        = x.item;
+                decimal avg     = x.avgMonthly;          // بوحدة البيع (SubUnit)
+                int cf          = item.ConversionFactor > 0 ? item.ConversionFactor : 1;
+                string abcClass = abcDict.ContainsKey(item.DrugId) ? abcDict[item.DrugId] : "C";
+                string priorityLabel = abcClass == "A" ? "قصوى" : (abcClass == "B" ? "متوسطة" : "عادية");
+                bool isLifeSaving   = item.IsLifeSaving;
+
+                // ─── تحويل الوحدة: avg بالشريط → avgInMainUnit بالباكت ─────────
+                decimal avgInMainUnit = cf > 1 ? Math.Round(avg / (decimal)cf, 2) : avg;
+
+                // EOQ وكل الكميات بوحدة الشراء (MainUnit)
+                decimal annualMainUnit = avgInMainUnit * 12m;
+                decimal eoqMainUnit    = annualMainUnit > 0
+                    ? (decimal)Math.Round(Math.Sqrt((double)(2m * annualMainUnit * 50m / 0.2m)))
+                    : 0;
+
+                decimal stockInMainUnit = item.CurrentStock / (decimal)cf;
+                decimal proposedBase = Math.Max(eoqMainUnit, avgInMainUnit * 2m - stockInMainUnit);
+
+                if (isLifeSaving)
+                    proposedBase = Math.Max(proposedBase, avgInMainUnit * 3m - stockInMainUnit);
+
+                proposedBase = proposedBase < 0 ? 0 : Math.Round(proposedBase);
+
+                decimal unitCost  = Math.Round(item.AvgCost, 2);
+                decimal totalCost = Math.Round(proposedBase * unitCost, 2);
+
+                string status      = item.CurrentStock <= item.MinStock
                                      ? "ناقص - يحتاج طلب"
-                                     : (proposed > 0 ? "ضمن الميزانية" : "مخزون كافٍ");
+                                     : (proposedBase > 0 ? "ضمن الميزانية" : "مخزون كافٍ");
                 string statusClass = item.CurrentStock <= item.MinStock ? "error"
-                                     : (proposed > 0 ? "ok" : "enough");
+                                     : (proposedBase > 0 ? "ok" : "enough");
                 return new
                 {
-                    drugId     = item.DrugId,
-                    drug       = item.DrugName,
-                    abc        = abcClass,
-                    priority   = priorityLabel,
-                    isLifeSaving,
-                    unit       = measureUnit,
-                    stock      = item.CurrentStock,
-                    minStock   = item.MinStock,
-                    expectedQty = (int)Math.Round(avg),
-                    optimalQty  = (int)proposed,  // Replaces eoq/proposed jargon
-                    approved   = (int)proposed,
+                    drugId           = item.DrugId,
+                    drug             = item.DrugName,
+                    abc              = abcClass,
+                    priority         = priorityLabel,
+                    isLifeSaving     = item.IsLifeSaving,
+                    unit             = item.MainUnit,
+                    subUnit          = item.SubUnit,
+                    conversionFactor = item.ConversionFactor,
+                    stock            = item.CurrentStock,
+                    minStock         = item.MinStock,
+                    expectedQty      = (int)Math.Round(avgInMainUnit),   // ✅ بوحدة الشراء
+                    optimalQty       = (int)proposedBase,                 // ✅ بوحدة الشراء
+                    approved         = (int)proposedBase,
                     unitCost,
                     totalCost,
                     status,
@@ -736,30 +899,79 @@ namespace PharmaSmartWeb.Controllers
             var newItems = new List<ForecastItemVm>();
             var rnd = new Random();
 
+            int scopeId = ReportScopeId;
+            bool isGlobal = (scopeId == 0);
+
             foreach(var item in request.items)
             {
+                // -- الجلب الآلي للمخزون وسعر التكلفة من قاعدة البيانات --
+                var drugEntity = await _context.Drugs.FirstOrDefaultAsync(d => d.DrugName == item.drug);
+                if (drugEntity != null)
+                {
+                    var invRow = await _context.Branchinventory
+                        .Where(bi => bi.DrugId == drugEntity.DrugId && (!isGlobal ? bi.BranchId == ReportScopeId : true))
+                        .FirstOrDefaultAsync();
+
+                    item.stock    = invRow?.StockQuantity ?? 0m;
+                    item.minStock = invRow?.MinimumStockLevel ?? 0m;
+                    item.unit     = drugEntity.MainUnit ?? "وحدة";
+                    item.subUnit  = drugEntity.SubUnit ?? "";
+                    item.conversionFactor = drugEntity.ConversionFactor;
+                    item.isLifeSaving = drugEntity.IsLifeSaving ?? false;
+
+                    // سعر التكلفة من آخر تشغيلة مشتريات
+                    var lastPurchase = await _context.Purchasedetails
+                        .Where(pd => pd.DrugId == drugEntity.DrugId)
+                        .OrderByDescending(pd => pd.DetailId)
+                        .FirstOrDefaultAsync();
+                    item.unitCost = lastPurchase?.CostPrice ?? 0m;
+
+                    // تصنيف الأولوية بناءً على ABC
+                    item.priority = item.abc == "A" ? "قصوى" : item.abc == "B" ? "متوسطة" : "عادية";
+                    if (item.isLifeSaving) item.priority = "قصوى";
+                }
+                else
+                {
+                    item.stock        = 0m;
+                    item.unitCost     = 0m;
+                    item.unit         = "وحدة";
+                    item.subUnit      = "";
+                    item.conversionFactor = 1;
+                    item.isLifeSaving = false;
+                    item.priority     = "عادية";
+                }
+                // --------------------------------------------------------
+
+                // item.expectedQty قادمة من الواجهة وهي بوحدة الشراء (MainUnit) بعد التحويل في GET
                 double baseDemand = (double)item.expectedQty * baseMultiplier * modelVariance;
                 
-                // Add tiny random fluctuation to simulate actual ML distribution outputs.
+                // تذبذب عشوائي بسيط لمحاكاة مخرجات نموذج ML
                 double fluctuation = 1.0 + ((rnd.NextDouble() * 0.08) - 0.04); // +/- 4%
 
+                // newExpected: الكمية المتوقعة بوحدة الشراء (MainUnit)
                 decimal newExpected = (decimal)Math.Round(baseDemand * fluctuation);
                 
-                // Recalculate EOQ & proposed based on new Expected
+                // EOQ بوحدة الشراء (MainUnit) - لا حاجة للقسمة على cf هنا
                 decimal annualExpected = newExpected * (12m / (decimal)Math.Max(1, request.horizon)); 
                 decimal eoq = annualExpected > 0 ? (decimal)Math.Round(Math.Sqrt((double)(2m * annualExpected * 50m / 0.2m))) : 0;
                 
-                decimal proposed = Math.Max(eoq, newExpected * 2m - item.stock);
-                proposed = proposed < 0 ? 0 : Math.Round(proposed);
+                int cf = item.conversionFactor > 0 ? item.conversionFactor : 1;
                 
-                item.expectedQty = newExpected;
-                item.eoq = eoq;
-                item.proposed = proposed;
-                item.approved = proposed; // Auto approve the new proposed
+                // المخزون الحالي بوحدة الشراء (MainUnit)
+                decimal stockInMainUnit = item.stock / (decimal)cf;
+                decimal proposedBase = Math.Max(eoq, newExpected * 2m - stockInMainUnit);
+                proposedBase = proposedBase < 0 ? 0 : Math.Round(proposedBase);
+
+                item.expectedQty  = newExpected;                               // ✅ بوحدة الشراء
+                item.optimalQty   = proposedBase;                              // ✅ بوحدة الشراء
+                item.eoq          = eoq;
+                item.proposed     = proposedBase;
+                item.approved     = proposedBase;
                 
-                item.totalCost = Math.Round(item.approved * item.unitCost, 2);
-                item.status = item.stock <= item.minStock ? "ناقص - يحتاج طلب" : (proposed > 0 ? "ضمن الميزانية" : "مخزون كافٍ");
-                item.statusClass = item.stock <= item.minStock ? "error" : (proposed > 0 ? "ok" : "enough");
+                // التكلفة الإجمالية = الكمية بوحدة الشراء × سعر الوحدة
+                item.totalCost  = Math.Round(proposedBase * item.unitCost, 2);
+                item.status     = item.stock <= item.minStock ? "ناقص - يحتاج طلب" : (proposedBase > 0 ? "ضمن الميزانية" : "مخزون كافٍ");
+                item.statusClass = item.stock <= item.minStock ? "error" : (proposedBase > 0 ? "ok" : "enough");
                 
                 newItems.Add(item);
             }
@@ -773,8 +985,6 @@ namespace PharmaSmartWeb.Controllers
             var chartForecastList = new List<decimal>();
 
             // Get Real Historical Data for the last 6 months
-            int scopeId = ReportScopeId;
-            bool isGlobal = (scopeId == 0);
             var sixMonthsAgo = today.AddMonths(-5);
             var startOfSixMonths = new DateTime(sixMonthsAgo.Year, sixMonthsAgo.Month, 1);
 
@@ -833,31 +1043,151 @@ namespace PharmaSmartWeb.Controllers
                 chartActual.Add(null);
             }
             
+            // 🔔 إرسال تنبيه واتساب في حالة وجود نواقص حرجة (أدوية منقذة للحياة)
+            try 
+            {
+                var criticalItems = newItems.Where(x => x.isLifeSaving && x.status != null && x.status.Contains("ناقص")).ToList();
+                if (criticalItems.Any())
+                {
+                    string msg = $"🚨 *تنبيه ذكاء مخزني - PharmaSmart*\n\n";
+                    msg += $"تم اكتشاف {criticalItems.Count} أصناف منقذة للحياة تحت حد الأمان:\n";
+                    foreach(var item in criticalItems.Take(3)) 
+                        msg += $"• {item.drug} (المخزون الحالي: {item.stock})\n";
+                    
+                    if (criticalItems.Count > 3) msg += $"... وغيرها.\n";
+                    msg += "\nيرجى مراجعة مركز التخطيط لاتخاذ إجراء الشراء.";
+
+                    // جلب رقم المالك من الإعدادات
+                    var settings = await _context.CompanySettings.FirstOrDefaultAsync(s => s.Id == 1);
+                    string targetNumber = !string.IsNullOrEmpty(settings?.OwnerWhatsApp) ? settings.OwnerWhatsApp : "967700000000";
+
+                    await _whatsappService.SendMessageAsync(targetNumber, msg);
+                }
+            }
+            catch(Exception ex) { _logger.LogWarning("WhatsApp Notification failed: " + ex.Message); }
+
             return Json(new { items = newItems, chartLabels, chartActual, chartForecast = paddedForecast });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RecalculateSafetyStock()
+        {
+            try
+            {
+                int scopeId = ReportScopeId;
+                bool isGlobal = (scopeId == 0);
+                var today = DateTime.Today;
+                var thirtyDaysAgo = today.AddDays(-30);
+
+                // 1. حساب سرعة البيع اليومية (Daily Sales Velocity) لآخر 30 يوم
+                var salesVelocity = await _context.Saledetails
+                    .Include(sd => sd.Sale)
+                    .Where(sd => sd.Sale.SaleDate >= thirtyDaysAgo && (!isGlobal ? sd.Sale.BranchId == scopeId : true))
+                    .GroupBy(sd => sd.DrugId)
+                    .Select(g => new {
+                        DrugId = g.Key,
+                        AverageDaily = g.Sum(sd => sd.Quantity) / 30m
+                    })
+                    .ToListAsync();
+
+                var velocityDict = salesVelocity.ToDictionary(x => x.DrugId, x => x.AverageDaily);
+
+                // 2. جلب كل المخزون لتحديثه
+                var inventory = await _context.Branchinventory
+                    .Include(bi => bi.Drug)
+                    .Where(bi => !isGlobal ? bi.BranchId == scopeId : true)
+                    .ToListAsync();
+
+                int updatedCount = 0;
+                foreach (var item in inventory)
+                {
+                    decimal ads = velocityDict.ContainsKey(item.DrugId) ? velocityDict[item.DrugId] : 0;
+                    
+                    // المعادلة الديناميكية:
+                    // حد الأمان = (متوسط البيع اليومي * فترة التوريد) + كمية احتياطية (Buffer)
+                    
+                    int leadTime = 7; // افتراضي: 7 أيام للتوريد
+                    int buffer = 3;   // احتياطي لتقلبات السوق
+                    
+                    if (item.Drug.IsLifeSaving == true) 
+                    {
+                        leadTime = 15; // رفع فترة التوريد للأدوية المنقذة للحياة لضمان الأمان
+                        buffer = 10;   // احتياطي أكبر
+                    }
+
+                    decimal newMinStock = ads * (leadTime + buffer);
+                    
+                    // حد أدنى مطلق لضمان عدم تصفير حد الأمان للأصناف الجديدة
+                    decimal absoluteMin = (item.Drug.IsLifeSaving == true) ? 10 : 3;
+                    
+                    int calculatedMin = (int)Math.Max(absoluteMin, Math.Ceiling(newMinStock));
+
+                    if (item.MinimumStockLevel != calculatedMin)
+                    {
+                        item.MinimumStockLevel = calculatedMin;
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    await RecordLog("Intelligence", "Update", $"تحديث تلقائي لحد الأمان لعدد {updatedCount} صنف بناءً على سرعة البيع.");
+                }
+
+                return Json(new { success = true, message = $"تم تحديث حد الأمان لـ {updatedCount} صنف آلياً بنجاح." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "فشل التحديث التلقائي: " + ex.Message });
+            }
         }
     }
 
     public class ForecastItemVm
     {
         public int id { get; set; }
-        public string drug { get; set; }
-        public string abc { get; set; }
+        public string? drug { get; set; }
+        public string? abc { get; set; }
+        public string? priority { get; set; }      // قصوى / متوسطة / عادية
+        public bool isLifeSaving { get; set; }
+        public string? unit { get; set; }           // وحدة الشراء (MainUnit)
+        public string? subUnit { get; set; }        // وحدة البيع (SubUnit)
+        public int conversionFactor { get; set; }  // عامل التحويل
         public decimal stock { get; set; }
         public decimal minStock { get; set; }
-        public decimal expectedQty { get; set; }
+        public decimal expectedQty { get; set; }   // الكمية المباعة سابقاً
+        public decimal optimalQty { get; set; }    // EOQ
         public decimal eoq { get; set; }
         public decimal proposed { get; set; }
         public decimal approved { get; set; }
         public decimal unitCost { get; set; }
         public decimal totalCost { get; set; }
-        public string status { get; set; }
-        public string statusClass { get; set; }
+        public string? status { get; set; }
+        public string? statusClass { get; set; }
     }
 
     public class ForecastRequestVm
     {
-        public List<ForecastItemVm> items { get; set; }
-        public string model { get; set; }
+        public List<ForecastItemVm>? items { get; set; }
+        public string? model { get; set; }
         public int horizon { get; set; }
+    }
+
+    // ── ViewModel لاستلام البضاعة ────────────────────────────────────────────
+    public class ReceiveGoodsVm
+    {
+        public int PlanId { get; set; }
+        public List<ReceiveGoodsItemVm> Items { get; set; } = new();
+    }
+
+    public class ReceiveGoodsItemVm
+    {
+        public int DrugId { get; set; }
+        public string? DrugName { get; set; }
+        public int ReceivedQty { get; set; }
+        public decimal UnitCost { get; set; }
+        public string? BatchNumber { get; set; }
+        public DateTime? ExpiryDate { get; set; }
     }
 }

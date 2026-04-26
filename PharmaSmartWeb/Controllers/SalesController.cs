@@ -17,10 +17,16 @@ namespace PharmaSmartWeb.Controllers
     public class SalesController : BaseController
     {
         private readonly IAccountingEngine _accountingEngine;
+        private readonly IWhatsAppService _whatsappService;
+        private readonly NotificationEngine _notificationEngine;
+        private readonly ILogger<SalesController> _logger;
 
-        public SalesController(ApplicationDbContext context, IAccountingEngine accountingEngine) : base(context)
+        public SalesController(ApplicationDbContext context, IAccountingEngine accountingEngine, IWhatsAppService whatsappService, NotificationEngine notificationEngine, ILogger<SalesController> logger) : base(context)
         {
             _accountingEngine = accountingEngine;
+            _whatsappService = whatsappService;
+            _notificationEngine = notificationEngine;
+            _logger = logger;
         }
 
         private async Task<int> GetValidUserIdAsync()
@@ -96,6 +102,23 @@ namespace PharmaSmartWeb.Controllers
             ViewBag.SystemSettings = await _context.CompanySettings.FirstOrDefaultAsync();
 
             return View(sale);
+        }
+
+        [HttpGet]
+        [HasPermission("Sales", "View")]
+        public async Task<IActionResult> PrintPartial(int id)
+        {
+            var sale = await _context.Sales
+                .Include(s => s.Customer)
+                .Include(s => s.User)
+                .Include(s => s.Saledetails).ThenInclude(d => d.Drug)
+                .Include(s => s.SalePayments).ThenInclude(sp => sp.Account)
+                .FirstOrDefaultAsync(m => m.SaleId == id && m.BranchId == ActiveBranchId);
+
+            if (sale == null) return NotFound();
+
+            ViewBag.SystemSettings = await _context.CompanySettings.FirstOrDefaultAsync();
+            return PartialView("_InvoicePartial", sale);
         }
 
         [HttpGet]
@@ -267,7 +290,22 @@ namespace PharmaSmartWeb.Controllers
                     });
 
                     await RecordLog("Add", "Sales", $"إصدار فاتورة مبيعات POS رقم {sale.SaleId}");
-                    return RedirectToAction(nameof(Details), new { id = sale.SaleId });
+
+                    // 🔔 تشغيل محرك الإشعارات فوراً للتحقق من النواقص بعد البيع
+                    _ = Task.Run(async () => {
+                        try {
+                            using var scope = HttpContext.RequestServices.CreateScope();
+                            var engine = scope.ServiceProvider.GetRequiredService<NotificationEngine>();
+                            await engine.GenerateAndSaveNotificationsAsync(ActiveBranchId);
+                        } catch { /* ignore notification errors to not break sale UI flow */ }
+                    });
+                    // 🚀 هندسة SPA: إذا كان الطلب AJAX (من الـ POS)، نرجع JSON بدلاً من Redirect
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    {
+                        return Json(new { success = true, saleId = sale.SaleId });
+                    }
+
+                    return RedirectToAction(nameof(Details), new { id = sale.SaleId, print = "true" });
                 }
                 catch (Exception ex) { ViewBag.Error = ex.Message; }
             }

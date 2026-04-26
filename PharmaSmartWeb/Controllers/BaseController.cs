@@ -28,7 +28,7 @@ namespace PharmaSmartWeb.Controllers
 
         public int ReportScopeId => (IsSuperAdmin && Request.Cookies.TryGetValue("ActiveBranchId", out string? bId) && int.TryParse(bId, out int id) && id >= 0) ? id : UserBranchId;
 
-        public override void OnActionExecuting(ActionExecutingContext context)
+        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var controllerName = context.RouteData.Values["controller"]?.ToString() ?? "";
             var actionName = context.RouteData.Values["action"]?.ToString() ?? "";
@@ -37,7 +37,7 @@ namespace PharmaSmartWeb.Controllers
                 && (string.Equals(actionName, "Login", StringComparison.OrdinalIgnoreCase) || 
                     string.Equals(actionName, "Logout", StringComparison.OrdinalIgnoreCase)))
             {
-                base.OnActionExecuting(context);
+                await next();
                 return;
             }
 
@@ -47,15 +47,14 @@ namespace PharmaSmartWeb.Controllers
                 return;
             }
 
-            base.OnActionExecuting(context);
-
-            PopulatePharmaSmartPageContext(controllerName, actionName);
+            await PopulatePharmaSmartPageContextAsync(controllerName, actionName);
+            await next();
         }
 
         /// <summary>
         /// يجهّز بيانات التخطيط والعناوين لكل طلب MVC مصادَق عليه (قائمة الشاشات، الفرع النشط، قسم النظام).
         /// </summary>
-        private void PopulatePharmaSmartPageContext(string controllerName, string actionName)
+        private async Task PopulatePharmaSmartPageContextAsync(string controllerName, string actionName)
         {
             ViewData["CurrentController"] = controllerName;
             ViewData["CurrentAction"] = actionName;
@@ -113,32 +112,26 @@ namespace PharmaSmartWeb.Controllers
                 else
                     ViewBag.ActiveBranchName = User.FindFirst("BranchName")?.Value ?? "فرع غير محدد";
 
-                // Notification Count logic - وفق التوثيق: نواقص المخزون + صلاحيات مقاربة فقط
+                // Notification Count logic: جلب التنبيهات غير المقروءة من قاعدة البيانات
                 int scopeId = scopeForUi;
-                bool isGlobal = scopeId == 0;
-                var invQ = _context.Branchinventory.AsQueryable();
-                if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
+                var notificationsQuery = _context.SystemNotifications.Where(n => !n.IsRead && (n.BranchId == 0 || n.BranchId == scopeId));
+                
+                int totalUnread = await notificationsQuery.CountAsync();
+                ViewBag.NotificationCount = totalUnread;
 
-                int shortagesCount = invQ.Count(bi => bi.StockQuantity <= bi.MinimumStockLevel);
+                // الاحتفاظ بالتصنيفات للتوافق مع القوالب القديمة (اختياري)
+                ViewBag.ShortagesCount = await notificationsQuery.CountAsync(n => n.Category == "shortage");
+                ViewBag.ExpiringCount = await notificationsQuery.CountAsync(n => n.Category == "expiry");
+                ViewBag.LoginFailuresCount = IsSuperAdmin ? await notificationsQuery.CountAsync(n => n.Category == "admin") : 0;
 
-                DateTime expiryThreshold = DateTime.Today.AddMonths(2);
-                var expiringBatchesQ = _context.DrugBatches.Where(b => b.ExpiryDate <= expiryThreshold);
-                int expiringCount = expiringBatchesQ.Count();
+                // جلب آخر 5 تنبيهات غير مقروءة لعرضها في القائمة المنسدلة
+                ViewBag.TopNotifications = await notificationsQuery
+                    .OrderByDescending(n => n.CreatedAt)
+                    .Take(5)
+                    .ToListAsync();
 
-                ViewBag.NotificationCount = shortagesCount + expiringCount;
-                ViewBag.ShortagesCount = shortagesCount;
-                ViewBag.ExpiringCount = expiringCount;
-
-                // ❗ محاولات تسجيل الدخول الفاشلة (للمدير فقط)
-                if (IsSuperAdmin)
-                {
-                    var since24h = DateTime.Now.AddHours(-24);
-                    int loginFailures = _context.Systemlogs
-                        .Count(l => l.Action == "LoginFailed" && l.CreatedAt >= since24h);
-                    ViewBag.LoginFailuresCount = loginFailures;
-                    if (loginFailures > 0)
-                        ViewBag.NotificationCount = (int)(ViewBag.NotificationCount ?? 0) + 1;
-                }
+                // 💵 إضافة العملة الافتراضية
+                ViewBag.CurrencySymbol = GetCachedBaseCurrency(cache);
             }
             catch
             {
@@ -146,6 +139,7 @@ namespace PharmaSmartWeb.Controllers
                 ViewBag.ActiveBranchName = "—";
                 ViewBag.Branches = null;
                 ViewBag.HeaderReportScopeId = UserBranchId;
+                ViewBag.CurrencySymbol = "ريال";
             }
         }
 
@@ -187,6 +181,18 @@ namespace PharmaSmartWeb.Controllers
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
                 return _context.Branches.AsNoTracking().Where(b => b.IsActive == true).ToList();
+            })!;
+        }
+
+        private string GetCachedBaseCurrency(IMemoryCache? cache)
+        {
+            if (cache == null)
+                return _context.Currencies.AsNoTracking().FirstOrDefault(c => c.IsBaseCurrency)?.CurrencyName ?? "ريال";
+
+            return cache.GetOrCreate("Global_BaseCurrency", entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
+                return _context.Currencies.AsNoTracking().FirstOrDefault(c => c.IsBaseCurrency)?.CurrencyName ?? "ريال";
             })!;
         }
 

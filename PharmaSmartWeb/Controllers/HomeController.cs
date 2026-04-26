@@ -12,7 +12,20 @@ namespace PharmaSmartWeb.Controllers
     [Authorize]
     public class HomeController : BaseController
     {
-        public HomeController(ApplicationDbContext context) : base(context) { }
+        private readonly PharmaSmartWeb.Services.IWhatsAppService _whatsappService;
+        private readonly PharmaSmartWeb.Services.NotificationEngine _notificationEngine;
+        private readonly Microsoft.Extensions.Logging.ILogger<HomeController> _logger;
+
+        public HomeController(
+            ApplicationDbContext context,
+            PharmaSmartWeb.Services.IWhatsAppService whatsappService,
+            PharmaSmartWeb.Services.NotificationEngine notificationEngine,
+            Microsoft.Extensions.Logging.ILogger<HomeController> logger) : base(context)
+        {
+            _whatsappService       = whatsappService;
+            _notificationEngine    = notificationEngine;
+            _logger                = logger;
+        }
 
         public async Task<IActionResult> DashboardHub()
         {
@@ -742,9 +755,7 @@ namespace PharmaSmartWeb.Controllers
         }
 
         // ============================================================
-
-        // ============================================================
-        // 🔔 مركز الإشعارات الكامل
+        // 🔔 مركز الإشعارات — يقرأ من قاعدة البيانات ثم يحذف (read = delete)
         // ============================================================
         [HttpGet]
         public async Task<IActionResult> Notifications()
@@ -753,154 +764,57 @@ namespace PharmaSmartWeb.Controllers
             ViewData["PageDescription"] = "تنبيهات المخزون والصلاحية والتحديثات الإدارية";
 
             int scopeId = ReportScopeId;
-            bool isGlobal = (scopeId == 0);
-            var today = DateTime.Today;
 
-            var items = new List<NotificationItemVm>();
+            try { await _notificationEngine.GenerateAndSaveNotificationsAsync(scopeId); }
+            catch (Exception ex) { _logger.LogWarning(ex, "NotificationEngine: خطأ أثناء التوليد."); }
 
-            // ── 1. أدوية انتهت صلاحيتها (حرجة) ──────────────────
-            var expired = await _context.DrugBatches
-                .Include(b => b.Drug)
-                .Where(b => b.ExpiryDate < today)
-                .OrderBy(b => b.ExpiryDate)
-                .Take(30)
-                .ToListAsync();
+            try {
+                var saved = await _context.SystemNotifications
+                    .Where(n => n.BranchId == 0 || n.BranchId == scopeId)
+                    .OrderByDescending(n => n.Severity == "critical" ? 2 : n.Severity == "warning" ? 1 : 0)
+                    .ThenByDescending(n => n.CreatedAt)
+                    .ToListAsync();
 
-            foreach (var b in expired)
-                items.Add(new NotificationItemVm
+                var viewItems = saved.Select(n => new NotificationItemVm
                 {
-                    Category  = "inventory",
-                    Severity  = "critical",
-                    Icon      = "dangerous",
-                    IconColor = "text-red-600",
-                    BgColor   = "bg-red-50 border-red-200",
-                    BadgeColor= "bg-red-600",
-                    Title     = $"صلاحية منتهية: {b.Drug?.DrugName}",
-                    Body      = $"الباتش {b.BatchNumber} — انتهت {b.ExpiryDate:dd/MM/yyyy}",
-                    ActionUrl = "/Report/StockExpiry",
-                    ActionText= "عرض تقرير الصلاحية",
-                    OccurredAt= today
-                });
+                    Id         = n.Id,
+                    Category   = n.Category,
+                    Severity   = n.Severity,
+                    Icon       = n.Icon,
+                    IconColor  = n.IconColor,
+                    BgColor    = n.BgColor,
+                    BadgeColor = n.BadgeColor,
+                    Title      = n.Title,
+                    Body       = n.Body,
+                    ActionUrl  = n.ActionUrl,
+                    ActionText = n.ActionText,
+                    OccurredAt = n.CreatedAt,
+                    IsRead     = n.IsRead
+                }).ToList();
 
-            // ── 2. أدوية توشك على الانتهاء (تحذير) ──────────────
-            var expiring = await _context.DrugBatches
-                .Include(b => b.Drug)
-                .Where(b => b.ExpiryDate >= today && b.ExpiryDate <= today.AddMonths(2))
-                .OrderBy(b => b.ExpiryDate)
-                .Take(30)
-                .ToListAsync();
+                ViewBag.TotalCount     = viewItems.Count;
+                ViewBag.UnreadCount    = viewItems.Count(i => !i.IsRead);
+                ViewBag.CriticalCount  = viewItems.Count(i => i.Severity == "critical" && !i.IsRead);
+                ViewBag.WarningCount   = viewItems.Count(i => i.Severity == "warning" && !i.IsRead);
+                ViewBag.InventoryCount = viewItems.Count(i => (i.Category is "shortage" or "expiry" or "inventory") && !i.IsRead);
+                ViewBag.AdminCount     = viewItems.Count(i => i.Category == "admin" && !i.IsRead);
 
-            foreach (var b in expiring)
-            {
-                int daysLeft = (b.ExpiryDate - today).Days;
-                items.Add(new NotificationItemVm
+                var unread = saved.Where(n => !n.IsRead).ToList();
+                if (unread.Any())
                 {
-                    Category  = "inventory",
-                    Severity  = "warning",
-                    Icon      = "event_busy",
-                    IconColor = "text-amber-600",
-                    BgColor   = "bg-amber-50 border-amber-200",
-                    BadgeColor= "bg-amber-500",
-                    Title     = $"صلاحية مقاربة: {b.Drug?.DrugName}",
-                    Body      = $"الباتش {b.BatchNumber} — تنتهي بعد {daysLeft} يوم ({b.ExpiryDate:dd/MM/yyyy})",
-                    ActionUrl = "/Report/StockExpiry",
-                    ActionText= "إدارة الصلاحية",
-                    OccurredAt= today
-                });
+                    unread.ForEach(n => n.IsRead = true);
+                    await _context.SaveChangesAsync();
+                }
+
+                return View(viewItems);
             }
-
-            // ── 3. نواقص المخزون ──────────────────────────────────
-            var invQ = _context.Branchinventory.Include(bi => bi.Drug).AsQueryable();
-            if (!isGlobal) invQ = invQ.Where(bi => bi.BranchId == scopeId);
-
-            var shortages = await invQ
-                .Where(bi => bi.StockQuantity <= bi.MinimumStockLevel && bi.Drug.IsActive == true)
-                .OrderBy(bi => bi.StockQuantity)
-                .Take(30)
-                .ToListAsync();
-
-            foreach (var s in shortages)
+            catch (Exception ex)
             {
-                bool empty = s.StockQuantity <= 0;
-                items.Add(new NotificationItemVm
-                {
-                    Category  = "inventory",
-                    Severity  = empty ? "critical" : "warning",
-                    Icon      = empty ? "inventory_2" : "production_quantity_limits",
-                    IconColor = empty ? "text-red-600" : "text-orange-500",
-                    BgColor   = empty ? "bg-red-50 border-red-200" : "bg-orange-50 border-orange-200",
-                    BadgeColor= empty ? "bg-red-600" : "bg-orange-500",
-                    Title     = empty ? $"نفد من المخزون: {s.Drug?.DrugName}" : $"مخزون حرج: {s.Drug?.DrugName}",
-                    Body      = $"الكمية الحالية: {s.StockQuantity} — الحد الأدنى: {s.MinimumStockLevel}",
-                    ActionUrl = "/InventoryIntelligence/PlanningHub",
-                    ActionText= "فتح خطة المشتريات",
-                    OccurredAt= today
-                });
+                _logger.LogError(ex, "خطأ في شاشة التنبيهات");
+                ViewBag.TotalCount = 0;
+                ViewBag.UnreadCount = 0;
+                return View(new List<NotificationItemVm>());
             }
-
-            // ── 4. تنبيهات أمنية (للمدير فقط) ────────────────────
-            if (IsSuperAdmin)
-            {
-                var since24h = DateTime.Now.AddHours(-24);
-                var loginFails = await _context.Systemlogs
-                    .Where(l => l.Action == "LoginFailed" && l.CreatedAt >= since24h)
-                    .CountAsync();
-
-                if (loginFails > 0)
-                    items.Add(new NotificationItemVm
-                    {
-                        Category  = "admin",
-                        Severity  = "critical",
-                        Icon      = "gpp_bad",
-                        IconColor = "text-purple-600",
-                        BgColor   = "bg-purple-50 border-purple-200",
-                        BadgeColor= "bg-purple-600",
-                        Title     = "تنبيه أمني: محاولات دخول فاشلة",
-                        Body      = $"{loginFails} محاولة دخول خاطئة خلال آخر 24 ساعة",
-                        ActionUrl = "/Admin/SystemLogs",
-                        ActionText= "مراجعة سجل الدخول",
-                        OccurredAt= DateTime.Now
-                    });
-            }
-
-            // ── 5. تحديثات إدارية (آخر 7 أيام) ──────────────────
-            var since7d = DateTime.Now.AddDays(-7);
-            var adminLogs = await _context.Systemlogs
-                .Where(l => l.CreatedAt >= since7d &&
-                           (l.Action.Contains("Role") || l.Action.Contains("Permission") || l.Action.Contains("User")))
-                .OrderByDescending(l => l.CreatedAt)
-                .Take(10)
-                .ToListAsync();
-
-            foreach (var log in adminLogs)
-                items.Add(new NotificationItemVm
-                {
-                    Category  = "admin",
-                    Severity  = "info",
-                    Icon      = "admin_panel_settings",
-                    IconColor = "text-blue-600",
-                    BgColor   = "bg-blue-50 border-blue-200",
-                    BadgeColor= "bg-blue-500",
-                    Title     = $"تحديث إداري: {log.Action}",
-                    Body      = log.Details ?? log.ScreenName ?? "—",
-                    ActionUrl = "#",
-                    ActionText= "—",
-                    OccurredAt= log.CreatedAt
-                });
-
-            // ترتيب: الحرجة أولاً ثم تاريخياً
-            var sorted = items
-                .OrderByDescending(i => i.Severity == "critical" ? 2 : i.Severity == "warning" ? 1 : 0)
-                .ThenByDescending(i => i.OccurredAt)
-                .ToList();
-
-            ViewBag.TotalCount    = sorted.Count;
-            ViewBag.CriticalCount = sorted.Count(i => i.Severity == "critical");
-            ViewBag.WarningCount  = sorted.Count(i => i.Severity == "warning");
-            ViewBag.InventoryCount= sorted.Count(i => i.Category == "inventory");
-            ViewBag.AdminCount    = sorted.Count(i => i.Category == "admin");
-
-            return View(sorted);
         }
 
 
@@ -923,8 +837,8 @@ namespace PharmaSmartWeb.Controllers
         [HttpGet]
         public IActionResult AccessDenied()
         {
-            return Content(@"
-                <html>
+            return Content(@"<!DOCTYPE html>
+                <html dir='rtl' lang='ar'>
                 <head>
                     <meta charset='utf-8'>
                     <title>عذراً - وصول مرفوض</title>
@@ -958,6 +872,7 @@ namespace PharmaSmartWeb.Controllers
     // ViewModel للإشعارات
     public class NotificationItemVm
     {
+        public int Id { get; set; }
         public string Category   { get; set; } = ""; // inventory | admin
         public string Severity   { get; set; } = ""; // critical | warning | info
         public string Icon       { get; set; } = "notifications";
@@ -967,7 +882,8 @@ namespace PharmaSmartWeb.Controllers
         public string Title      { get; set; } = "";
         public string Body       { get; set; } = "";
         public string ActionUrl  { get; set; } = "#";
-        public string ActionText { get; set; } = "";
+        public string ActionText { get; set; } = "عرض";
         public DateTime OccurredAt { get; set; } = DateTime.Now;
+        public bool IsRead { get; set; } = false;
     }
 }

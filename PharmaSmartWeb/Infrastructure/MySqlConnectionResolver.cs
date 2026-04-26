@@ -32,7 +32,7 @@ namespace PharmaSmartWeb.Infrastructure
                 string pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
                 string dbName = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
                 int port = uri.Port > 0 ? uri.Port : 3306;
-                connectionString = $"Server={uri.Host};Port={port};Database={dbName};Uid={user};Pwd={pass};SslMode=Required;";
+                connectionString = $"Server={uri.Host};Port={port};Database={dbName};Uid={user};Pwd={pass};SslMode=Required;CharSet=utf8mb4;";
             }
 
             return connectionString;

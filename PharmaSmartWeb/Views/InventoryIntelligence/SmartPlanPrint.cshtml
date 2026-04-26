@@ -46,7 +46,7 @@
         </div>
         <div style="font-size: 13px; line-height: 1.8;">
             <strong>تم التوليد بواسطة:</strong> مستخدم مرخص (ذكاء مخزني)<br>
-            <strong>إجمالي تكلفة الأصناف:</strong> @Model.EstimatedTotalCost.ToString("N2") ر.ي<br>
+            <strong>إجمالي تكلفة الأصناف:</strong> @Model.EstimatedTotalCost.ToString("N2") @ViewBag.CurrencySymbol<br>
             <strong>حالة التعديل:</strong> @(Model.PlanDetails.Any(d => d.ApprovedQuantity != d.ProposedQuantity) ? "معدلة يدوياً من الإدارة" : "كما اقترحتها الخوارزمية (EOQ)")
         </div>
     </div>
@@ -93,7 +93,7 @@
     </table>
 
     <div style="margin-top: 20px; text-align: right; font-weight: bold; font-size: 16px;">
-        إجمالي قيمة الطلبية النهائية: <span style="font-size: 20px; color: #063955;">@Model.PlanDetails.Sum(x => x.TotalCost).ToString("N2")</span> ر.ي
+        إجمالي قيمة الطلبية النهائية: <span style="font-size: 20px; color: #063955;">@Model.PlanDetails.Sum(x => x.TotalCost).ToString("N2")</span> @ViewBag.CurrencySymbol
     </div>
 
     <!-- Signatures -->

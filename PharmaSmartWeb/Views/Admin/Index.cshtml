@@ -44,22 +44,42 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-                <!-- Company Name -->
+                <!-- Company Name & Contact -->
                 <div class="space-y-6">
                     <div class="space-y-2">
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">
                             الاسم التجاري للمؤسسة <span class="text-rose-500">*</span>
                         </label>
                         <input asp-for="CompanyName" required class="w-full bg-slate-50 border border-slate-200 rounded-sm py-3.5 px-4 font-bold text-primary outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all text-lg" placeholder="مثال: صيدليات الحياة الذكية" />
-                        <span asp-validation-for="CompanyName" class="text-xs text-rose-500 font-bold"></span>
                     </div>
 
-                    <div class="p-4 bg-blue-50/50 border border-blue-100 rounded-sm">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">هاتف المؤسسة</label>
+                            <input asp-for="Phone" class="w-full bg-slate-50 border border-slate-200 rounded-sm py-2.5 px-4 font-bold text-primary outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">البريد الإلكتروني</label>
+                            <input asp-for="Email" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-sm py-2.5 px-4 font-bold text-primary outline-none focus:border-amber-500 transition-all" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">العنوان الرئيسي</label>
+                        <input asp-for="Address" class="w-full bg-slate-50 border border-slate-200 rounded-sm py-2.5 px-4 font-bold text-primary outline-none focus:border-amber-500 transition-all" />
+                    </div>
+
+                    <div class="p-4 bg-amber-50 border border-amber-200 rounded-sm">
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-blue-500 text-lg mt-0.5">info</span>
-                            <div class="text-[11px] text-slate-600 font-bold leading-relaxed space-y-1">
-                                <p>يتم استخدام الحقول أعلاه لتكوين الهوية المؤسسية.</p>
-                                <p class="text-blue-600">أما بالنسبة للرقم الضريبي وتفاصيل العنوان؛ فيتم سحبها تلقائياً لكل فرع بشكل مستقل من إعدادات الفروع لدعم مرونة الإقرارات وتعدد الفروع.</p>
+                            <span class="material-symbols-outlined text-amber-600 text-xl mt-0.5">notification_important</span>
+                            <div class="space-y-3 flex-1">
+                                <div>
+                                    <label class="block text-xs font-black text-amber-800 uppercase tracking-widest mb-1">رقم واتساب المالك (للتنبيهات الذكية)</label>
+                                    <input asp-for="OwnerWhatsApp" dir="ltr" placeholder="9677XXXXXXXX" class="w-full bg-white border border-amber-300 rounded-sm py-2.5 px-4 font-black text-amber-900 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-600/10 transition-all" />
+                                </div>
+                                <p class="text-[10px] text-amber-700 font-bold leading-relaxed">
+                                    هذا الرقم هو الوجهة النهائية لكافة "تنبيهات الذكاء المخزني" ونواقص الأصناف الحرجة وتقارير الأداء اليومية التي يرسلها النظام آلياً.
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -109,7 +109,6 @@ namespace PharmaSmartWeb
             services.AddHttpContextAccessor();
             services.AddScoped<PharmaSmartWeb.Services.INavigationService, PharmaSmartWeb.Services.NavigationService>();
             
-            // إضافة مزود الإعدادات للنظام (Dynamic Currency Architecture)
             services.AddScoped<PharmaSmartWeb.Services.ISystemSettingsService, PharmaSmartWeb.Services.SystemSettingsService>();
 
             // ─── خدمة التنبؤ بالطلب الخارجي (Google Vertex AI) ───────────────
@@ -121,6 +120,13 @@ namespace PharmaSmartWeb
             });
             services.AddScoped<PharmaSmartWeb.Services.IForecastApiService,
                                PharmaSmartWeb.Services.GoogleVertexAiForecastService>();
+
+            // ─── خدمة إرسال التنبيهات عبر الواتساب ───────────────────────────
+            services.AddHttpClient<PharmaSmartWeb.Services.IWhatsAppService, PharmaSmartWeb.Services.WhatsAppService>();
+
+            // ─── محرك الإشعارات التلقائي والخدمات الخلفية ─────────────────────────
+            services.AddScoped<PharmaSmartWeb.Services.NotificationEngine>();
+            services.AddHostedService<PharmaSmartWeb.Infrastructure.NotificationBackgroundService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

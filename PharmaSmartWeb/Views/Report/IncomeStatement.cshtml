@@ -50,8 +50,8 @@
 
 @section Summary {
     <div><span>إجمالي المبيعات:</span><span style="font-weight:bold;">@sales.ToString("N2")</span></div>
-    <div><span>تكلفة المبيعات:</span><span style="color:#e11d48; font-weight:bold;">(@cogs.ToString("N2"))</span></div>
-    <div><span>إجمالي المصاريف:</span><span style="color:#e11d48; font-weight:bold;">(@totalOpExp.ToString("N2"))</span></div>
+    <div><span>تكلفة المبيعات:</span><span style="color:#e11d48; font-weight:bold;">(@cogs.ToString("N2") @ViewBag.CurrencySymbol)</span></div>
+    <div><span>إجمالي المصاريف:</span><span style="color:#e11d48; font-weight:bold;">(@totalOpExp.ToString("N2") @ViewBag.CurrencySymbol)</span></div>
     <div><span style="color:@(netIncome >= 0 ? "#059669" : "#e11d48");">النتيجة (صافي الدخل):</span><span style="color:@(netIncome >= 0 ? "#059669" : "#e11d48"); font-weight:bold;">@netIncome.ToString("N2")</span></div>
 }
 
@@ -74,15 +74,15 @@
 </div>
 <div class="rpt-row">
     <span>إجمالي المبيعات (Revenue)</span>
-    <span style="font-weight:bold;">@sales.ToString("N2") @Settings.Currency</span>
+    <span style="font-weight:bold;">@sales.ToString("N2") @ViewBag.CurrencySymbol</span>
 </div>
 <div class="rpt-row" style="color:#e11d48;">
     <span>(-) يطرح: تكلفة البضاعة المباعة (COGS)</span>
-    <span style="font-weight:bold;">(@cogs.ToString("N2")) @Settings.Currency</span>
+    <span style="font-weight:bold;">(@cogs.ToString("N2") @ViewBag.CurrencySymbol)</span>
 </div>
 <div class="rpt-row-total" style="background:#063955; color:white;">
     <span>مجمل الربح (Gross Profit)</span>
-    <span>@grossProfit.ToString("N2") @Settings.Currency</span>
+    <span>@grossProfit.ToString("N2") @ViewBag.CurrencySymbol</span>
 </div>
 
 <!-- Section 2: OPEX -->
@@ -95,8 +95,8 @@
     <div class="rpt-row">
         <span>@exp.Name <small style="color:#94a3b8; font-size:10px;">(@exp.Percentage.ToString("N1")%)</small></span>
         <span style="font-weight:bold; color:#475569;">
-            <a href="javascript:void(0)" onclick="openDrillDown(@exp.AccountId, '@exp.Name')" class="no-print" style="text-decoration:underline; color:#063955;" title="انقر لاستعراض تفاصيل حساب @exp.Name">@exp.Total.ToString("N2") @Settings.Currency</a>
-            <span class="print-visible">@exp.Total.ToString("N2") @Settings.Currency</span>
+            <a href="javascript:void(0)" onclick="openDrillDown(@exp.AccountId, '@exp.Name')" class="no-print" style="text-decoration:underline; color:#063955;" title="انقر لاستعراض تفاصيل حساب @exp.Name">@exp.Total.ToString("N2") @ViewBag.CurrencySymbol</a>
+            <span class="print-visible">@exp.Total.ToString("N2") @ViewBag.CurrencySymbol</span>
         </span>
     </div>
 }
@@ -106,7 +106,7 @@
 }
 <div class="rpt-row-total" style="color:#e11d48;">
     <span>إجمالي المصاريف التشغيلية</span>
-    <span>(@totalOpExp.ToString("N2")) @Settings.Currency</span>
+    <span>(@totalOpExp.ToString("N2") @ViewBag.CurrencySymbol)</span>
 </div>
 
 <!-- Net Income -->
@@ -116,7 +116,7 @@
         <div style="font-size:11px; color:#94a3b8;">التصنيف النهائي بعد إجمالي المصاريف</div>
     </div>
     <div style="font-size:28px; font-weight:900; color:@(netIncome >= 0 ? "#059669" : "#e11d48"); font-family:monospace;" dir="ltr">
-        @netIncome.ToString("N2") @Settings.Currency
+        @netIncome.ToString("N2") @ViewBag.CurrencySymbol
     </div>
 </div>
 

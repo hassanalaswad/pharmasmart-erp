@@ -210,6 +210,7 @@ namespace PharmaSmartWeb.Controllers
                     existingDrug.MainUnit = updatedDrug.MainUnit;
                     existingDrug.SubUnit = updatedDrug.SubUnit;
                     existingDrug.ConversionFactor = updatedDrug.ConversionFactor;
+                    existingDrug.IsLifeSaving = updatedDrug.IsLifeSaving;
 
                     if (drugImage != null && drugImage.Length > 0)
                     {

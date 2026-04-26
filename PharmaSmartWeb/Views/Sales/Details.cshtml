@@ -104,7 +104,6 @@
     var settings = ViewBag.SystemSettings as PharmaSmartWeb.Models.CompanySettings;
     string orgName = settings?.CompanyName ?? "فارما سمارت";
     string orgLogo = string.IsNullOrEmpty(settings?.CompanyLogoPath) ? "" : settings.CompanyLogoPath;
-    string taxNo = settings?.TaxNumber ?? "—";
     string brName = ViewBag.ActiveBranchName ?? "—";
 }
 
@@ -123,10 +122,6 @@
             <h2 class="receipt-title">@brName</h2>
             <div class="receipt-subtitle">@orgName</div>
             
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:10px; color:#475569; font-weight:700; margin-top:16px; text-align:right;">
-                <div>الرقم الضريبي:</div>
-                <div style="font-family:monospace; text-align:left;">@taxNo</div>
-            </div>
         </div>
 
         <!-- Meta Info -->
@@ -221,3 +216,17 @@
         
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // 🚀 تشغيل الطباعة تلقائياً إذا كان الرابط يحتوي على print=true
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('print') === 'true') {
+                setTimeout(() => {
+                    window.print();
+                }, 500);
+            }
+        });
+    </script>
+}

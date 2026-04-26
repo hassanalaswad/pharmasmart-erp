@@ -110,7 +110,7 @@ namespace PharmaSmartWeb.Infrastructure
         public static class Images
         {
             /// <summary>شعار التطبيق الافتراضي</summary>
-            public const string Logo    = "/dist/img/AdminLTELogo.png";
+            public const string Logo    = "/dist/img/AdminLTElogo1.png";
             /// <summary>صورة المستخدم الافتراضية</summary>
             public const string Avatar  = "/dist/img/avatar.png";
             /// <summary>أيقونة Favicon</summary>

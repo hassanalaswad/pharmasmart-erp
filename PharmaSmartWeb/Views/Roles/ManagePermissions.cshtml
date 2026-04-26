@@ -85,10 +85,11 @@
                         var categoryTitles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
                             {"Sales", "المبيعات"}, {"Purchases", "المشتريات"}, {"Inventory", "المخزون"},
                             {"Accounting", "الحسابات المالية"}, {"Reports", "التقارير"}, {"SystemSettings", "إعدادات النظام"},
-                            {"Admin", "الإدارة والدعم"}, {"POS", "نقاط البيع"}, {"Settings", "الإعدادات"}, {"Finance", "المالية"}
+                            {"Admin", "الإدارة والدعم"}, {"POS", "نقاط البيع"}, {"Settings", "الإعدادات"}, {"Finance", "المالية"},
+                            {"التجاري", "العمليات التجارية"}, {"الأدوية والمخزون", "الأدوية والمخزون"}, {"المالية", "الإدارة المالية"}, {"التقارير", "مركز التقارير"}, {"الإدارة", "إعدادات الإدارة"}
                         };
                         string safeKey = group.Key ?? "";
-                        string groupName = categoryTitles.ContainsKey(safeKey) ? categoryTitles[safeKey] : safeKey;
+                        string groupName = categoryTitles.ContainsKey(safeKey) ? categoryTitles[safeKey] : (safeKey.Contains("?") ? "عام" : safeKey);
                     }
                     <div class="bg-surface-container p-4 border-b border-surface-variant flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors outline-none" onclick="this.nextElementSibling.classList.toggle('hidden');">
                         <div class="flex items-center gap-3">
@@ -119,7 +120,40 @@
                                         <td class="py-4 px-4">
                                             <input type="hidden" name="permissions[@i].ScreenId" value="@screen.ScreenId" />
                                             <div class="flex flex-col">
-                                                <span class="font-bold text-sm text-primary">@screen.ScreenArabicName</span>
+                                                @{
+                                                    var arabicNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                                                        {"Sales","المبيعات"}, {"SalesReturn","مرتجع المبيعات"},
+                                                        {"Purchases","المشتريات"}, {"PurchasesReturn","مرتجع المشتريات"},
+                                                        {"Customers","إدارة العملاء"}, {"Suppliers","إدارة الموردين"},
+                                                        {"Drugs","الأدوية والمخزون"}, {"Inventory","المخزون والجرد"},
+                                                        {"Warehouses","المستودعات والرفوف"}, {"ItemGroups","المجموعات العلاجية"},
+                                                        {"DrugTransfers","التحويلات المخزنية"},
+                                                        {"InventoryIntelligence","ذكاء المخزون والتخطيط"},
+                                                        {"Accounting","الدليل المحاسبي"},
+                                                        {"JournalEntries","القيود اليومية"},
+                                                        {"Vouchers","سندات القبض والصرف"},
+                                                        {"FundTransfers","التحويلات المالية"},
+                                                        {"AccountReports","التقارير المالية"},
+                                                        {"ShortageForecast","تقرير نواقص الأدوية"},
+                                                        {"Employees","سجل الموظفين"},
+                                                        {"Users","إدارة المستخدمين"},
+                                                        {"Roles","إدارة الأدوار"},
+                                                        {"Branches","إدارة الفروع"},
+                                                        {"Currencies","إدارة العملات"},
+                                                        {"BarcodeGenerator","مولد الباركود"},
+                                                        {"StockAudit","جرد المخزون"},
+                                                        {"Report","مركز التقارير"},
+                                                        {"Admin","إعدادات النظام"},
+                                                    };
+                                                    string displayName = !string.IsNullOrWhiteSpace(screen.ScreenArabicName)
+                                                        ? screen.ScreenArabicName
+                                                        : (arabicNames.ContainsKey(screen.ScreenName ?? "") ? arabicNames[screen.ScreenName] : screen.ScreenName);
+                                                }
+                                                <span class="font-bold text-sm text-primary">@displayName</span>
+                                                @if (string.IsNullOrWhiteSpace(screen.ScreenArabicName))
+                                                {
+                                                    <span class="text-[10px] text-slate-400 font-mono">@screen.ScreenName</span>
+                                                }
                                             </div>
                                         </td>
                                         <td class="py-4 px-4 text-center">

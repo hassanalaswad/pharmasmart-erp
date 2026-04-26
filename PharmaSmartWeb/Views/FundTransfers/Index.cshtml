@@ -82,7 +82,7 @@
                             </div>
                         </td>
                         <td style="text-align:center; font-weight:700; font-size:13px; font-family:monospace;">
-                            @item.Amount.ToString("N2") ر.ي
+                            @item.Amount.ToString("N2") @ViewBag.CurrencySymbol
                         </td>
                         <td style="text-align:center;">
                             @if (item.JournalId != null)
@@ -103,6 +103,6 @@
         </table>
     </div>
     <div style="padding:8px 12px; background:#f8fafc; border-top:1px solid #e2e8f0; font-size:11px; color:#64748b;">
-        إجمالي: @Model.Count() تحويل مالي — مجموع المبالغ: @Model.Sum(x => x.Amount).ToString("N2") ر.ي
+        إجمالي: @Model.Count() تحويل مالي — مجموع المبالغ: @Model.Sum(x => x.Amount).ToString("N2") @ViewBag.CurrencySymbol
     </div>
 </div>

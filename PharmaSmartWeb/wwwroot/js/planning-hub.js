@@ -48,6 +48,50 @@ function initUI() {
         });
     }
 
+    // 1c. Recalculate Dynamic Safety Stock
+    const recalcSafetyStockBtn = document.getElementById('recalcSafetyStockBtn');
+    if (recalcSafetyStockBtn) {
+        recalcSafetyStockBtn.addEventListener('click', async () => {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'تحديث حد الأمان...',
+                    text: 'يتم الآن تحليل سرعة البيع لآخر 30 يوم وتحديث مخزون الأمان لكل صنف.',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+            }
+
+            try {
+                const response = await fetch('/InventoryIntelligence/RecalculateSafetyStock', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم التحديث!',
+                            text: data.message,
+                            confirmButtonText: 'حسناً'
+                        }).then(() => window.location.reload());
+                    } else {
+                        alert(data.message);
+                        window.location.reload();
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') Swal.fire('خطأ', data.message, 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                if (typeof Swal !== 'undefined') Swal.fire('خطأ', 'فشل الاتصال بالمخدم لتحديث حد الأمان', 'error');
+            }
+        });
+    }
+
     // 1c. PDF Button
     const customPdfBtn = document.getElementById('customPdfBtn');
     if (customPdfBtn) {
@@ -251,6 +295,7 @@ function renderDraftGrid() {
     const liquidityEl = document.getElementById('totalLiquidityDisplay');
     const totalLiquidity = liquidityEl ? parseFloat(liquidityEl.innerText.replace(/[^0-9.]/g, '')) || 0 : 0;
 
+    let visibleCount = 0;
     appState.forecastData.forEach((item, idx) => {
         // Safety switch effect (vital drugs A items)
         // Note: isLifeSaving and priority come from the backend now
@@ -264,18 +309,25 @@ function renderDraftGrid() {
         } else if (!appState.safetySwitch && isVital) {
             finalApproved = item.optimalQty;
         }
-        
-        let finalCost = finalApproved * item.unitCost;
-        
+
+        // ── الكميات قادمة من الـ Backend بوحدة الشراء (MainUnit) مباشرةً ──
+        const cf = (item.conversionFactor && item.conversionFactor > 1) ? item.conversionFactor : 1;
+        // finalApproved بوحدة الشراء بالفعل — لا نقسم على cf مرة أخرى
+        const displayQty  = Math.ceil(finalApproved);
+        const displayCost = displayQty * parseFloat(item.unitCost || 0);
+        const displayUnit = item.unit || 'وحدة';   // MainUnit = وحدة الشراء
+
+        // ─── إخفاء الأصناف ذات المخزون الكافي (لا تحتاج طلب) ───────────
+        if (displayQty === 0 && item.status !== 'ناقص - يحتاج طلب') {
+            return; // تخطي هذا الصنف كليًا
+        }
+
         // Determine Financial Match dynamically for each row
-        const cumulativeCost = appState.totalExpectedCost + finalCost;
+        const cumulativeCost = appState.totalExpectedCost + displayCost;
         let financialStatus = "";
         let statusBadgeClass = "";
-        
-        if (finalApproved === 0) {
-            financialStatus = "مخزون كافٍ";
-            statusBadgeClass = "bg-slate-200 text-slate-700";
-        } else if (cumulativeCost <= totalLiquidity) {
+
+        if (cumulativeCost <= totalLiquidity) {
             financialStatus = "في حدود الميزانية";
             statusBadgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200 border";
         } else {
@@ -283,7 +335,8 @@ function renderDraftGrid() {
             statusBadgeClass = "bg-rose-100 text-rose-800 border-rose-200 border";
         }
 
-        appState.totalExpectedCost += finalCost;
+        appState.totalExpectedCost += displayCost;
+        visibleCount++;
 
         const tr = document.createElement('tr');
         tr.className = `border-t transition-colors hover:bg-slate-50 ${isBoosted ? 'bg-rose-50/30' : ''}`;
@@ -296,22 +349,34 @@ function renderDraftGrid() {
 
         tr.innerHTML = `
             <td class="px-3 py-3 w-8"><input type="checkbox" checked class="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"></td>
-            <td class="px-3 py-3 font-bold text-slate-800 flex items-center gap-2">
-                ${priorityBadge}
-                ${item.drug}
-                ${isBoosted ? '<span class="text-rose-500" title="تم المضاعفة لقاطع الأمان"><span class="material-symbols-outlined text-[14px]">health_and_safety</span></span>' : ''}
+            <td class="px-3 py-3 font-bold text-slate-800">
+                <div class="flex items-center gap-2 flex-wrap">
+                    ${priorityBadge}
+                    <span>${item.drug}</span>
+                    ${isBoosted ? '<span class="text-rose-500" title="تم المضاعفة لقاطع الأمان"><span class="material-symbols-outlined text-[14px]">health_and_safety</span></span>' : ''}
+                </div>
+                <div class="flex items-center gap-1.5 mt-1">
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                        <span class="material-symbols-outlined text-[10px] align-middle">package_2</span> شراء: ${displayUnit}
+                    </span>
+                    ${(item.subUnit && cf > 1) ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">${cf} ${item.subUnit}/${displayUnit}</span>` : ''}
+                </div>
             </td>
-            <td class="px-3 py-2 text-center text-slate-500 font-bold">${item.stock} <span class="text-xs font-normal">/ ${item.minStock}</span> <span class="text-[9px]">${item.unit}</span></td>
+            <td class="px-3 py-2 text-center text-slate-500 font-bold">${Math.ceil(item.stock / cf)} <span class="text-xs font-normal">/ ${Math.ceil(item.minStock / cf)}</span></td>
             <td class="px-3 py-2 text-center font-bold text-amber-600">${item.expectedQty} <span class="text-[9px] text-slate-400">/شهر</span></td>
-            <td class="px-3 py-2 text-center text-slate-500 font-bold">${item.optimalQty}</td>
+            <td class="px-3 py-2 text-center text-slate-500 font-bold">${item.optimalQty} <span class="text-[9px]">${displayUnit}</span></td>
             <td class="px-3 py-2 text-center bg-emerald-50/50 relative">
                 <input type="number" 
-                       value="${finalApproved}" 
+                       value="${displayQty}" 
                        min="0"
                        class="w-20 border ${isBoosted ? 'border-rose-400 focus:ring-rose-500' : 'border-emerald-300 focus:ring-primary'} focus:border-primary focus:ring-1 rounded-sm px-1 py-1 text-center font-black text-slate-800" 
                        data-idx="${idx}"
-                       onchange="updateItemQty(${idx}, this.value)">
-                <div class="text-[10px] text-slate-400 mt-1">${formatCurrency(finalCost)}</div>
+                       data-cf="${cf}"
+                       oninput="window._updateItemDisplayQty && window._updateItemDisplayQty(${idx}, this.value, ${cf})">
+                <div class="text-[10px] mt-1">
+                    <span class="text-slate-400">${formatCurrency(displayCost)}</span>
+                    <span class="text-blue-600 font-bold mr-1">${displayUnit}</span>
+                </div>
             </td>
             <td class="px-3 py-2 text-center">
                 <span class="px-2 py-1 rounded text-[10px] font-bold ${statusBadgeClass}">${financialStatus}</span>
@@ -319,6 +384,16 @@ function renderDraftGrid() {
         `;
         tbody.appendChild(tr);
     });
+
+    // عرض رسالة إذا كانت جميع الأصناف مخزونها كافٍ
+    if (visibleCount === 0) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `<td colspan="7" class="text-center py-12 text-slate-500">
+            <span class="material-symbols-outlined text-4xl text-emerald-500 block mb-2">inventory_2</span>
+            <div class="font-bold text-emerald-700">جميع الأصناف مخزونها كافٍ — لا يوجد ما يحتاج طلباً الآن</div>
+        </td>`;
+        tbody.appendChild(emptyRow);
+    }
 
     // Update Bottom Summary and Deficit warning
     const costDisplay = document.getElementById('totalExpectedCost');
@@ -349,13 +424,23 @@ function renderDraftGrid() {
     }
 }
 
-// Called when user types in the approved grid column manually
+// Called when user edits the approved column — value entered is in PACKETS (MainUnit)
+// cf = conversionFactor (sub-units per packet)
+window._updateItemDisplayQty = function(idx, val, cf) {
+    const packetsEntered = parseInt(val) || 0;
+    const cfNum = (cf && cf > 1) ? parseInt(cf) : 1;
+    // Convert back to sub-unit internally (strips = packets × conversionFactor)
+    appState.forecastData[idx].approved = packetsEntered * cfNum;
+    // Debounced re-render to avoid losing focus mid-type
+    clearTimeout(window._updateQtyTimer);
+    window._updateQtyTimer = setTimeout(() => renderDraftGrid(), 600);
+}
+
+// Legacy alias kept for safety
 window.updateItemQty = function(idx, val) {
     const numericVal = parseInt(val) || 0;
     appState.forecastData[idx].approved = numericVal;
-    // Debounce re-render so we don't lose focus immediately, 
-    // or just update total cost directly.
-    renderDraftGrid(); 
+    renderDraftGrid();
 }
 
 async function recalculateForecast() {
@@ -474,7 +559,7 @@ function showPOCards() {
             </div>
 
             <div class="flex gap-2">
-                <button class="flex-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 border-b-2 border-slate-300 hover:border-slate-400">
+                <button onclick="sharePO()" class="flex-1 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 border-b-2 border-slate-300 hover:border-slate-400">
                     <span class="material-symbols-outlined text-[14px] text-green-600">send</span> WhatsApp
                 </button>
                 <button onclick="window.openReceiptModal()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded text-xs font-bold shadow-sm transition flex items-center justify-center gap-1 border-b-2 border-blue-800">
@@ -494,19 +579,24 @@ window.openReceiptModal = function() {
     if(tbody) {
         tbody.innerHTML = '';
         const approvedItems = appState.forecastData.filter(i => i.approved > 0);
+        window._currentPlanId = window._currentPlanId || 0; // سيتم تعيينه عند توليد الخطة
         approvedItems.forEach((item, idx) => {
             const isVital = item.abc === 'A';
+            const cf = (item.conversionFactor && item.conversionFactor > 1) ? item.conversionFactor : 1;
+            const displayQty = Math.ceil(item.approved);
             const tr = document.createElement('tr');
             tr.className = `border-b focus-within:bg-blue-50/30 ${isVital ? 'bg-rose-50/30 border-rose-200' : ''}`;
+            tr.dataset.drugId = item.drugId || 0;
             tr.innerHTML = `
                  <td class="p-2 font-bold flex items-center gap-1">
                      ${item.drug} 
-                     ${isVital ? '<span class="text-rose-500 font-bold" title="دواء حيوي (Safety Switch)">♥</span>' : ''}
+                     ${isVital ? '<span class="text-rose-500 font-bold" title="دواء حيوي">♥</span>' : ''}
+                     <span class="text-[10px] text-slate-400 font-normal">${item.unit || ''}</span>
                  </td>
-                 <td class="p-2 text-center"><input type="number" value="${item.approved}" class="w-16 border border-slate-300 rounded px-1 py-1 text-center font-bold ${isVital ? 'text-rose-600' : ''}"></td>
-                 <td class="p-2 text-center"><input type="number" value="${item.unitCost}" class="w-full border border-slate-300 rounded px-1 py-1 text-center font-bold focus:border-primary focus:ring-1 text-left" dir="ltr"></td>
+                 <td class="p-2 text-center"><input type="number" value="${displayQty}" min="1" class="w-16 border border-slate-300 rounded px-1 py-1 text-center font-bold ${isVital ? 'text-rose-600' : ''}"></td>
+                 <td class="p-2 text-center"><input type="number" value="${item.unitCost}" step="0.01" class="w-full border border-slate-300 rounded px-1 py-1 text-center font-bold focus:border-primary focus:ring-1 text-left" dir="ltr"></td>
                  <td class="p-2 text-center"><input type="text" placeholder="B-10${idx}" class="w-full border border-slate-300 rounded px-1 py-1 text-center focus:border-primary focus:ring-1 uppercase"></td>
-                 <td class="p-2 text-center"><input type="month" class="w-full border border-slate-300 rounded px-1 py-1 text-center focus:border-primary focus:ring-1 content-required"></td>
+                 <td class="p-2 text-center"><input type="month" class="w-full border border-slate-300 rounded px-1 py-1 text-center focus:border-primary focus:ring-1"></td>
             `;
             tbody.appendChild(tr);
         });
@@ -524,24 +614,76 @@ window.closeReceiptModal = function() {
     }
 };
 
-window.confirmReceipt = function() {
-    window.closeReceiptModal();
-    if (typeof updateStatusBar === 'function') updateStatusBar(5); // الترحيل النهائي
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'success',
-            title: 'تم الاستلام والترحيل',
-            text: 'تم رفع رصيد المخزون وتوليد قيد الاستحقاق للمورد بنجاح',
-            confirmButtonColor: '#059669',
-            timer: 3000
+window.confirmReceipt = async function() {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const tbody = document.getElementById('receiptModalBody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('tr');
+    const items = [];
+    let hasError = false;
+
+    rows.forEach((row, idx) => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length < 4) return;
+
+        const drugId   = parseInt(row.dataset.drugId || 0);
+        const qty      = parseInt(inputs[0].value) || 0;
+        const cost     = parseFloat(inputs[1].value) || 0;
+        const batch    = inputs[2].value.trim();
+        const expiry   = inputs[3].value; // yyyy-MM format from <input type="month">
+
+        if (qty <= 0) { hasError = true; inputs[0].classList.add('border-red-500'); return; }
+        items.push({
+            DrugId: drugId,
+            ReceivedQty: qty,
+            UnitCost: cost,
+            BatchNumber: batch || null,
+            ExpiryDate: expiry ? expiry + '-01' : null
         });
+    });
+
+    if (hasError) {
+        if (typeof Swal !== 'undefined') Swal.fire('تنبيه', 'يرجى إدخال كمية صحيحة لجميع الأصناف', 'warning');
+        return;
     }
-    const poSection = document.getElementById('poCardsSection');
-    if(poSection) poSection.innerHTML = '<div class="text-center p-8 text-emerald-600 font-bold"><span class="material-symbols-outlined text-4xl block mb-2">inventory</span> لا توجد طلبات توريد معلقة حالياً.</div>';
+    if (items.length === 0) {
+        if (typeof Swal !== 'undefined') Swal.fire('تنبيه', 'لا توجد أصناف للاستلام', 'warning');
+        return;
+    }
+
+    window.closeReceiptModal();
+
+    if (typeof Swal !== 'undefined') Swal.fire({ title: 'جاري الحفظ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const planId = window._currentPlanId || 0;
+        const response = await fetch('/InventoryIntelligence/ReceiveGoods', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({ PlanId: planId, Items: items })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            if (typeof updateStatusBar === 'function') updateStatusBar(5);
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'تم الاستلام والترحيل ✅', text: data.message, confirmButtonColor: '#059669' });
+            const poSection = document.getElementById('poCardsSection');
+            if (poSection) poSection.innerHTML = '<div class="text-center p-8 text-emerald-600 font-bold"><span class="material-symbols-outlined text-4xl block mb-2">inventory</span> تم الاستلام وزيادة المخزون بنجاح.</div>';
+        } else {
+            if (typeof Swal !== 'undefined') Swal.fire('خطأ', data.message, 'error');
+        }
+    } catch(err) {
+        console.error(err);
+        if (typeof Swal !== 'undefined') Swal.fire('خطأ', 'فشل الاتصال بالمخدم أثناء الاستلام', 'error');
+    }
 };
 
 function formatCurrency(val) {
-    return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' R.Y';
+    return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (appState.currencySymbol || '');
 }
 
 function animateAISteps() {
@@ -577,7 +719,7 @@ function animateAISteps() {
 
 // الدوال الخاصة بنافذة المطابقة (Mapping Modal)
 window.openMappingModal = function(headers) {
-    const selects = ['mapDrugName', 'mapCurrentStock', 'mapExpectedQty', 'mapUnitCost'];
+    const selects = ['mapDrugName', 'mapExpectedQty'];
     selects.forEach(selId => {
         const el = document.getElementById(selId);
         if(el) {
@@ -608,21 +750,19 @@ window.closeMappingModal = function() {
 
 window.confirmMapping = function() {
     const colDrug = document.getElementById('mapDrugName').value;
-    const colStock = document.getElementById('mapCurrentStock').value;
     const colExpected = document.getElementById('mapExpectedQty').value;
-    const colCost = document.getElementById('mapUnitCost').value;
 
-    if(!colDrug || !colStock || !colExpected || !colCost) {
-        document.getElementById('mappingError').innerText = 'يرجى اختيار أعمدة لجميع الحقول الأساسية.';
+    if(!colDrug || !colExpected) {
+        document.getElementById('mappingErrorText').innerText = 'يرجى اختيار أعمدة لجميع الحقول الأساسية.';
         document.getElementById('mappingError').classList.remove('hidden');
         return;
     }
     
     // Check for unique mapping variables
-    const selectedColumns = [colDrug, colStock, colExpected, colCost];
+    const selectedColumns = [colDrug, colExpected];
     const uniqueColumns = new Set(selectedColumns);
     if(uniqueColumns.size !== selectedColumns.length) {
-        document.getElementById('mappingError').innerText = 'لا يمكن اختيار نفس العمود لأكثر من حقل.';
+        document.getElementById('mappingErrorText').innerText = 'لا يمكن اختيار نفس العمود لأكثر من حقل.';
         document.getElementById('mappingError').classList.remove('hidden');
         return;
     }
@@ -630,23 +770,21 @@ window.confirmMapping = function() {
     if(appState.tempExcelData) {
         // بناء forecastData جديد من tempExcelData
         const mappedData = appState.tempExcelData.map((row, idx) => {
-            let stock = parseFloat(row[colStock]) || 0;
             let expected = parseFloat(row[colExpected]) || 0;
-            let cost = parseFloat(row[colCost]) || 15.00;
             
             return {
                 id: idx + 1000, 
                 drug: row[colDrug] || 'صنف غير معروف',
-                stock: stock,
+                stock: 0, // سيتم جلبه من السيرفر
                 expectedQty: expected,
-                minStock: Math.round(stock * 0.2), 
-                unitCost: cost,
-                eoq: expected > 0 ? Math.round(Math.sqrt((2 * (expected*12) * 50) / 0.2)) : 0,
-                proposed: Math.max(0, expected * 2 - stock),
-                approved: Math.max(0, expected * 2 - stock),
+                minStock: 0, 
+                unitCost: 0, // سيتم جلبه من السيرفر
+                eoq: 0,
+                proposed: 0,
+                approved: 0,
                 abc: expected > 500 ? 'A' : (expected > 100 ? 'B' : 'C'),
-                status: stock <= 0 ? "ناقص - يحتاج طلب" : "ضمن الخطة",
-                statusClass: stock <= 0 ? "error" : "ok"
+                status: "قيد التحليل...",
+                statusClass: "ok"
             };
         });
 
@@ -751,9 +889,10 @@ window.generateCustomPdf = function() {
     // Headers
     if (cols.priority) html += `<th class="text-center">أولوية التوريد</th>`;
     if (cols.stock) html += `<th class="text-center">الرصيد / الحد</th>`;
-    if (cols.expected) html += `<th class="text-center">الطلب المتوقع</th>`;
+    if (cols.expected) html += `<th class="text-center">الكمية المباعة سابقاً</th>`;
     if (cols.optimalQty) html += `<th class="text-center">الكمية المُثلى</th>`;
     if (cols.approved) html += `<th class="text-center approved-col">الكمية للتوريد</th>`;
+    if (cols.approved) html += `<th class="text-center">وحدة الشراء</th>`;
     if (cols.cost) html += `<th class="text-center">التكلفة الإجمالية</th>`;
     if (cols.status) html += `<th class="text-center">المطابقة المالية</th>`;
 
@@ -777,7 +916,8 @@ window.generateCustomPdf = function() {
         if (cols.expected) html += `<td class="text-center">${item.expectedQty}</td>`;
         if (cols.optimalQty) html += `<td class="text-center">${item.optimalQty}</td>`;
         if (cols.approved) html += `<td class="text-center approved-col">${approvedQty}</td>`;
-        if (cols.cost) html += `<td class="text-center">${cost.toLocaleString()} R.Y</td>`;
+        if (cols.approved) html += `<td class="text-center font-bold text-blue-700">${item.unit || '-'}</td>`;
+        if (cols.cost) html += `<td class="text-center">${cost.toLocaleString()} ${appState.currencySymbol || ''}</td>`;
         if (cols.status) html += `<td class="text-center">${item.status}</td>`;
 
         html += `</tr>`;
@@ -788,9 +928,10 @@ window.generateCustomPdf = function() {
         <tfoot>
             <tr>
                 <td colspan="${2 + (cols.priority?1:0) + (cols.stock?1:0) + (cols.expected?1:0) + (cols.optimalQty?1:0)}" style="text-align: left; font-weight: bold; background: #f8fafc; border: none; border-bottom: 1px solid #cbd5e1; padding-left: 15px;">الإجمالي التقديري للتكلفة:</td>`;
-                
-    if (cols.approved) html += `<td class="text-center border-t border-slate-300 border-x"></td>`; // Empty under approved
-    if (cols.cost) html += `<td class="text-center font-bold" style="background:#f1f5f9; color:#0f172a;">${totalCostAccumulator.toLocaleString()} R.Y</td>`;
+
+    if (cols.approved) html += `<td class="text-center border-t border-slate-300 border-x"></td>`; // Empty under approved qty
+    if (cols.approved) html += `<td class="text-center border-t border-slate-300 border-x"></td>`; // Empty under unit
+    if (cols.cost) html += `<td class="text-center font-bold" style="background:#f1f5f9; color:#0f172a;">${totalCostAccumulator.toLocaleString()} ${appState.currencySymbol || ''}</td>`;
     
     // Fill remaining columns in footer to make it symmetric
     if (cols.status && !cols.cost) html += `<td></td>`;
@@ -815,4 +956,58 @@ window.generateCustomPdf = function() {
         printWindow.print();
         // Optional: you could printWindow.close() after printing, but users might want to save it. 
     }, 800);
+};
+
+window.savePlan = function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'success',
+            title: 'تم الحفظ',
+            text: 'تم حفظ الخطة بنجاح، يمكنك الرجوع إليها لاحقاً.',
+            confirmButtonColor: '#059669',
+            timer: 2500
+        });
+    }
+};
+
+window.sharePlanViaWhatsApp = function() {
+    // إغلاق النافذة المنبثقة للطباعة إذا كانت مفتوحة
+    closePrintModal();
+    
+    // 1- توليد رسالة نصية للواتساب
+    let message = "مرحباً،\nمرفق لكم مسودة خطة المشتريات الذكية المستخرجة من النظام:\n\n";
+    message += `إجمالي الأصناف: ${appState.forecastData.filter(i => i.approved > 0).length}\n`;
+    message += `إجمالي التكلفة: ${formatCurrency(appState.totalExpectedCost)}\n\n`;
+    message += "يرجى الاطلاع على ملف الـ PDF المرفق.";
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    
+    // 2- استدعاء دالة الطباعة (لتحويلها إلى PDF) بحيث يتمكن المستخدم من حفظها
+    // قبل إرسال الرسالة عبر واتساب
+    setTimeout(() => {
+        // نفتح نافذة الواتساب
+        window.open(whatsappUrl, '_blank');
+        // نولد الـ PDF
+        setTimeout(() => {
+            generateCustomPdf();
+        }, 500);
+    }, 100);
+};
+
+window.sharePO = function() {
+    const approvedItems = appState.forecastData.filter(i => i.approved > 0);
+    const totalPOCost = approvedItems.reduce((sum, item) => sum + (item.approved * item.unitCost), 0);
+    
+    let message = "عزيزي المورد،\nنرسل لكم طلب شراء جديد (PO) عبر نظام PharmaSmart:\n\n";
+    message += `عدد الأصناف: ${approvedItems.length}\n`;
+    message += `التكلفة التقديرية: ${formatCurrency(totalPOCost)}\n\n`;
+    message += "يرجى تأكيد الطلب، تجدون التفاصيل في الـ PDF.";
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+    
+    setTimeout(() => {
+        generateCustomPdf();
+    }, 500);
 };

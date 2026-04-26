@@ -99,13 +99,18 @@
 
                         <div class="flex-1 min-w-0">
                             <div class="flex items-start justify-between gap-2">
-                                <p class="text-sm font-bold text-slate-800 leading-snug">@item.Title</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-slate-800 leading-snug">@item.Title</p>
+                                    @if (!item.IsRead)
+                                    {
+                                        <span class="text-[9px] font-black bg-primary text-white px-1.5 py-0.5 rounded animate-pulse">جديد</span>
+                                    }
+                                </div>
                                 <div class="flex items-center gap-1.5 flex-shrink-0">
                                     @{
                                         string severityLabel = item.Severity == "critical" ? "حرجة" : item.Severity == "warning" ? "تحذير" : "معلومة";
                                     }
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full text-white @item.BadgeColor">@severityLabel</span>
-                                    <div class="w-2 h-2 rounded-full @item.BadgeColor flex-shrink-0"></div>
                                 </div>
                             </div>
                             <p class="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">@item.Body</p>
@@ -143,7 +148,12 @@
         }
         document.querySelectorAll('.notification-card').forEach(card => {
             const cat = card.getAttribute('data-category');
-            card.style.display = (category === 'all' || cat === category) ? 'flex' : 'none';
+            let show = false;
+            if (category === 'all') show = true;
+            else if (category === 'inventory') show = (cat === 'inventory' || cat === 'shortage' || cat === 'expiry');
+            else show = (cat === category);
+
+            card.style.display = show ? 'flex' : 'none';
         });
     }
 </script>

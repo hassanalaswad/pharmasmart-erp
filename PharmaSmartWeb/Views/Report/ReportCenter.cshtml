@@ -51,7 +51,7 @@
                 <span style="font-size:10px; font-weight:700; color:#94a3b8; background:#f1f5f9; padding:2px 6px;">هذا الشهر</span>
             </div>
             <p class="kpi-title">إجمالي الإيرادات</p>
-            <h3 class="kpi-value">@Model.MonthlyRevenue.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#64748b;">ر.ي</span></h3>
+            <h3 class="kpi-value">@Model.MonthlyRevenue.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#64748b;">@ViewBag.CurrencySymbol</span></h3>
         </div>
 
         <div class="kpi-box" style="border-right-color:#e11d48;">
@@ -60,7 +60,7 @@
                 <span style="font-size:10px; font-weight:700; color:#94a3b8; background:#f1f5f9; padding:2px 6px;">هذا الشهر</span>
             </div>
             <p class="kpi-title">إجمالي المصروفات</p>
-            <h3 class="kpi-value">@Model.MonthlyExpenses.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#64748b;">ر.ي</span></h3>
+            <h3 class="kpi-value">@Model.MonthlyExpenses.ToString("N2") <span style="font-size:12px; font-weight:normal; color:#64748b;">@ViewBag.CurrencySymbol</span></h3>
         </div>
 
         <div class="kpi-box" style="border-right-color:#dc2626;">

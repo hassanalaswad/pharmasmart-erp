@@ -131,7 +131,7 @@
                     الرصيد الافتتاحي المدور من الفترة السابقة
                 </td>
                 <td style="font-family:monospace; font-weight:bold; color:#0284c7; text-align:left; padding:8px 12px; background:#e0f2fe;">
-                    @openingBalance.ToString("N2")
+                    @openingBalance.ToString("N2") @ViewBag.CurrencySymbol
                 </td>
             </tr>
             @if (!Model.Any())
@@ -150,13 +150,13 @@
                     <td style="text-align:center; font-family:monospace; color:#0284c7; font-weight:bold;">#@item.JournalId</td>
                     <td style="font-size:12px;">@item.Journal.Description</td>
                     <td style="text-align:left; font-family:monospace; font-weight:bold; color:@(item.Debit > 0 ? "#059669" : "#94a3b8");">
-                        @(item.Debit > 0 ? item.Debit.ToString("N2") : "-")
+                        @(item.Debit > 0 ? item.Debit.ToString("N2") : "-") @ViewBag.CurrencySymbol
                     </td>
                     <td style="text-align:left; font-family:monospace; font-weight:bold; color:@(item.Credit > 0 ? "#e11d48" : "#94a3b8");">
-                        @(item.Credit > 0 ? item.Credit.ToString("N2") : "-")
+                        @(item.Credit > 0 ? item.Credit.ToString("N2") : "-") @ViewBag.CurrencySymbol
                     </td>
                     <td style="font-family:monospace; font-weight:bold; color:@(runningBalance >= 0 ? "#063955" : "#e11d48"); background:#f8fafc; text-align:left;">
-                        @runningBalance.ToString("N2")
+                        @runningBalance.ToString("N2") @ViewBag.CurrencySymbol
                     </td>
                 </tr>
             }
